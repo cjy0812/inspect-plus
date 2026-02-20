@@ -56,6 +56,8 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
     lowMemoryMode: false,
     themeMode: 'auto',
     darkModeStart: '18:00',
+    autoExpandSnapshots: false,
+    locale: 'zh',
   }),
 );
 
