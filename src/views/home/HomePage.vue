@@ -2,6 +2,7 @@
 import ActionCard from '@/components/ActionCard.vue';
 import { usePreviewCache } from '@/composables/usePreviewCache';
 import { toValidURL } from '@/utils/check';
+import { formatClock, normalizeClock } from '@/utils/clock';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
 import { dialog } from '@/utils/discrete';
 import {
@@ -294,31 +295,15 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
     cacheLimit: previewCacheLimit,
   });
 
-const normalizeClock = (value: string) => {
-  const v = value.trim();
-  if (!/^\d{1,2}:\d{1,2}$/.test(v)) return null;
-  const [hText, mText] = v.split(':');
-  const h = Number(hText);
-  const m = Number(mText);
-  if (
-    !Number.isInteger(h) ||
-    !Number.isInteger(m) ||
-    h < 0 ||
-    h > 23 ||
-    m < 0 ||
-    m > 59
-  ) {
-    return null;
-  }
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-};
 const updateDarkModeStart = () => {
-  settingsStore.darkModeStart =
-    normalizeClock(settingsStore.darkModeStart) || '18:00';
+  settingsStore.darkModeStart = formatClock(
+    normalizeClock(settingsStore.darkModeStart) ?? 18 * 60,
+  );
 };
 const updateDarkModeEnd = () => {
-  settingsStore.darkModeEnd =
-    normalizeClock(settingsStore.darkModeEnd) || '06:00';
+  settingsStore.darkModeEnd = formatClock(
+    normalizeClock(settingsStore.darkModeEnd) ?? 6 * 60,
+  );
 };
 </script>
 

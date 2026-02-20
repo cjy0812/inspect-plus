@@ -2,6 +2,7 @@
 import { darkTheme, dateZhCN, zhCN, type GlobalThemeOverrides } from 'naive-ui';
 import { RouterView } from 'vue-router';
 import ErrorDlg from './components/ErrorDlg.vue';
+import { isInDarkRange, parseClock } from './utils/clock';
 import { ScrollbarWrapper } from './utils/others';
 import { debounce } from 'lodash-es';
 
@@ -22,36 +23,6 @@ useEventListener('click', () => {
 
 const { settingsStore } = useStorageStore();
 const now = useNow({ interval: 60_000 });
-
-const parseClock = (value?: string | null): number | null => {
-  if (!value) return null;
-  const [hourText = '', minuteText = ''] = value.split(':');
-  const hour = Number(hourText);
-  const minute = Number(minuteText);
-  if (
-    !Number.isInteger(hour) ||
-    !Number.isInteger(minute) ||
-    hour < 0 ||
-    hour > 23 ||
-    minute < 0 ||
-    minute > 59
-  ) {
-    return null;
-  }
-  return hour * 60 + minute;
-};
-
-const isInDarkRange = (
-  currentMinutes: number,
-  startMinutes: number,
-  endMinutes: number,
-) => {
-  if (startMinutes === endMinutes) return true;
-  if (startMinutes < endMinutes) {
-    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
-  }
-  return currentMinutes >= startMinutes || currentMinutes < endMinutes;
-};
 
 const appTheme = computed(() => {
   if (settingsStore.themeMode == 'dark') {
