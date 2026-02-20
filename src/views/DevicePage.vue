@@ -145,6 +145,11 @@ const groupedSnapshots = computed(() => {
   return [...packageMap.entries()]
     .map(([packageName, activityMap]) => ({
       packageName,
+      appName:
+        [...activityMap.values()]
+          .flat()
+          .map((s) => getAppInfo(s).name)
+          .find(Boolean) || packageName,
       activities: [...activityMap.entries()]
         .map(([activityId, items]) => ({
           activityId,
@@ -345,7 +350,7 @@ const execSelector = useTask(async () => {
           <template #header>
             <div flex items-center gap-8px>
               <NTag type="info" size="small">包名</NTag>
-              <code>{{ group.packageName }}</code>
+              <code>{{ `${group.appName} (${group.packageName})` }}</code>
               <NTag size="small">{{ group.activities.length }} Activities</NTag>
             </div>
           </template>

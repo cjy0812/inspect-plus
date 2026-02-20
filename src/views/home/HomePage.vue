@@ -436,13 +436,18 @@ const updateDarkModeStart = () => {
       </div>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-hidden">
-      <NSpin v-if="loading" class="h-full" />
-      <div v-else-if="!groupedSnapshots.length" py-40px text-center opacity-70>
-        未找到匹配快照
-      </div>
-      <div v-else class="h-full min-h-0 overflow-auto pr-6px">
+    <div class="flex-1 min-h-0 overflow-auto pr-6px">
+      <NSpin :show="loading" class="h-full">
+        <div
+          v-if="!loading && !groupedSnapshots.length"
+          py-40px
+          text-center
+          opacity-70
+        >
+          未找到匹配快照
+        </div>
         <NCollapse
+          v-else
           v-model:expandedNames="expandedPackageNames"
           :accordion="false"
           :displayDirective="settingsStore.lowMemoryMode ? 'if' : 'show'"
@@ -482,14 +487,14 @@ const updateDarkModeStart = () => {
                   <div
                     v-for="item in activity.snapshots"
                     :key="item.id"
-                    class="rounded-8px border border-solid px-10px py-8px transition-colors"
+                    class="rounded-8px border border-solid px-10px py-6px transition-colors"
                     :class="[
                       snapshotViewedTime[item.id]
                         ? 'snapshot-row-viewed'
                         : 'bg-white border-#efeff5',
                     ]"
                   >
-                    <div flex items-center gap-12px>
+                    <div flex items-start gap-10px>
                       <NCheckbox
                         :checked="checkedSet.has(item.id)"
                         @update:checked="toggleChecked(item.id, $event)"
@@ -510,7 +515,7 @@ const updateDarkModeStart = () => {
                             class="min-w-0 inline-flex max-w-full cursor-default select-text flex-col"
                             @mouseenter="ensurePreview(item.id)"
                           >
-                            <div flex items-center gap-8px>
+                            <div flex items-center gap-6px leading-18px>
                               <NTag size="small" type="warning">{{
                                 dayjs(item.id).format('MM-DD HH:mm:ss')
                               }}</NTag>
@@ -520,14 +525,21 @@ const updateDarkModeStart = () => {
                                 type="success"
                                 >已查看</NTag
                               >
-                              <span class="truncate">{{
+                              <span class="truncate font-600">{{
                                 getAppInfo(item).name || item.appId
                               }}</span>
                             </div>
-                            <div text-12px mt-2px>
+                            <div text-12px mt-2px class="font-600">
                               界面ID: {{ item.activityId || '(unknown)' }}
                             </div>
-                            <div text-11px opacity-65 leading-18px>
+                            <div
+                              text-11px
+                              opacity-65
+                              leading-18px
+                              flex
+                              flex-wrap
+                              gap-x-10px
+                            >
                               <span mr-10px
                                 >创建:
                                 {{
@@ -543,7 +555,14 @@ const updateDarkModeStart = () => {
                                 }}</span
                               >
                             </div>
-                            <div text-11px opacity-65 leading-18px>
+                            <div
+                              text-11px
+                              opacity-65
+                              leading-18px
+                              flex
+                              flex-wrap
+                              gap-x-10px
+                            >
                               <span mr-10px
                                 >设备:
                                 {{
@@ -565,22 +584,20 @@ const updateDarkModeStart = () => {
                           </div>
                         </template>
                         <div class="inline-block w-fit max-w-90vw">
-                          <NSpin :show="previewLoadingMap[item.id]">
-                            <img
-                              v-if="previewUrlMap[item.id]"
-                              :src="previewUrlMap[item.id]"
-                              class="h-auto w-auto max-h-320px max-w-80vw rounded-6px"
-                              alt="preview"
-                            />
-                            <div v-else py-20px text-center opacity-70>
-                              {{
-                                previewErrorMap[item.id] ||
-                                (previewLoadingMap[item.id]
-                                  ? '预览加载中...'
-                                  : '暂无预览')
-                              }}
-                            </div>
-                          </NSpin>
+                          <img
+                            v-if="previewUrlMap[item.id]"
+                            :src="previewUrlMap[item.id]"
+                            class="block h-auto w-auto max-h-320px max-w-80vw rounded-6px"
+                            alt="preview"
+                          />
+                          <div v-else py-20px text-center opacity-70>
+                            {{
+                              previewErrorMap[item.id] ||
+                              (previewLoadingMap[item.id]
+                                ? '预览加载中...'
+                                : '暂无预览')
+                            }}
+                          </div>
                         </div>
                       </NPopover>
                       <NButton
@@ -601,7 +618,7 @@ const updateDarkModeStart = () => {
             </NCollapse>
           </NCollapseItem>
         </NCollapse>
-      </div>
+      </NSpin>
     </div>
   </div>
 
