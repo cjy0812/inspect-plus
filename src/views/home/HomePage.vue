@@ -10,7 +10,7 @@ import {
   batchZipDownloadZip,
 } from '@/utils/export';
 import { importFromLocal, importFromNetwork } from '@/utils/import';
-import { getAppInfo } from '@/utils/node';
+import { getAppInfo, getDevice } from '@/utils/node';
 import { filterQuery, getDragEventFiles } from '@/utils/others';
 import {
   screenshotStorage,
@@ -18,6 +18,7 @@ import {
   snapshotStorage,
 } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
+import { useI18n } from '@/utils/i18n';
 import { getImagUrl } from '@/utils/url';
 import dayjs from 'dayjs';
 
@@ -25,6 +26,7 @@ const route = useRoute();
 const router = useRouter();
 const { settingsStore, snapshotImportTime, snapshotViewedTime } =
   useStorageStore();
+const { t } = useI18n();
 
 const snapshots = shallowRef<Snapshot[]>([]);
 const loading = shallowRef(true);
@@ -37,47 +39,39 @@ const updateSnapshots = async () => {
 onMounted(updateSnapshots);
 
 const filterOption = shallowReactive({
-  query: ``,
-  actualQuery: ``,
+  query: '',
+  actualQuery: '',
   updateQuery: () => {
     filterOption.actualQuery = filterOption.query.trim();
     checkedRowKeys.value = [];
   },
 });
 
-const matchSnapshot = (s: Snapshot, query: string) => {
-  if (!query) return true;
-  return (
-    (getAppInfo(s).name || ``).includes(query) ||
-    (s.appId || ``).includes(query) ||
-    ((s.appInfo?.id || ``) as string).includes(query) ||
-    (s.activityId || ``).includes(query)
-  );
-};
-
 const filteredSnapshots = computed(() => {
-  return snapshots.value.filter((s) =>
-    matchSnapshot(s, filterOption.actualQuery),
-  );
+  const query = filterOption.actualQuery;
+  return snapshots.value.filter((s) => {
+    if (!query) return true;
+    return (
+      (getAppInfo(s).name || '').includes(query) ||
+      (s.appId || '').includes(query) ||
+      (s.appInfo?.id || '').includes(query) ||
+      (s.activityId || '').includes(query)
+    );
+  });
 });
-
-const getPackageName = (s: Snapshot) => {
-  return s.appId || s.appInfo?.id || '(unknown)';
-};
 
 const groupedSnapshots = computed(() => {
   const packageMap = new Map<string, Map<string, Snapshot[]>>();
   for (const snapshot of filteredSnapshots.value) {
-    const packageName = getPackageName(snapshot);
+    const packageName = snapshot.appId || snapshot.appInfo?.id || '(unknown)';
     const activityId = snapshot.activityId || '(unknown)';
-    let activityMap = packageMap.get(packageName);
-    if (!activityMap) {
-      activityMap = new Map();
-      packageMap.set(packageName, activityMap);
+    if (!packageMap.has(packageName)) {
+      packageMap.set(packageName, new Map());
     }
-    const activityList = activityMap.get(activityId) || [];
-    activityList.push(snapshot);
-    activityMap.set(activityId, activityList);
+    const activityMap = packageMap.get(packageName)!;
+    const list = activityMap.get(activityId) || [];
+    list.push(snapshot);
+    activityMap.set(activityId, list);
   }
   return [...packageMap.entries()]
     .map(([packageName, activityMap]) => ({
@@ -99,8 +93,14 @@ const groupedSnapshots = computed(() => {
 const expandedPackageNames = shallowRef<(string | number)[]>([]);
 const expandedActivityNames = shallowRef<(string | number)[]>([]);
 watchEffect(() => {
-  const packageNames = groupedSnapshots.value.map((v) => v.packageName);
-  expandedPackageNames.value = packageNames.slice(0, 4);
+  if (!settingsStore.autoExpandSnapshots) {
+    expandedPackageNames.value = [];
+    expandedActivityNames.value = [];
+    return;
+  }
+  expandedPackageNames.value = groupedSnapshots.value
+    .slice(0, 4)
+    .map((g) => g.packageName);
   expandedActivityNames.value = groupedSnapshots.value
     .slice(0, 4)
     .flatMap((g) =>
@@ -121,28 +121,25 @@ const importLocal = useTask(async (_files?: File[]) => {
     await updateSnapshots();
   }
 });
-
 useEventListener(document.body, 'drop', async (e) => {
   e.preventDefault();
   await importLocal.invoke(getDragEventFiles(e));
 });
-useEventListener(document.body, 'dragover', (e) => {
-  e.preventDefault();
-});
+useEventListener(document.body, 'dragover', (e) => e.preventDefault());
 
 const showImportModal = shallowRef(false);
-const textImportValue = shallowRef(``);
+const textImportValue = shallowRef('');
 const importNetwork = useTask(async () => {
   const urls = textImportValue.value
     .trim()
-    .split(`\n`)
+    .split('\n')
     .map((u) => u.trim())
     .filter((u) => toValidURL(u));
   if (urls.length == 0) return;
   const r = await importFromNetwork(urls);
   if (!r) return;
   await updateSnapshots();
-  textImportValue.value = ``;
+  textImportValue.value = '';
 });
 
 useEventListener(document.body, 'paste', (e) => {
@@ -177,21 +174,20 @@ const toggleChecked = (id: number, checked: boolean) => {
   }
   checkedRowKeys.value = checkedRowKeys.value.filter((k) => k != id);
 };
-const checkedSnapshots = () => {
-  return Promise.all(
+const checkedSnapshots = () =>
+  Promise.all(
     checkedRowKeys.value.map(
       (id) => snapshotStorage.getItem(id) as Promise<Snapshot>,
     ),
   );
-};
 
 const batchDelete = useTask(async () => {
   await new Promise((res, rej) => {
     dialog.warning({
-      title: `删除`,
+      title: '删除',
       content: `是否批量删除 ${checkedRowKeys.value.length} 个快照`,
-      negativeText: `取消`,
-      positiveText: `确认`,
+      negativeText: '取消',
+      positiveText: '确认',
       onClose: rej,
       onEsc: rej,
       onMaskClick: rej,
@@ -214,14 +210,14 @@ const batchShareImageUrl = useTask(async () => {
   await waitShareAgree();
   const imageIds = await batchCreateImageId(await checkedSnapshots());
   showTextDLg({
-    content: imageIds.map((s) => getImagUrl(s)).join(`\n`) + `\n`,
+    content: imageIds.map((s) => getImagUrl(s)).join('\n') + '\n',
   });
 });
 const batchShareZipUrl = useTask(async () => {
   await waitShareAgree();
   const zipUrls = await batchCreateZipUrl(await checkedSnapshots());
   showTextDLg({
-    content: zipUrls.map((s) => location.origin + '/i/' + s).join(`\n`) + `\n`,
+    content: zipUrls.map((s) => location.origin + '/i/' + s).join('\n') + '\n',
   });
 });
 
@@ -246,11 +242,9 @@ const clearPreviewById = (id: number) => {
   previewLoadingMap[id] = false;
   previewOrder.value = previewOrder.value.filter((v) => v != id);
 };
-
 const clearPreviewCache = () => {
   Object.keys(previewUrlMap).forEach((id) => clearPreviewById(Number(id)));
 };
-
 const ensurePreview = async (id: number) => {
   if (previewUrlMap[id] || previewLoadingMap[id]) return;
   previewErrorMap[id] = '';
@@ -269,11 +263,8 @@ const ensurePreview = async (id: number) => {
     previewOrder.value = [...previewOrder.value.filter((v) => v != id), id];
     while (previewOrder.value.length > previewCacheLimit.value) {
       const removeId = previewOrder.value[0];
-      if (typeof removeId == 'number') {
-        clearPreviewById(removeId);
-      } else {
-        break;
-      }
+      if (typeof removeId == 'number') clearPreviewById(removeId);
+      else break;
     }
   } catch {
     previewErrorMap[id] = '预览加载失败';
@@ -281,32 +272,21 @@ const ensurePreview = async (id: number) => {
     previewLoadingMap[id] = false;
   }
 };
-
 watch(
   () => settingsStore.lowMemoryMode,
-  (value) => {
-    if (value) {
-      while (previewOrder.value.length > previewCacheLimit.value) {
-        const removeId = previewOrder.value[0];
-        if (typeof removeId == 'number') {
-          clearPreviewById(removeId);
-        } else {
-          break;
-        }
-      }
+  () => {
+    while (previewOrder.value.length > previewCacheLimit.value) {
+      const removeId = previewOrder.value[0];
+      if (typeof removeId == 'number') clearPreviewById(removeId);
+      else break;
     }
   },
 );
-
-onBeforeUnmount(() => {
-  clearPreviewCache();
-});
+onBeforeUnmount(clearPreviewCache);
 
 const normalizeClock = (value: string) => {
   const v = value.trim();
-  if (!/^\d{1,2}:\d{1,2}$/.test(v)) {
-    return null;
-  }
+  if (!/^\d{1,2}:\d{1,2}$/.test(v)) return null;
   const [hText, mText] = v.split(':');
   const h = Number(hText);
   const m = Number(mText);
@@ -327,6 +307,7 @@ const updateDarkModeStart = () => {
     normalizeClock(settingsStore.darkModeStart) || '18:00';
 };
 </script>
+
 <template>
   <div flex flex-col p-10px gap-10px page-size>
     <div flex>
@@ -334,23 +315,19 @@ const updateDarkModeStart = () => {
         <NInputGroup>
           <NInput
             v-model:value="filterOption.query"
-            placeholder="输入应用名 / 包名 / Activity ID"
+            placeholder="请输入应用名/应用ID/界面ID"
             clearable
             class="min-w-320px"
             @keyup.enter="filterOption.updateQuery"
             @change="filterOption.updateQuery"
           />
           <NButton @click="filterOption.updateQuery">
-            <template #icon>
-              <SvgIcon name="search" />
-            </template>
+            <template #icon><SvgIcon name="search" /></template>
           </NButton>
         </NInputGroup>
         <template v-if="checkedRowKeys.length">
           <NPopover>
-            <template #trigger>
-              <NButton>批量下载</NButton>
-            </template>
+            <template #trigger><NButton>批量下载</NButton></template>
             <NSpace vertical>
               <NButton
                 :loading="batchDownloadZip.loading"
@@ -367,9 +344,7 @@ const updateDarkModeStart = () => {
             </NSpace>
           </NPopover>
           <NPopover>
-            <template #trigger>
-              <NButton>批量分享</NButton>
-            </template>
+            <template #trigger><NButton>批量分享</NButton></template>
             <NSpace vertical>
               <NButton
                 :loading="batchShareZipUrl.loading"
@@ -395,62 +370,42 @@ const updateDarkModeStart = () => {
       <div flex gap-24px items-center pr-8px class="[--svg-h:24px]">
         <NTooltip>
           <template #trigger>
-            <NButton text @click="settingsDlgShow = true">
-              <SvgIcon name="settings" />
-            </NButton>
+            <NButton text @click="settingsDlgShow = true"
+              ><SvgIcon name="settings"
+            /></NButton>
           </template>
           设置
         </NTooltip>
         <NTooltip>
           <template #trigger>
-            <RouterLink flex to="/selector">
-              <NButton text>
-                <SvgIcon name="terminal" />
-              </NButton>
-            </RouterLink>
+            <RouterLink flex to="/selector"
+              ><NButton text><SvgIcon name="terminal" /></NButton
+            ></RouterLink>
           </template>
           测试选择器
         </NTooltip>
         <NPopover>
-          <template #trigger>
-            <NButton text>
-              <SvgIcon name="import" />
-            </NButton>
-          </template>
+          <template #trigger
+            ><NButton text><SvgIcon name="import" /></NButton
+          ></template>
           <NSpace vertical>
-            <NTooltip placement="left">
-              <template #trigger>
-                <NButton
-                  :loading="importLocal.loading"
-                  @click="importLocal.invoke()"
-                >
-                  导入本地文件
-                </NButton>
-              </template>
-              <div class="whitespace-nowrap">支持拖拽文件到页面任意位置</div>
-            </NTooltip>
-            <NTooltip placement="left">
-              <template #trigger>
-                <NButton
-                  :loading="importNetwork.loading"
-                  @click="showImportModal = true"
-                >
-                  导入网络文件
-                </NButton>
-              </template>
-              <div class="whitespace-nowrap">
-                支持任意位置粘贴（Ctrl+V）文本触发导入
-              </div>
-            </NTooltip>
+            <NButton
+              :loading="importLocal.loading"
+              @click="importLocal.invoke()"
+              >导入本地文件</NButton
+            >
+            <NButton
+              :loading="importNetwork.loading"
+              @click="showImportModal = true"
+              >导入网络文件</NButton
+            >
           </NSpace>
         </NPopover>
         <NTooltip>
           <template #trigger>
-            <RouterLink flex to="/device">
-              <NButton text>
-                <SvgIcon name="device" />
-              </NButton>
-            </RouterLink>
+            <RouterLink flex to="/device"
+              ><NButton text><SvgIcon name="device" /></NButton
+            ></RouterLink>
           </template>
           连接设备
         </NTooltip>
@@ -462,9 +417,7 @@ const updateDarkModeStart = () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <NButton text>
-                <SvgIcon name="discussion" />
-              </NButton>
+              <NButton text><SvgIcon name="discussion" /></NButton>
             </a>
           </template>
           讨论交流
@@ -477,9 +430,7 @@ const updateDarkModeStart = () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <NButton text>
-                <SvgIcon name="github" />
-              </NButton>
+              <NButton text><SvgIcon name="github" /></NButton>
             </a>
           </template>
           Github
@@ -487,11 +438,11 @@ const updateDarkModeStart = () => {
       </div>
     </div>
 
-    <NSpin :show="loading" class="flex-1 overflow-hidden">
+    <NSpin :show="loading" class="flex-1 min-h-0 overflow-hidden">
       <div v-if="!groupedSnapshots.length" py-40px text-center opacity-70>
         未找到匹配快照
       </div>
-      <NScrollbar v-else class="h-full pr-6px">
+      <div v-else class="h-full min-h-0 overflow-auto pr-6px">
         <NCollapse
           v-model:expandedNames="expandedPackageNames"
           :accordion="false"
@@ -537,7 +488,7 @@ const updateDarkModeStart = () => {
                     class="rounded-8px border border-solid px-10px py-8px transition-colors"
                     :class="[
                       snapshotViewedTime[item.id]
-                        ? 'bg-emerald-50 border-emerald-100'
+                        ? 'snapshot-row-viewed'
                         : 'bg-white border-#efeff5',
                     ]"
                   >
@@ -549,7 +500,8 @@ const updateDarkModeStart = () => {
                       <NPopover
                         trigger="hover"
                         placement="right-start"
-                        :to="false"
+                        :flip="true"
+                        :shift="true"
                         @update:show="
                           if ($event) {
                             ensurePreview(item.id);
@@ -558,7 +510,7 @@ const updateDarkModeStart = () => {
                       >
                         <template #trigger>
                           <div
-                            class="min-w-0 flex-1 cursor-default select-text"
+                            class="min-w-0 inline-flex max-w-full cursor-default select-text flex-col"
                             @mouseenter="ensurePreview(item.id)"
                           >
                             <div flex items-center gap-8px>
@@ -570,11 +522,15 @@ const updateDarkModeStart = () => {
                                 size="small"
                                 type="success"
                               >
-                                已查看
+                                {{ t('snapshot.viewed') }}
                               </NTag>
                               <span class="truncate">
                                 {{ getAppInfo(item).name || item.appId }}
                               </span>
+                            </div>
+                            <div text-12px opacity-70>
+                              创建时间:
+                              {{ dayjs(item.id).format('YYYY-MM-DD HH:mm:ss') }}
                             </div>
                             <div text-12px opacity-70>
                               导入时间:
@@ -583,6 +539,28 @@ const updateDarkModeStart = () => {
                                   snapshotImportTime[item.id] || item.id,
                                 ).format('YYYY-MM-DD HH:mm:ss')
                               }}
+                            </div>
+                            <div text-12px opacity-70>
+                              设备:
+                              {{
+                                `${getDevice(item).manufacturer} Android ${getDevice(item).release || ''}`
+                              }}
+                            </div>
+                            <div text-12px opacity-70>
+                              应用名称: {{ getAppInfo(item).name }}
+                            </div>
+                            <div text-12px opacity-70>
+                              应用ID: {{ item.appId }}
+                            </div>
+                            <div text-12px opacity-70>
+                              版本代码: {{ getAppInfo(item).versionCode }}
+                            </div>
+                            <div text-12px opacity-70>
+                              版本号:
+                              {{ getAppInfo(item).versionName || 'unknown' }}
+                            </div>
+                            <div text-12px opacity-70>
+                              界面ID: {{ item.activityId || '(unknown)' }}
                             </div>
                           </div>
                         </template>
@@ -609,9 +587,8 @@ const updateDarkModeStart = () => {
                         quaternary
                         size="small"
                         @click="goToSnapshot(item.id)"
+                        >查看</NButton
                       >
-                        查看
-                      </NButton>
                       <ActionCard
                         :snapshot="item"
                         :showPreview="false"
@@ -624,7 +601,7 @@ const updateDarkModeStart = () => {
             </NCollapse>
           </NCollapseItem>
         </NCollapse>
-      </NScrollbar>
+      </div>
     </NSpin>
   </div>
 
@@ -642,20 +619,15 @@ const updateDarkModeStart = () => {
     @close="showImportModal = false"
     @esc="showImportModal = false"
     @afterEnter="inputImportRef?.focus()"
-    @afterLeave="textImportValue = ``"
+    @afterLeave="textImportValue = ''"
   >
     <NInput
       ref="inputImportRef"
       :value="textImportValue"
       type="textarea"
       :placeholder="`1.支持 ZIP 文件链接\n2.支持快照分享链接\n每行一个\n空白行自动忽略\n非法链接行自动忽略`"
-      :autosize="{
-        minRows: 8,
-        maxRows: 16,
-      }"
-      :inputProps="{
-        style: `white-space: nowrap;`,
-      }"
+      :autosize="{ minRows: 8, maxRows: 16 }"
+      :inputProps="{ style: 'white-space: nowrap;' }"
       @update:value="
         if (!importNetwork.loading) {
           textImportValue = $event;
@@ -673,13 +645,13 @@ const updateDarkModeStart = () => {
     style="width: 620px"
     @positiveClick="settingsDlgShow = false"
   >
-    <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn">
-      关闭生成分享链接弹窗提醒
-    </NCheckbox>
+    <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn"
+      >关闭生成分享链接弹窗提醒</NCheckbox
+    >
     <div h-1px my-10px bg="#eee" />
-    <NCheckbox v-model:checked="settingsStore.ignoreWasmWarn">
-      关闭浏览器版本正则表达式 WASM(GC) 提醒
-    </NCheckbox>
+    <NCheckbox v-model:checked="settingsStore.ignoreWasmWarn"
+      >关闭浏览器版本正则表达式 WASM(GC) 提醒</NCheckbox
+    >
     <div h-1px my-10px bg="#eee" />
     <div flex gap-10px>
       <NSwitch v-model:value="settingsStore.autoUploadImport" />
@@ -688,7 +660,22 @@ const updateDarkModeStart = () => {
     <div h-1px my-10px bg="#eee" />
     <div flex gap-10px items-center>
       <NSwitch v-model:value="settingsStore.lowMemoryMode" />
-      <div>低内存模式（限制预览缓存、减少动画、降低实时开销）</div>
+      <div>低内存模式（限制预览缓存、减少动画、降低实时更新开销）</div>
+    </div>
+    <div h-1px my-10px bg="#eee" />
+    <div flex gap-10px items-center>
+      <NSwitch v-model:value="settingsStore.autoExpandSnapshots" />
+      <div>{{ t('settings.autoExpandSnapshots') }}</div>
+    </div>
+    <div h-1px my-10px bg="#eee" />
+    <div flex gap-10px items-center>
+      <div class="w-100px">{{ t('settings.locale') }}</div>
+      <NRadioGroup v-model:value="settingsStore.locale">
+        <NSpace>
+          <NRadio value="zh">{{ t('settings.localeZh') }}</NRadio>
+          <NRadio value="en">{{ t('settings.localeEn') }}</NRadio>
+        </NSpace>
+      </NRadioGroup>
     </div>
     <div h-1px my-10px bg="#eee" />
     <div flex flex-col gap-10px>
@@ -708,7 +695,6 @@ const updateDarkModeStart = () => {
           class="w-120px"
           @blur="updateDarkModeStart"
         />
-        <span text-12px opacity-70> 到达该时间后自动切换到夜间模式 </span>
       </div>
     </div>
   </NModal>
