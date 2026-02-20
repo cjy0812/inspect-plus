@@ -1,14 +1,14 @@
 <script lang="ts" setup>
-import { loadingBar, message } from '@/utils/discrete';
+import FullScreenDialog from '@/components/FullScreenDialog.vue';
+import TrackCard from '@/components/TrackCard.vue';
+import { loadingBar } from '@/utils/discrete';
 import AttrCard from './AttrCard.vue';
 import OverlapCard from './OverlapCard.vue';
 import RuleCard from './RuleCard.vue';
 import ScreenshotCard from './ScreenshotCard.vue';
 import SearchCard from './SearchCard.vue';
-import WindowCard from './WindowCard.vue';
 import { useSnapshotStore } from './snapshot';
-import TrackCard from '@/components/TrackCard.vue';
-import FullScreenDialog from '@/components/FullScreenDialog.vue';
+import WindowCard from './WindowCard.vue';
 
 const { snapshot, rootNode, loading, redirected, trackData, trackShow } =
   useSnapshotStore();
@@ -21,12 +21,39 @@ watchEffect(() => {
   }
 });
 
+const { settingsStore } = useStorageStore();
 const searchShow = useStorage('searchShow', true, sessionStorage);
 const ruleShow = useStorage('ruleShow', false, sessionStorage);
 const attrShow = useStorage('attrShow', true, sessionStorage);
+const settingsDlgShow = shallowRef(false);
 
 const clickSettings = () => {
-  message.info('暂未实现');
+  settingsDlgShow.value = true;
+};
+
+const normalizeClock = (value: string) => {
+  const v = value.trim();
+  if (!/^\d{1,2}:\d{1,2}$/.test(v)) {
+    return null;
+  }
+  const [hText, mText] = v.split(':');
+  const h = Number(hText);
+  const m = Number(mText);
+  if (
+    !Number.isInteger(h) ||
+    !Number.isInteger(m) ||
+    h < 0 ||
+    h > 23 ||
+    m < 0 ||
+    m > 59
+  ) {
+    return null;
+  }
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+const updateDarkModeStart = () => {
+  settingsStore.darkModeStart =
+    normalizeClock(settingsStore.darkModeStart) || '18:00';
 };
 </script>
 <template>
@@ -134,6 +161,55 @@ const clickSettings = () => {
         @close="trackShow = false"
       />
     </FullScreenDialog>
+
+    <NModal
+      v-model:show="settingsDlgShow"
+      preset="dialog"
+      title="设置"
+      :showIcon="false"
+      positiveText="关闭"
+      style="width: 620px"
+      @positiveClick="settingsDlgShow = false"
+    >
+      <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn">
+        关闭生成分享链接弹窗提醒
+      </NCheckbox>
+      <div h-1px my-10px bg="#eee" />
+      <NCheckbox v-model:checked="settingsStore.ignoreWasmWarn">
+        关闭浏览器版本正则表达式 WASM(GC) 提醒
+      </NCheckbox>
+      <div h-1px my-10px bg="#eee" />
+      <div flex gap-10px>
+        <NSwitch v-model:value="settingsStore.autoUploadImport" />
+        <div>打开快照页面自动生成分享链接（请确保不含隐私）</div>
+      </div>
+      <div h-1px my-10px bg="#eee" />
+      <div flex gap-10px items-center>
+        <NSwitch v-model:value="settingsStore.lowMemoryMode" />
+        <div>低内存模式（限制预览缓存、减少动画、降低实时开销）</div>
+      </div>
+      <div h-1px my-10px bg="#eee" />
+      <div flex flex-col gap-10px>
+        <div>主题模式</div>
+        <NRadioGroup v-model:value="settingsStore.themeMode">
+          <NSpace>
+            <NRadio value="auto">自动</NRadio>
+            <NRadio value="light">强制日间</NRadio>
+            <NRadio value="dark">强制夜间</NRadio>
+          </NSpace>
+        </NRadioGroup>
+        <div flex items-center gap-10px>
+          <div class="w-100px">自动切换时间</div>
+          <NInput
+            v-model:value="settingsStore.darkModeStart"
+            placeholder="18:00"
+            class="w-120px"
+            @blur="updateDarkModeStart"
+          />
+          <span text-12px opacity-70>到达该时间后自动切换到夜间模式</span>
+        </div>
+      </div>
+    </NModal>
   </template>
   <div
     v-else-if="!loading && !redirected"
@@ -145,13 +221,14 @@ const clickSettings = () => {
     justify-center
   >
     <div mb-8px>
-      <span>快照数据缺失，</span>
+      <span>快照数据缺失</span>
       <a
         href="https://gkd.li/guide/snapshot#share-note"
         target="_blank"
         referrerpolicy="no-referrer"
-        >分享须知</a
       >
+        分享须知
+      </a>
     </div>
   </div>
 </template>
