@@ -486,7 +486,7 @@ const updateDarkModeEnd = () => {
           <template #trigger>
             <a
               flex
-              href="https://github.com/cjy0812/inspect-Desktop"
+              href="https://github.com/cjy0812/inspect-plus"
               target="_blank"
               rel="noopener noreferrer"
             >
