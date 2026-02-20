@@ -486,7 +486,7 @@ const updateDarkModeStart = () => {
         <NCollapse
           v-model:expandedNames="expandedPackageNames"
           :accordion="false"
-          :displayDirective="'show'"
+          :displayDirective="settingsStore.lowMemoryMode ? 'if' : 'show'"
         >
           <NCollapseItem
             v-for="group in groupedSnapshots"
@@ -505,7 +505,7 @@ const updateDarkModeStart = () => {
             <NCollapse
               v-model:expandedNames="expandedActivityNames"
               :accordion="false"
-              :displayDirective="'show'"
+              :displayDirective="settingsStore.lowMemoryMode ? 'if' : 'show'"
             >
               <NCollapseItem
                 v-for="activity in group.activities"
