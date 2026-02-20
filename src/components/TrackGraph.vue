@@ -148,7 +148,31 @@ const getEdgeDistance = (g: Graph, d: EdgeData): number => {
 const numReg = /\d+/;
 
 const graphRef = shallowRef<Graph>();
+const darkMode = shallowRef(
+  document.documentElement.classList.contains('dark-mode-active'),
+);
+const updateDarkMode = () => {
+  darkMode.value =
+    document.documentElement.classList.contains('dark-mode-active');
+};
+const themeObserver = new MutationObserver(() => {
+  updateDarkMode();
+});
+onMounted(() => {
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+});
+const redrawGraph = async () => {
+  if (!graphRef.value) return;
+  await graphRef.value.draw();
+};
+watch(darkMode, () => {
+  redrawGraph();
+});
 onUnmounted(() => {
+  themeObserver.disconnect();
   if (graphRef.value) {
     graphRef.value.destroy();
   }
@@ -180,6 +204,7 @@ watch(el, async () => {
           pointerEvents: 'none',
           labelPlacement: 'right',
           labelText: treeCtx.value.getLabel(node),
+          labelFill: darkMode.value ? '#e8e8ee' : '#1b1f24',
           labelOffsetX: 2,
           labelFontWeight: qf && !placeholdered ? 'bold' : undefined,
           labelOpacity: placeholdered ? 0.5 : undefined,

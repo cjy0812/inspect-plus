@@ -151,6 +151,13 @@ interface SettingsStore {
   ignoreUploadWarn: boolean;
   ignoreWasmWarn: boolean;
   maxShowNodeSize: number;
+  lowMemoryMode: boolean;
+  themeMode: 'auto' | 'light' | 'dark';
+  darkModeStart: string;
+  darkModeEnd: string;
+  autoExpandSnapshots: boolean;
+  groupRemarks: Record<string, string>;
+  locale: 'zh' | 'en';
 }
 
 interface GlobalStore {

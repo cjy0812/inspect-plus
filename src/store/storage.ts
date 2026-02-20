@@ -53,8 +53,23 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
     ignoreUploadWarn: false,
     ignoreWasmWarn: false,
     maxShowNodeSize: 2000,
+    lowMemoryMode: false,
+    themeMode: 'auto',
+    darkModeStart: '18:00',
+    darkModeEnd: '06:00',
+    autoExpandSnapshots: false,
+    groupRemarks: {},
+    locale: 'zh',
   }),
 );
+
+if (!settingsStore.darkModeStart) settingsStore.darkModeStart = '18:00';
+if (!settingsStore.darkModeEnd) settingsStore.darkModeEnd = '06:00';
+
+// snapshot id -> last viewed time
+export const snapshotViewedTime = await useReactiveIndexedDB<
+  Record<number, number>
+>('snapshotViewedTime', () => ({}));
 
 // snapshot id -> import time
 export const snapshotImportTime = await useReactiveIndexedDB<
@@ -132,6 +147,7 @@ export const importSnapshotId = await useReactiveIndexedDB<
 export const useStorageStore = () => ({
   settingsStore,
   snapshotImportTime,
+  snapshotViewedTime,
   snapshotImageId,
   snapshotImportId,
   importSnapshotId,

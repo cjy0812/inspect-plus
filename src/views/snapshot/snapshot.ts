@@ -26,6 +26,7 @@ const getRemoteImportId = async (id: number): Promise<number> => {
 export const useSnapshotStore = createSharedComposable(() => {
   const route = useRoute();
   const router = useRouter();
+  const { snapshotViewedTime } = useStorageStore();
 
   const snapshotId = shallowRef<number>();
   watchImmediate(
@@ -87,6 +88,9 @@ export const useSnapshotStore = createSharedComposable(() => {
         });
         return;
       }
+    }
+    if (snapshot.value?.id) {
+      snapshotViewedTime[snapshot.value.id] = Date.now();
     }
   });
   const loading = computed(() => update.loading);

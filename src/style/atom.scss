@@ -34,3 +34,9 @@
     display: none;
   }
 }
+
+.low-memory-mode * {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+  scroll-behavior: auto !important;
+}

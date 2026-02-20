@@ -225,7 +225,14 @@ const shareResult = (result: SearchResult) => {
     class="box-shadow-dim"
     :show="show"
   >
-    <div bg-white b-1px b-solid b-gray-200 rounded-4px p-8px>
+    <div
+      class="snapshot-floating-panel"
+      b-1px
+      b-solid
+      b-gray-200
+      rounded-4px
+      p-8px
+    >
       <div flex m-b-4px pr-4px>
         <NRadioGroup v-model:value="enableSearchBySelector">
           <NSpace>
@@ -276,7 +283,7 @@ const shareResult = (result: SearchResult) => {
               break-all
               px-4px
               leading-20px
-              bg="#eee"
+              class="snapshot-token"
               gkd_code
               :title="result.gkd ? `选择器` : `搜索字符`"
             >

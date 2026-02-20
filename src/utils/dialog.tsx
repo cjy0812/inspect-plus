@@ -3,6 +3,7 @@ import { dialog, message } from './discrete';
 export const showTextDLg = ({ title = `批量分享链接`, content = '' }) => {
   dialog.success({
     title,
+    class: 'snapshot-floating-panel',
     style: {
       width: `800px`,
     },
@@ -10,6 +11,7 @@ export const showTextDLg = ({ title = `批量分享链接`, content = '' }) => {
       return (
         <NInput
           type="textarea"
+          class="snapshot-floating-panel"
           autosize={{
             minRows: 8,
             maxRows: 16,
@@ -57,10 +59,11 @@ export const waitShareAgree = async () => {
   if (settingsStore.ignoreUploadWarn) return;
   return new Promise((resolve, reject) => {
     dialog.warning({
+      class: 'snapshot-floating-panel',
       title: '生成分享链接须知',
       content() {
         return (
-          <div>
+          <div class="snapshot-floating-panel">
             <div>所有快照上传分享链接均为公开链接，任何人均可访问。</div>
             <div>请确保快照不包含隐私信息，请勿分享任何敏感信息。</div>
             <NoticeCheckbox class="mt-10px" />

@@ -1,34 +1,32 @@
 <script lang="ts" setup>
-import { loadingBar, message } from '@/utils/discrete';
+import FullScreenDialog from '@/components/FullScreenDialog.vue';
+import SettingsModal from '@/components/SettingsModal.vue';
+import TrackCard from '@/components/TrackCard.vue';
+import { loadingBar } from '@/utils/discrete';
 import AttrCard from './AttrCard.vue';
 import OverlapCard from './OverlapCard.vue';
 import RuleCard from './RuleCard.vue';
 import ScreenshotCard from './ScreenshotCard.vue';
 import SearchCard from './SearchCard.vue';
-import WindowCard from './WindowCard.vue';
+import SelectorTestCard from './SelectorTestCard.vue';
 import { useSnapshotStore } from './snapshot';
-import TrackCard from '@/components/TrackCard.vue';
-import FullScreenDialog from '@/components/FullScreenDialog.vue';
+import WindowCard from './WindowCard.vue';
 
 const { snapshot, rootNode, loading, redirected, trackData, trackShow } =
   useSnapshotStore();
 
 watchEffect(() => {
-  if (loading.value) {
-    loadingBar.start();
-  } else {
-    loadingBar.finish();
-  }
+  if (loading.value) loadingBar.start();
+  else loadingBar.finish();
 });
 
 const searchShow = useStorage('searchShow', true, sessionStorage);
 const ruleShow = useStorage('ruleShow', false, sessionStorage);
 const attrShow = useStorage('attrShow', true, sessionStorage);
-
-const clickSettings = () => {
-  message.info('暂未实现');
-};
+const selectorTestShow = useStorage('selectorTestShow', false, sessionStorage);
+const settingsDlgShow = shallowRef(false);
 </script>
+
 <template>
   <template v-if="snapshot && rootNode">
     <div page-size flex gap-5px>
@@ -44,43 +42,49 @@ const clickSettings = () => {
         <NTooltip placement="right">
           <template #trigger>
             <NButton text>
-              <RouterLink to="/">
-                <SvgIcon name="home" />
-              </RouterLink>
+              <RouterLink to="/"><SvgIcon name="home" /></RouterLink>
             </NButton>
           </template>
           回到首页
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="clickSettings">
-              <SvgIcon name="settings" />
-            </NButton>
+            <NButton text @click="settingsDlgShow = true"
+              ><SvgIcon name="settings"
+            /></NButton>
           </template>
           设置
         </NTooltip>
         <div />
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="searchShow = !searchShow">
-              <SvgIcon name="search-list" />
-            </NButton>
+            <NButton text @click="searchShow = !searchShow"
+              ><SvgIcon name="search-list"
+            /></NButton>
           </template>
           搜索面板
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="attrShow = !attrShow">
-              <SvgIcon name="prop" />
-            </NButton>
+            <NButton text @click="attrShow = !attrShow"
+              ><SvgIcon name="prop"
+            /></NButton>
           </template>
           属性面板
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="ruleShow = !ruleShow">
-              <SvgIcon name="test" />
-            </NButton>
+            <NButton text @click="selectorTestShow = !selectorTestShow"
+              ><SvgIcon name="terminal"
+            /></NButton>
+          </template>
+          测试选择器
+        </NTooltip>
+        <NTooltip placement="right">
+          <template #trigger>
+            <NButton text @click="ruleShow = !ruleShow"
+              ><SvgIcon name="test"
+            /></NButton>
           </template>
           测试规则
         </NTooltip>
@@ -94,9 +98,7 @@ const clickSettings = () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <NButton text>
-                <SvgIcon name="discussion" />
-              </NButton>
+              <NButton text><SvgIcon name="discussion" /></NButton>
             </a>
           </template>
           讨论交流
@@ -110,9 +112,7 @@ const clickSettings = () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <NButton text>
-                <SvgIcon name="warn" />
-              </NButton>
+              <NButton text><SvgIcon name="warn" /></NButton>
             </a>
           </template>
           分享须知
@@ -123,17 +123,23 @@ const clickSettings = () => {
     </div>
 
     <SearchCard :show="searchShow" @updateShow="searchShow = $event" />
+    <SelectorTestCard
+      :show="selectorTestShow"
+      @updateShow="selectorTestShow = $event"
+    />
     <RuleCard :show="ruleShow" @updateShow="ruleShow = $event" />
     <AttrCard :show="attrShow" @updateShow="attrShow = $event" />
     <OverlapCard />
     <FullScreenDialog v-model:show="trackShow" @closed="trackData = undefined">
       <TrackCard
         v-if="trackData"
-        class="bg-white"
+        class="snapshot-floating-panel"
         v-bind="trackData"
         @close="trackShow = false"
       />
     </FullScreenDialog>
+
+    <SettingsModal v-model:show="settingsDlgShow" />
   </template>
   <div
     v-else-if="!loading && !redirected"
@@ -145,13 +151,14 @@ const clickSettings = () => {
     justify-center
   >
     <div mb-8px>
-      <span>快照数据缺失，</span>
+      <span>快照数据缺失</span>
       <a
         href="https://gkd.li/guide/snapshot#share-note"
         target="_blank"
         referrerpolicy="no-referrer"
-        >分享须知</a
       >
+        分享须知
+      </a>
     </div>
   </div>
 </template>
