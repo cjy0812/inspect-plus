@@ -132,12 +132,17 @@ const previewSnapshot = useBatchTask(
   (r) => r.id,
 );
 
-const groupedSnapshots = computed(() => {
+const buildGroupedSnapshots = (
+  snapshots: Snapshot[],
+  snapshotImportTimeMap: Record<number, number>,
+) => {
   const packageMap = new Map<string, Map<string, Snapshot[]>>();
-  for (const snapshot of snapshots.value) {
+  for (const snapshot of snapshots) {
     const packageName = snapshot.appId || snapshot.appInfo?.id || '(unknown)';
     const activityId = snapshot.activityId || '(unknown)';
-    if (!packageMap.has(packageName)) packageMap.set(packageName, new Map());
+    if (!packageMap.has(packageName)) {
+      packageMap.set(packageName, new Map());
+    }
     const activityMap = packageMap.get(packageName)!;
     const list = activityMap.get(activityId) || [];
     list.push(snapshot);
@@ -154,12 +159,42 @@ const groupedSnapshots = computed(() => {
       activities: [...activityMap.entries()]
         .map(([activityId, items]) => ({
           activityId,
-          snapshots: items.sort((a, b) => b.id - a.id),
+          snapshots: [...items].sort(
+            (a, b) =>
+              (snapshotImportTimeMap[b.id] || b.id) -
+              (snapshotImportTimeMap[a.id] || a.id),
+          ),
         }))
         .sort((a, b) => b.snapshots.length - a.snapshots.length),
     }))
     .sort((a, b) => b.activities.length - a.activities.length);
+};
+
+const getAutoExpandedNames = (
+  groups: ReturnType<typeof buildGroupedSnapshots>,
+  packageLimit = 4,
+  activityLimit = 3,
+) => {
+  const packageNames = groups.slice(0, packageLimit).map((g) => g.packageName);
+  const activityNames = groups
+    .slice(0, packageLimit)
+    .flatMap((g) =>
+      g.activities
+        .slice(0, activityLimit)
+        .map((a) => `${g.packageName}::${a.activityId}`),
+    );
+  return { packageNames, activityNames };
+};
+
+const groupedSnapshots = computed(() => {
+  return buildGroupedSnapshots(snapshots.value, snapshotImportTime);
 });
+
+const getItemAppName = (item: Snapshot) => getAppInfo(item).name || item.appId;
+const getItemDeviceText = (item: Snapshot) =>
+  `${getDevice(item).manufacturer} Android ${getDevice(item).release || ''}`;
+const getItemImportTimeText = (item: Snapshot) =>
+  dayjs(snapshotImportTime[item.id] || item.id).format('YYYY-MM-DD HH:mm:ss');
 
 const expandedPackageNames = shallowRef<(string | number)[]>([]);
 const expandedActivityNames = shallowRef<(string | number)[]>([]);
@@ -169,14 +204,13 @@ watchEffect(() => {
     expandedActivityNames.value = [];
     return;
   }
-  expandedPackageNames.value = groupedSnapshots.value
-    .slice(0, 5)
-    .map((g) => g.packageName);
-  expandedActivityNames.value = groupedSnapshots.value
-    .slice(0, 5)
-    .flatMap((g) =>
-      g.activities.slice(0, 4).map((a) => `${g.packageName}::${a.activityId}`),
-    );
+  const { packageNames, activityNames } = getAutoExpandedNames(
+    groupedSnapshots.value,
+    5,
+    4,
+  );
+  expandedPackageNames.value = packageNames;
+  expandedActivityNames.value = activityNames;
 });
 
 const showSubsModel = shallowRef(false);
@@ -418,36 +452,40 @@ const execSelector = useTask(async () => {
                     <div
                       class="min-w-0 inline-flex max-w-full cursor-default select-text flex-col"
                     >
-                      <div text-12px opacity-70>
-                        创建时间:
-                        {{ dayjs(item.id).format('YYYY-MM-DD HH:mm:ss') }}
+                      <div flex items-center gap-6px leading-18px>
+                        <NTag size="small" type="warning">{{
+                          dayjs(item.id).format('MM-DD HH:mm:ss')
+                        }}</NTag>
+                        <span class="truncate font-600">{{
+                          getItemAppName(item)
+                        }}</span>
                       </div>
-                      <div text-12px opacity-70>
-                        导入时间:
-                        {{
-                          dayjs(snapshotImportTime[item.id] || item.id).format(
-                            'YYYY-MM-DD HH:mm:ss',
-                          )
-                        }}
-                      </div>
-                      <div text-12px opacity-70>
-                        设备:
-                        {{
-                          `${getDevice(item).manufacturer} Android ${getDevice(item).release || ''}`
-                        }}
-                      </div>
-                      <div text-12px opacity-70>
-                        应用名称: {{ getAppInfo(item).name }}
-                      </div>
-                      <div text-12px opacity-70>应用ID: {{ item.appId }}</div>
-                      <div text-12px opacity-70>
-                        版本代码: {{ getAppInfo(item).versionCode }}
-                      </div>
-                      <div text-12px opacity-70>
-                        版本号: {{ getAppInfo(item).versionName || 'unknown' }}
-                      </div>
-                      <div text-12px opacity-70>
+                      <div text-12px mt-2px class="font-600">
                         界面ID: {{ item.activityId || '(unknown)' }}
+                      </div>
+                      <div mt-4px text-12px class="opacity-75">
+                        <span
+                          >创建时间:
+                          {{
+                            dayjs(item.id).format('YYYY-MM-DD HH:mm:ss')
+                          }}</span
+                        >
+                        <span class="mx-6px opacity-45">|</span>
+                        <span>导入时间: {{ getItemImportTimeText(item) }}</span>
+                      </div>
+                      <div mt-2px text-12px class="opacity-70">
+                        <span>设备: {{ getItemDeviceText(item) }}</span>
+                        <span class="mx-6px opacity-45">|</span>
+                        <span>应用ID: {{ item.appId }}</span>
+                        <span class="mx-6px opacity-45">|</span>
+                        <span
+                          >版本代码: {{ getAppInfo(item).versionCode }}</span
+                        >
+                        <span class="mx-6px opacity-45">|</span>
+                        <span
+                          >版本号:
+                          {{ getAppInfo(item).versionName || 'unknown' }}</span
+                        >
                       </div>
                     </div>
                     <NButton

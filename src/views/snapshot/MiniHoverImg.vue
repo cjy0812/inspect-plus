@@ -18,7 +18,7 @@ const {
     <!-- 渲染在外部防止被遮挡 -->
     <div
       v-show="imgHover"
-      class="MiniHoverImg"
+      class="MiniHoverImg mini-hover-image"
       :style="{
         left: imgBounding.right.value + 4 + 'px',
         top: imgBounding.top.value + 'px',
@@ -27,7 +27,6 @@ const {
       fixed
       overflow-hidden
       z-2
-      bg-white
       h-200px
       w-200px
       border-1px
@@ -50,7 +49,7 @@ const {
         p-1px
         z-1
         text-13px
-        class="leading-[1] bg-[rgba(256,256,256,0.7)]"
+        class="leading-[1] mini-hover-token"
       >
         {{ `${hoverPosition.ox.toFixed(0)}, ${hoverPosition.oy.toFixed(0)}` }}
       </div>
@@ -62,7 +61,7 @@ const {
         p-1px
         z-1
         text-12px
-        class="leading-[1] bg-[rgba(256,256,256,0.7)]"
+        class="leading-[1] mini-hover-token"
         flex
         flex-col
         flex-items-center
@@ -85,7 +84,7 @@ const {
         p-1px
         z-1
         text-12px
-        class="leading-[1] bg-[rgba(256,256,256,0.7)]"
+        class="leading-[1] mini-hover-token"
         flex
         flex-col
         flex-items-center
