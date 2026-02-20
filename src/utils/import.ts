@@ -7,6 +7,19 @@ import { setSnapshot, snapshotStorage } from './snapshot';
 import { getImportFileUrl, getImportId } from './url';
 import { loadAsync } from './chunk';
 import type { JSZipType } from './chunk';
+import { useSnapshotGroupStore } from '@/store/snapshot-groups';
+
+const buildSnapshotMeta = (snapshot: Snapshot): SnapshotMeta => {
+  const snapshotWithPackage = snapshot as Snapshot & { packageName?: string };
+  const packageName = snapshotWithPackage.packageName ?? snapshot.appId;
+  return {
+    id: String(snapshot.id),
+    packageName,
+    activityId: snapshot.activityId,
+    createdAt: Date.now(),
+    visited: false,
+  };
+};
 
 const parseZip = async (zip: JSZipType) => {
   const snapshotFile = zip.filter((s) => s.endsWith(`.json`))[0];
@@ -15,6 +28,7 @@ const parseZip = async (zip: JSZipType) => {
     return false;
   }
   const snapshot = JSON.parse(await snapshotFile.async('string')) as Snapshot;
+  useSnapshotGroupStore().insertSnapshot(buildSnapshotMeta(snapshot));
   const screenshotBf = await screenshotFile.async('arraybuffer');
   await setSnapshot(snapshot, screenshotBf);
   return true;
@@ -111,6 +125,7 @@ export const importFromNetwork = async (
           }
           screenshotBf = await screenshotFile.async('arraybuffer');
           snapshot = JSON.parse(await snapshotFile.async('string')) as Snapshot;
+          useSnapshotGroupStore().insertSnapshot(buildSnapshotMeta(snapshot));
         } else {
           throw new Error(`file must be png or zip`);
         }
