@@ -31,11 +31,12 @@ const normalizeDeviceUrl = (input: string): string | null => {
   const raw = input.trim();
   if (!raw) return null;
   const withProtocol = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
-  const withPort = /:\d+(\/|$)/.test(withProtocol)
-    ? withProtocol
-    : `${withProtocol}:8888`;
   return errorWrap(
-    () => new URL(withPort).origin,
+    () => {
+      const url = new URL(withProtocol);
+      if (!url.port) url.port = '8888';
+      return url.origin;
+    },
     () => null,
   );
 };
