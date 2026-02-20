@@ -61,7 +61,7 @@ export const waitShareAgree = async () => {
       title: '生成分享链接须知',
       content() {
         return (
-          <div>
+          <div class="snapshot-floating-panel">
             <div>所有快照上传分享链接均为公开链接，任何人均可访问。</div>
             <div>请确保快照不包含隐私信息，请勿分享任何敏感信息。</div>
             <NoticeCheckbox class="mt-10px" />
