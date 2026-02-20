@@ -120,10 +120,14 @@ const importNetwork = useTask(async () => {
 useEventListener(document.body, 'paste', (e) => {
   if (showImportModal.value) return;
   const target = e.target as HTMLElement;
+  const className =
+    target.getAttribute?.('class') ||
+    (typeof target.className == 'string' ? target.className : '');
   if (
     target instanceof HTMLInputElement ||
     target instanceof HTMLTextAreaElement ||
-    (target.className || '').includes('input')
+    target.classList?.contains('input') ||
+    className.includes('input')
   ) {
     return;
   }
