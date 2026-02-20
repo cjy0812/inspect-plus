@@ -74,6 +74,11 @@ const groupedSnapshots = computed(() => {
   return [...packageMap.entries()]
     .map(([packageName, activityMap]) => ({
       packageName,
+      appName:
+        [...activityMap.values()]
+          .flat()
+          .map((s) => getAppInfo(s).name)
+          .find(Boolean) || packageName,
       activities: [...activityMap.entries()]
         .map(([activityId, items]) => ({
           activityId,
