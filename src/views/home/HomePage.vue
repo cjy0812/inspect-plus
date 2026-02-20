@@ -420,7 +420,7 @@ const updateDarkModeEnd = () => {
           <template #trigger>
             <a
               flex
-              href="https://github.com/gkd-kit/inspect"
+              href="https://github.com/cjy0812/inspect-Desktop"
               target="_blank"
               rel="noopener noreferrer"
             >
