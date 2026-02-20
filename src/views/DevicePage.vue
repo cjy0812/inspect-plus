@@ -250,9 +250,9 @@ const execSelector = useTask(async () => {
       @close="showSubsModel = false"
     >
       <template #header>
-        <div flex items-center>
+        <div :ref="onRef" flex items-center cursor-move>
           <span>修改内存订阅</span>
-          <div :ref="onRef" flex-1 cursor-move />
+          <div flex-1 />
         </div>
       </template>
       <NInput
@@ -288,9 +288,9 @@ const execSelector = useTask(async () => {
       @close="showSelectorModel = false"
     >
       <template #header>
-        <div flex items-center>
+        <div :ref="onRef" flex items-center cursor-move>
           <span>执行选择器</span>
-          <div :ref="onRef" flex-1 cursor-move />
+          <div flex-1 />
         </div>
       </template>
       <NInput
