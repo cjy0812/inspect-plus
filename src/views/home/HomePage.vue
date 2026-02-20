@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import ActionCard from '@/components/ActionCard.vue';
 import { toValidURL } from '@/utils/check';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
@@ -701,7 +701,7 @@ const updateDarkModeEnd = () => {
         </NSpace>
       </NRadioGroup>
       <div flex items-center gap-10px>
-        <div class="w-100px">自动切换时间</div>
+        <div class="w-100px">开始时间</div>
         <NInput
           v-model:value="settingsStore.darkModeStart"
           placeholder="18:00"
