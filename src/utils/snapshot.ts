@@ -69,6 +69,14 @@ export const screenshotStorage = useStorage<ArrayBuffer>({
 });
 
 export const setSnapshot = async (snapshot: Snapshot, bf: ArrayBuffer) => {
+  const appId = snapshot.appId || snapshot.appInfo?.id || '';
+  snapshot.appId = appId;
+  if (snapshot.appInfo && !snapshot.appInfo.id) {
+    snapshot.appInfo.id = appId;
+  }
+  if (!snapshot.activityId) {
+    snapshot.activityId = '(unknown)';
+  }
   Object.entries(importSnapshotId).forEach(([k, v]) => {
     if (v == snapshot.id) {
       delete importSnapshotId[k];
