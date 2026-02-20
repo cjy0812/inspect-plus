@@ -170,12 +170,11 @@ const checkedRowKeys = shallowRef<number[]>([]);
 const checkedSet = computed(() => new Set(checkedRowKeys.value));
 const toggleChecked = (id: number, checked: boolean) => {
   if (checked) {
-    if (!checkedSet.value.has(id)) {
+    if (!checkedSet.value.has(id))
       checkedRowKeys.value = [...checkedRowKeys.value, id];
-    }
-    return;
+  } else {
+    checkedRowKeys.value = checkedRowKeys.value.filter((k) => k != id);
   }
-  checkedRowKeys.value = checkedRowKeys.value.filter((k) => k != id);
 };
 const checkedSnapshots = () =>
   Promise.all(
@@ -335,15 +334,13 @@ const updateDarkModeStart = () => {
               <NButton
                 :loading="batchDownloadZip.loading"
                 @click="batchDownloadZip.invoke"
+                >批量下载-快照</NButton
               >
-                批量下载-快照
-              </NButton>
               <NButton
                 :loading="batchDownloadImage.loading"
                 @click="batchDownloadImage.invoke"
+                >批量下载-图片</NButton
               >
-                批量下载-图片
-              </NButton>
             </NSpace>
           </NPopover>
           <NPopover>
@@ -352,15 +349,13 @@ const updateDarkModeStart = () => {
               <NButton
                 :loading="batchShareZipUrl.loading"
                 @click="batchShareZipUrl.invoke"
+                >批量生成链接-快照</NButton
               >
-                批量生成链接-快照
-              </NButton>
               <NButton
                 :loading="batchShareImageUrl.loading"
                 @click="batchShareImageUrl.invoke"
+                >批量生成链接-图片</NButton
               >
-                批量生成链接-图片
-              </NButton>
             </NSpace>
           </NPopover>
           <NButton @click="batchDelete.invoke">批量删除</NButton>
@@ -441,8 +436,9 @@ const updateDarkModeStart = () => {
       </div>
     </div>
 
-    <NSpin :show="loading" class="flex-1 min-h-0 overflow-hidden">
-      <div v-if="!groupedSnapshots.length" py-40px text-center opacity-70>
+    <div class="flex-1 min-h-0 overflow-hidden">
+      <NSpin v-if="loading" class="h-full" />
+      <div v-else-if="!groupedSnapshots.length" py-40px text-center opacity-70>
         未找到匹配快照
       </div>
       <div v-else class="h-full min-h-0 overflow-auto pr-6px">
@@ -458,11 +454,9 @@ const updateDarkModeStart = () => {
           >
             <template #header>
               <div flex items-center gap-8px>
-                <NTag type="info" size="small">包名</NTag>
-                <code>{{ group.packageName }}</code>
-                <NTag size="small"
-                  >{{ group.activities.length }} Activities</NTag
-                >
+                <NTag type="info" size="small">应用</NTag>
+                <code>{{ `${group.appName} (${group.packageName})` }}</code>
+                <NTag size="small">{{ group.activities.length }} 个界面</NTag>
               </div>
             </template>
             <NCollapse
@@ -480,7 +474,7 @@ const updateDarkModeStart = () => {
                     <NTag type="success" size="small">Activity</NTag>
                     <code>{{ activity.activityId }}</code>
                     <NTag size="small"
-                      >{{ activity.snapshots.length }} snapshots</NTag
+                      >{{ activity.snapshots.length }} 个快照</NTag
                     >
                   </div>
                 </template>
@@ -517,62 +511,65 @@ const updateDarkModeStart = () => {
                             @mouseenter="ensurePreview(item.id)"
                           >
                             <div flex items-center gap-8px>
-                              <NTag size="small" type="warning">
-                                {{ dayjs(item.id).format('MM-DD HH:mm:ss') }}
-                              </NTag>
+                              <NTag size="small" type="warning">{{
+                                dayjs(item.id).format('MM-DD HH:mm:ss')
+                              }}</NTag>
                               <NTag
                                 v-if="snapshotViewedTime[item.id]"
                                 size="small"
                                 type="success"
+                                >已查看</NTag
                               >
-                                已查看
-                              </NTag>
-                              <span class="truncate">
-                                {{ getAppInfo(item).name || item.appId }}
-                              </span>
+                              <span class="truncate">{{
+                                getAppInfo(item).name || item.appId
+                              }}</span>
                             </div>
-                            <div text-12px opacity-70>
-                              创建时间:
-                              {{ dayjs(item.id).format('YYYY-MM-DD HH:mm:ss') }}
-                            </div>
-                            <div text-12px opacity-70>
-                              导入时间:
-                              {{
-                                dayjs(
-                                  snapshotImportTime[item.id] || item.id,
-                                ).format('YYYY-MM-DD HH:mm:ss')
-                              }}
-                            </div>
-                            <div text-12px opacity-70>
-                              设备:
-                              {{
-                                `${getDevice(item).manufacturer} Android ${getDevice(item).release || ''}`
-                              }}
-                            </div>
-                            <div text-12px opacity-70>
-                              应用名称: {{ getAppInfo(item).name }}
-                            </div>
-                            <div text-12px opacity-70>
-                              应用ID: {{ item.appId }}
-                            </div>
-                            <div text-12px opacity-70>
-                              版本代码: {{ getAppInfo(item).versionCode }}
-                            </div>
-                            <div text-12px opacity-70>
-                              版本号:
-                              {{ getAppInfo(item).versionName || 'unknown' }}
-                            </div>
-                            <div text-12px opacity-70>
+                            <div text-12px mt-2px>
                               界面ID: {{ item.activityId || '(unknown)' }}
+                            </div>
+                            <div text-11px opacity-65 leading-18px>
+                              <span mr-10px
+                                >创建:
+                                {{
+                                  dayjs(item.id).format('YYYY-MM-DD HH:mm:ss')
+                                }}</span
+                              >
+                              <span
+                                >导入:
+                                {{
+                                  dayjs(
+                                    snapshotImportTime[item.id] || item.id,
+                                  ).format('YYYY-MM-DD HH:mm:ss')
+                                }}</span
+                              >
+                            </div>
+                            <div text-11px opacity-65 leading-18px>
+                              <span mr-10px
+                                >设备:
+                                {{
+                                  `${getDevice(item).manufacturer} Android ${getDevice(item).release || ''}`
+                                }}</span
+                              >
+                              <span mr-10px>应用ID: {{ item.appId }}</span>
+                              <span mr-10px
+                                >版本代码:
+                                {{ getAppInfo(item).versionCode }}</span
+                              >
+                              <span
+                                >版本号:
+                                {{
+                                  getAppInfo(item).versionName || 'unknown'
+                                }}</span
+                              >
                             </div>
                           </div>
                         </template>
-                        <div min-w-220px max-w-360px>
+                        <div class="inline-block w-fit max-w-90vw">
                           <NSpin :show="previewLoadingMap[item.id]">
                             <img
                               v-if="previewUrlMap[item.id]"
                               :src="previewUrlMap[item.id]"
-                              class="max-h-260px max-w-340px rounded-6px"
+                              class="h-auto w-auto max-h-320px max-w-80vw rounded-6px"
                               alt="preview"
                             />
                             <div v-else py-20px text-center opacity-70>
@@ -605,7 +602,7 @@ const updateDarkModeStart = () => {
           </NCollapseItem>
         </NCollapse>
       </div>
-    </NSpin>
+    </div>
   </div>
 
   <NModal
