@@ -94,6 +94,37 @@ const selectText = computed(() => {
   if (!focusNode.value) return '';
   return getNodeSelectorText(focusNode.value);
 });
+
+const attrExplainMap: Record<string, string> = {
+  id: '控件资源 ID，通常最稳定，常用于构建精准选择器。',
+  vid: '虚拟 ID，部分场景可辅助定位同类控件。',
+  name: '控件类型名，表示当前节点的组件/类名。',
+  text: '控件文本内容，适合定位按钮、标题等可见文案。',
+  textLen: '文本长度，便于快速过滤长文本节点。',
+  desc: '无障碍描述信息，常见于图标按钮。',
+  descLen: '描述文本长度，用于补充筛选条件。',
+  isClickable: '是否可点击，可用于判断交互节点。',
+  childCount: '子节点数量，用于识别容器节点结构。',
+  index: '在父节点中的序号，结构变动时稳定性一般。',
+  depth: '节点深度，层级过深时通常更脆弱。',
+  left: '节点左边界像素坐标。',
+  top: '节点上边界像素坐标。',
+  right: '节点右边界像素坐标。',
+  bottom: '节点下边界像素坐标。',
+  width: '节点宽度（像素）。',
+  height: '节点高度（像素）。',
+  _id: '快照生成时的遍历序号，仅用于本地分析。',
+  _pid: '父节点的 _id，用于还原树结构。',
+  'text.length': 'text 字段的字符数量。',
+  'desc.length': 'desc 字段的字符数量。',
+  _selector: '自动生成的节点选择器表达式。',
+};
+
+const getAttrExplain = (name: string) => {
+  return (
+    attrExplainMap[name] || '该属性用于描述节点特征，可结合其他字段一起定位。'
+  );
+};
 </script>
 
 <template>
@@ -130,26 +161,31 @@ const selectText = computed(() => {
       <NTbody>
         <NTr v-for="attrx in attrs" :key="attrx.name">
           <NTd @click="copy(`${attrx.name}=${attrx.desc}`)">
-            <div v-if="attrx.tip" flex justify-between items-center>
-              <div>
-                {{ attrx.name }}
-              </div>
-              <NTooltip>
-                <template #trigger>
-                  <NIcon size="16">
-                    <SvgIcon v-if="attrx.tip.type == 'info'" name="info" />
-                    <SvgIcon
-                      v-else-if="attrx.tip.type == 'quickFind'"
-                      name="ok"
-                    />
-                  </NIcon>
+            <NTooltip :delay="2000" placement="top-start">
+              <template #trigger>
+                <div v-if="attrx.tip" flex justify-between items-center>
+                  <div>
+                    {{ attrx.name }}
+                  </div>
+                  <NTooltip>
+                    <template #trigger>
+                      <NIcon size="16">
+                        <SvgIcon v-if="attrx.tip.type == 'info'" name="info" />
+                        <SvgIcon
+                          v-else-if="attrx.tip.type == 'quickFind'"
+                          name="ok"
+                        />
+                      </NIcon>
+                    </template>
+                    {{ attrx.tip.desc }}
+                  </NTooltip>
+                </div>
+                <template v-else>
+                  {{ attrx.name }}
                 </template>
-                {{ attrx.tip.desc }}
-              </NTooltip>
-            </div>
-            <template v-else>
-              {{ attrx.name }}
-            </template>
+              </template>
+              {{ getAttrExplain(attrx.name) }}
+            </NTooltip>
           </NTd>
           <NTd>
             <NEllipsis
