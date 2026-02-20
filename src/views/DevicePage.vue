@@ -1,20 +1,20 @@
-<script setup lang="tsx">
+<script setup lang="ts">
 import { useDeviceApi } from '@/utils/api';
 import { toValidURL } from '@/utils/check';
 import { message } from '@/utils/discrete';
 import { errorWrap } from '@/utils/error';
+import { getAppInfo } from '@/utils/node';
 import { delay } from '@/utils/others';
 import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
-import { useSnapshotColumns } from '@/utils/table';
 import { useBatchTask, useTask } from '@/utils/task';
-import type { DataTableColumns, PaginationProps } from 'naive-ui';
-import type { SortState } from 'naive-ui/es/data-table/src/interface';
-import pLimit from 'p-limit';
+import dayjs from 'dayjs';
 import JSON5 from 'json5';
+import pLimit from 'p-limit';
 
 const router = useRouter();
 const { api, origin, serverInfo } = useDeviceApi();
 const link = useStorage(`device_link`, ``);
+
 const connect = useTask(async () => {
   if (!link.value) return;
   origin.value = errorWrap(
@@ -59,6 +59,7 @@ const captureSnapshot = useTask(async () => {
   result.sort((a, b) => b.id - a.id);
   snapshots.value = result;
 });
+
 const downloadAllSnapshot = useTask(async () => {
   const snapshotIds = (await api.getSnapshots()).map((s) => s.id);
   const existSnapshotIds = new Set(
@@ -92,20 +93,6 @@ const downloadAllSnapshot = useTask(async () => {
   message.success(`导入${r}条新记录`);
 });
 
-const {
-  activityIdCol,
-  appIdCol,
-  appNameCol,
-  ctimeCol,
-  appVersionCodeCol,
-  appVersionNameCol,
-  resetColWidth,
-} = useSnapshotColumns();
-const handleSorterChange = (sorter: SortState) => {
-  if (sorter.columnKey == ctimeCol.key) {
-    ctimeCol.sortOrder = sorter.order;
-  }
-};
 const previewSnapshot = useBatchTask(
   async (row: Snapshot) => {
     if (!(await snapshotStorage.hasItem(row.id))) {
@@ -126,48 +113,45 @@ const previewSnapshot = useBatchTask(
   (r) => r.id,
 );
 
-const columns: DataTableColumns<Snapshot> = [
-  ctimeCol,
-  appNameCol,
-  appIdCol,
-  appVersionCodeCol,
-  appVersionNameCol,
-  activityIdCol,
-  {
-    key: `actions`,
-    title: `操作`,
-    fixed: 'right',
-    width: `120px`,
-    render(row) {
-      return (
-        <NSpace size="small">
-          <NButton
-            size="small"
-            loading={previewSnapshot.loading[row.id]}
-            onClick={() => previewSnapshot.invoke(row)}
-          >
-            查看
-          </NButton>
-        </NSpace>
-      );
-    },
-  },
-];
-
-const pagination = shallowReactive<PaginationProps>({
-  page: 1,
-  pageSize: 50,
-  showSizePicker: true,
-  pageSizes: [50, 100],
-  onChange: (page: number) => {
-    pagination.page = page;
-  },
-  onUpdatePageSize: (pageSize: number) => {
-    pagination.pageSize = pageSize;
-    pagination.page = 1;
-  },
+const groupedSnapshots = computed(() => {
+  const packageMap = new Map<string, Map<string, Snapshot[]>>();
+  for (const snapshot of snapshots.value) {
+    const packageName = snapshot.appId || snapshot.appInfo?.id || '(unknown)';
+    const activityId = snapshot.activityId || '(unknown)';
+    let activityMap = packageMap.get(packageName);
+    if (!activityMap) {
+      activityMap = new Map();
+      packageMap.set(packageName, activityMap);
+    }
+    const list = activityMap.get(activityId) || [];
+    list.push(snapshot);
+    activityMap.set(activityId, list);
+  }
+  return [...packageMap.entries()]
+    .map(([packageName, activityMap]) => ({
+      packageName,
+      activities: [...activityMap.entries()]
+        .map(([activityId, items]) => ({
+          activityId,
+          snapshots: items.sort((a, b) => b.id - a.id),
+        }))
+        .sort((a, b) => b.snapshots.length - a.snapshots.length),
+    }))
+    .sort((a, b) => b.activities.length - a.activities.length);
 });
-watch(pagination, resetColWidth);
+
+const expandedPackageNames = shallowRef<(string | number)[]>([]);
+const expandedActivityNames = shallowRef<(string | number)[]>([]);
+watchEffect(() => {
+  expandedPackageNames.value = groupedSnapshots.value
+    .slice(0, 5)
+    .map((g) => g.packageName);
+  expandedActivityNames.value = groupedSnapshots.value
+    .slice(0, 5)
+    .flatMap((g) =>
+      g.activities.slice(0, 4).map((a) => `${g.packageName}::${a.activityId}`),
+    );
+});
 
 const showSubsModel = shallowRef(false);
 const subsText = shallowRef(``);
@@ -200,43 +184,15 @@ const updateSubs = useTask(async () => {
 });
 
 const showSelectorModel = shallowRef(false);
-
-const actionOptions: {
-  value?: string;
-  label: string;
-}[] = [
-  {
-    label: '仅查询',
-    value: ``,
-  },
-  {
-    value: 'click',
-    label: 'click',
-  },
-  {
-    value: 'clickNode',
-    label: 'clickNode',
-  },
-  {
-    value: 'clickCenter',
-    label: 'clickCenter',
-  },
-  {
-    value: 'back',
-    label: 'back',
-  },
-  {
-    value: 'longClick',
-    label: 'longClick',
-  },
-  {
-    value: 'longClickNode',
-    label: 'longClickNode',
-  },
-  {
-    value: 'longClickCenter',
-    label: 'longClickCenter',
-  },
+const actionOptions: { value?: string; label: string }[] = [
+  { label: '仅查询', value: `` },
+  { value: 'click', label: 'click' },
+  { value: 'clickNode', label: 'clickNode' },
+  { value: 'clickCenter', label: 'clickCenter' },
+  { value: 'back', label: 'back' },
+  { value: 'longClick', label: 'longClick' },
+  { value: 'longClickNode', label: 'longClickNode' },
+  { value: 'longClickCenter', label: 'longClickCenter' },
 ];
 const clickAction = shallowReactive({
   selector: ``,
@@ -249,58 +205,33 @@ const execSelector = useTask(async () => {
     fastQuery: clickAction.quickFind,
   });
   if (result.message) {
-    message.success(`操作成功:` + result.message);
+    message.success(`操作成功: ${result.message}`);
     return;
   }
   if (result.action) {
-    message.success((result.result ? `操作成功:` : `操作失败`) + result.action);
+    message.success(
+      (result.result ? `操作成功: ` : `操作失败: `) + result.action,
+    );
   } else if (!result.action && result.result) {
     message.success(`查询成功`);
   }
 });
 
 const placeholder = `
-请输入订阅文本(JSON5语法):
-示例1-更新单个应用的规则:
+请输入订阅文本(JSON5):
+示例1-更新单个应用规则:
 {
   id: 'appId',
   groups: []
 }
 
-示例2-更新多个应用的规则:
+示例2-更新多个应用规则:
 [
-  {
-    id: 'appId1',
-    groups: []
-  },
-  {
-    id: 'appId2',
-    groups: []
-  }
+  { id: 'appId1', groups: [] },
+  { id: 'appId2', groups: [] }
 ]
 
-示例3-更新全局规则(1.7.0):
-{
-  name: '全局规则-1',
-  key: 0,
-  rules: []
-}
-
-示例3-更新多个全局规则(1.7.0):
-[
-  {
-    name: '全局规则-1',
-    key: 0,
-    rules: []
-  },
-  {
-    name: '全局规则-2',
-    key: 1,
-    rules: []
-  }
-]
-
-示例4-更新整个订阅(1.7.0):
+示例3-更新整个订阅:
 {
   apps: [],
   globalGroups: [],
@@ -334,6 +265,7 @@ const placeholder = `
       :placeholder="placeholder"
     />
   </NModal>
+
   <NModal
     v-model:show="showSelectorModel"
     preset="dialog"
@@ -356,11 +288,11 @@ const placeholder = `
         minRows: 4,
         maxRows: 10,
       }"
-      placeholder="请输入合法的选择器"
+      placeholder="请输入合法选择器"
     />
     <div h-15px />
     <NSpace>
-      <NCheckbox v-model:checked="clickAction.quickFind"> 快速查找 </NCheckbox>
+      <NCheckbox v-model:checked="clickAction.quickFind">快速查找</NCheckbox>
       <a
         href="https://gkd.li/api/interfaces/RawCommonProps.html#quickfind"
         target="_blank"
@@ -385,6 +317,7 @@ const placeholder = `
       </a>
     </div>
   </NModal>
+
   <div page-size flex flex-col p-10px gap-10px>
     <div flex items-center gap-24px>
       <RouterLink to="/" class="flex ml-12px" title="首页">
@@ -429,20 +362,86 @@ const placeholder = `
         >
           下载所有快照
         </NButton>
-        <NButton @click="showSubsModel = true"> 修改内存订阅 </NButton>
-        <NButton @click="showSelectorModel = true"> 执行选择器 </NButton>
+        <NButton @click="showSubsModel = true">修改内存订阅</NButton>
+        <NButton @click="showSelectorModel = true">执行选择器</NButton>
       </template>
     </div>
-    <NDataTable
-      striped
-      flex-height
-      :data="snapshots"
-      :columns="columns"
-      :pagination="pagination"
-      size="small"
-      class="flex-1"
-      :scrollX="1200"
-      @update:sorter="handleSorterChange"
-    />
+
+    <NScrollbar class="flex-1 pr-6px">
+      <div v-if="!groupedSnapshots.length" py-40px text-center opacity-70>
+        暂无快照
+      </div>
+      <NCollapse
+        v-else
+        v-model:expandedNames="expandedPackageNames"
+        :accordion="false"
+      >
+        <NCollapseItem
+          v-for="group in groupedSnapshots"
+          :key="group.packageName"
+          :name="group.packageName"
+        >
+          <template #header>
+            <div flex items-center gap-8px>
+              <NTag type="info" size="small">包名</NTag>
+              <code>{{ group.packageName }}</code>
+              <NTag size="small">{{ group.activities.length }} Activities</NTag>
+            </div>
+          </template>
+          <NCollapse
+            v-model:expandedNames="expandedActivityNames"
+            :accordion="false"
+          >
+            <NCollapseItem
+              v-for="activity in group.activities"
+              :key="`${group.packageName}::${activity.activityId}`"
+              :name="`${group.packageName}::${activity.activityId}`"
+            >
+              <template #header>
+                <div flex items-center gap-8px>
+                  <NTag type="success" size="small">Activity</NTag>
+                  <code>{{ activity.activityId }}</code>
+                  <NTag size="small"
+                    >{{ activity.snapshots.length }} snapshots</NTag
+                  >
+                </div>
+              </template>
+              <NSpace vertical :size="6">
+                <div
+                  v-for="item in activity.snapshots"
+                  :key="item.id"
+                  class="rounded-8px border border-solid border-#efeff5 bg-white px-10px py-8px"
+                >
+                  <div flex items-center gap-12px>
+                    <div class="min-w-0 flex-1">
+                      <div flex items-center gap-8px>
+                        <NTag size="small" type="warning">
+                          {{ dayjs(item.id).format('MM-DD HH:mm:ss') }}
+                        </NTag>
+                        <span class="truncate">
+                          {{ getAppInfo(item).name || item.appId }}
+                        </span>
+                      </div>
+                      <div text-12px opacity-70>
+                        ID: {{ item.id }} | 分辨率: {{ item.screenWidth }}x{{
+                          item.screenHeight
+                        }}
+                      </div>
+                    </div>
+                    <NButton
+                      size="small"
+                      :loading="previewSnapshot.loading[item.id]"
+                      @click="previewSnapshot.invoke(item)"
+                    >
+                      查看
+                    </NButton>
+                  </div>
+                </div>
+              </NSpace>
+            </NCollapseItem>
+          </NCollapse>
+        </NCollapseItem>
+      </NCollapse>
+    </NScrollbar>
   </div>
 </template>
