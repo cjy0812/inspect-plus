@@ -2,7 +2,6 @@
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import TrackCard from '@/components/TrackCard.vue';
 import { loadingBar } from '@/utils/discrete';
-import { useI18n } from '@/utils/i18n';
 import AttrCard from './AttrCard.vue';
 import OverlapCard from './OverlapCard.vue';
 import RuleCard from './RuleCard.vue';
@@ -20,7 +19,6 @@ watchEffect(() => {
 });
 
 const { settingsStore } = useStorageStore();
-const { t } = useI18n();
 const searchShow = useStorage('searchShow', true, sessionStorage);
 const ruleShow = useStorage('ruleShow', false, sessionStorage);
 const attrShow = useStorage('attrShow', true, sessionStorage);
@@ -179,17 +177,7 @@ const updateDarkModeStart = () => {
       <div h-1px my-10px bg="#eee" />
       <div flex gap-10px items-center>
         <NSwitch v-model:value="settingsStore.autoExpandSnapshots" />
-        <div>{{ t('settings.autoExpandSnapshots') }}</div>
-      </div>
-      <div h-1px my-10px bg="#eee" />
-      <div flex gap-10px items-center>
-        <div class="w-100px">{{ t('settings.locale') }}</div>
-        <NRadioGroup v-model:value="settingsStore.locale">
-          <NSpace>
-            <NRadio value="zh">{{ t('settings.localeZh') }}</NRadio>
-            <NRadio value="en">{{ t('settings.localeEn') }}</NRadio>
-          </NSpace>
-        </NRadioGroup>
+        <div>自动展开快照</div>
       </div>
       <div h-1px my-10px bg="#eee" />
       <div flex flex-col gap-10px>

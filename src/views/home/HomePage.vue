@@ -18,7 +18,6 @@ import {
   snapshotStorage,
 } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
-import { useI18n } from '@/utils/i18n';
 import { getImagUrl } from '@/utils/url';
 import dayjs from 'dayjs';
 
@@ -26,7 +25,6 @@ const route = useRoute();
 const router = useRouter();
 const { settingsStore, snapshotImportTime, snapshotViewedTime } =
   useStorageStore();
-const { t } = useI18n();
 
 const snapshots = shallowRef<Snapshot[]>([]);
 const loading = shallowRef(true);
@@ -522,7 +520,7 @@ const updateDarkModeStart = () => {
                                 size="small"
                                 type="success"
                               >
-                                {{ t('snapshot.viewed') }}
+                                已查看
                               </NTag>
                               <span class="truncate">
                                 {{ getAppInfo(item).name || item.appId }}
@@ -665,17 +663,7 @@ const updateDarkModeStart = () => {
     <div h-1px my-10px bg="#eee" />
     <div flex gap-10px items-center>
       <NSwitch v-model:value="settingsStore.autoExpandSnapshots" />
-      <div>{{ t('settings.autoExpandSnapshots') }}</div>
-    </div>
-    <div h-1px my-10px bg="#eee" />
-    <div flex gap-10px items-center>
-      <div class="w-100px">{{ t('settings.locale') }}</div>
-      <NRadioGroup v-model:value="settingsStore.locale">
-        <NSpace>
-          <NRadio value="zh">{{ t('settings.localeZh') }}</NRadio>
-          <NRadio value="en">{{ t('settings.localeEn') }}</NRadio>
-        </NSpace>
-      </NRadioGroup>
+      <div>自动展开快照</div>
     </div>
     <div h-1px my-10px bg="#eee" />
     <div flex flex-col gap-10px>
