@@ -97,24 +97,6 @@ interface Snapshot extends Overview {
   nodes: RawNode[];
 }
 
-interface SnapshotMeta {
-  id: string;
-  packageName: string;
-  activityId: string;
-  createdAt: number;
-  visited: boolean;
-}
-
-interface ActivityGroup {
-  activityId: string;
-  snapshots: SnapshotMeta[];
-}
-
-interface PackageGroup {
-  packageName: string;
-  activities: ActivityGroup[];
-}
-
 interface AppInfo {
   id: string;
   name: string;
