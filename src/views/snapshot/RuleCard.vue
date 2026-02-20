@@ -200,7 +200,14 @@ const targetNode = computed(() => {
     class="box-shadow-dim"
     :show="show"
   >
-    <div bg-white b-1px b-solid b-gray-200 rounded-4px p-8px>
+    <div
+      class="snapshot-floating-panel"
+      b-1px
+      b-solid
+      b-gray-200
+      rounded-4px
+      p-8px
+    >
       <div flex m-b-4px pr-4px>
         <div>测试规则</div>
         <div :ref="onRef" flex-1 cursor-move />

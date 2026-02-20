@@ -24,7 +24,7 @@ const left = _1vw * 25.5;
       <template #header>
         <div :ref="onRef" cursor-move>
           位置
-          <span bg="#eee" px-2px>{{
+          <span class="snapshot-token" px-2px>{{
             `${focusPosition.x.toFixed(0)},${focusPosition.y.toFixed(0)}`
           }}</span>
           存在 {{ overlapNodes.length }} 个层叠节点

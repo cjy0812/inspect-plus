@@ -31,3 +31,71 @@ html.dark-mode-active .bg-white {
 html.dark-mode-active [class*='border-#efeff5'] {
   border-color: #373744 !important;
 }
+
+.snapshot-floating-panel {
+  background-color: #fff;
+  color: inherit;
+}
+
+.snapshot-token {
+  background-color: #eee;
+  color: inherit;
+}
+
+.snapshot-row-viewed {
+  background-color: #ecfdf3;
+  border-color: #bbf7d0;
+}
+
+.selector-ast-view {
+  background-color: #d4d4d8;
+  color: #111;
+}
+
+.selector-ast-view-error {
+  background-color: #fecaca;
+}
+
+.selector-error-box {
+  background-color: #fca5a5;
+  color: #111;
+}
+
+.selector-error-arrow {
+  color: #1f2937;
+}
+
+html.dark-mode-active .snapshot-floating-panel {
+  background-color: #1b1b22 !important;
+  color: #e8e8ee !important;
+}
+
+html.dark-mode-active .snapshot-token,
+html.dark-mode-active [bg='#eee'] {
+  background-color: #2d3340 !important;
+  color: #e7eaf3 !important;
+}
+
+html.dark-mode-active .snapshot-row-viewed {
+  background-color: #203229 !important;
+  border-color: #355746 !important;
+}
+
+html.dark-mode-active .selector-ast-view {
+  background-color: #2d3340 !important;
+  color: #e7eaf3 !important;
+}
+
+html.dark-mode-active .selector-ast-view-error {
+  background-color: #5a1f26 !important;
+  color: #ffdede !important;
+}
+
+html.dark-mode-active .selector-error-box {
+  background-color: #4a1e24 !important;
+  color: #ffdede !important;
+}
+
+html.dark-mode-active .selector-error-arrow {
+  color: #f4c2c2 !important;
+}

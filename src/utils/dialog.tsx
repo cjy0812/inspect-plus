@@ -10,6 +10,7 @@ export const showTextDLg = ({ title = `批量分享链接`, content = '' }) => {
       return (
         <NInput
           type="textarea"
+          class="snapshot-floating-panel"
           autosize={{
             minRows: 8,
             maxRows: 16,

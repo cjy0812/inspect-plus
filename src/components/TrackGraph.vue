@@ -180,6 +180,11 @@ watch(el, async () => {
           pointerEvents: 'none',
           labelPlacement: 'right',
           labelText: treeCtx.value.getLabel(node),
+          labelFill: document.documentElement.classList.contains(
+            'dark-mode-active',
+          )
+            ? '#e8e8ee'
+            : '#1b1f24',
           labelOffsetX: 2,
           labelFontWeight: qf && !placeholdered ? 'bold' : undefined,
           labelOpacity: placeholdered ? 0.5 : undefined,
