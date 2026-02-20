@@ -168,6 +168,35 @@ useEventListener(document.body, 'paste', (e) => {
 
 const checkedRowKeys = shallowRef<number[]>([]);
 const checkedSet = computed(() => new Set(checkedRowKeys.value));
+const allFilteredSnapshotIds = computed(() =>
+  filteredSnapshots.value.map((s) => s.id),
+);
+const getActivitySnapshotIds = (activity: { snapshots: Snapshot[] }) =>
+  activity.snapshots.map((s) => s.id);
+const getGroupSnapshotIds = (group: {
+  activities: Array<{ snapshots: Snapshot[] }>;
+}) => group.activities.flatMap((a) => getActivitySnapshotIds(a));
+const getCheckedStats = (ids: number[]) => {
+  if (!ids.length) return { checked: false, indeterminate: false };
+  let checkedCount = 0;
+  ids.forEach((id) => {
+    if (checkedSet.value.has(id)) checkedCount++;
+  });
+  return {
+    checked: checkedCount == ids.length,
+    indeterminate: checkedCount > 0 && checkedCount < ids.length,
+  };
+};
+const setCheckedByIds = (ids: number[], checked: boolean) => {
+  if (checked) {
+    const next = new Set(checkedRowKeys.value);
+    ids.forEach((id) => next.add(id));
+    checkedRowKeys.value = [...next];
+    return;
+  }
+  const idSet = new Set(ids);
+  checkedRowKeys.value = checkedRowKeys.value.filter((id) => !idSet.has(id));
+};
 const toggleChecked = (id: number, checked: boolean) => {
   if (checked) {
     if (!checkedSet.value.has(id))
@@ -225,6 +254,35 @@ const batchShareZipUrl = useTask(async () => {
 
 const settingsDlgShow = shallowRef(false);
 const inputImportRef = shallowRef();
+const groupRemarkModal = shallowReactive({
+  show: false,
+  key: '',
+  title: '',
+  value: '',
+});
+const ensureGroupRemarks = () => {
+  if (!settingsStore.groupRemarks) settingsStore.groupRemarks = {};
+  return settingsStore.groupRemarks;
+};
+const getGroupRemark = (key: string) =>
+  (ensureGroupRemarks()[key] || '').trim();
+const getPackageRemarkKey = (packageName: string) => `package:${packageName}`;
+const getActivityRemarkKey = (packageName: string, activityId: string) =>
+  `activity:${packageName}::${activityId}`;
+const openGroupRemarkModal = (key: string, title: string) => {
+  groupRemarkModal.show = true;
+  groupRemarkModal.key = key;
+  groupRemarkModal.title = title;
+  groupRemarkModal.value = getGroupRemark(key);
+};
+const saveGroupRemark = () => {
+  const key = groupRemarkModal.key;
+  if (!key) return;
+  const value = groupRemarkModal.value.trim();
+  if (value) ensureGroupRemarks()[key] = value;
+  else delete ensureGroupRemarks()[key];
+  groupRemarkModal.show = false;
+};
 
 const previewUrlMap = shallowReactive<Record<number, string>>({});
 const previewLoadingMap = shallowReactive<Record<number, boolean>>({});
@@ -331,6 +389,14 @@ const updateDarkModeEnd = () => {
             <template #icon><SvgIcon name="search" /></template>
           </NButton>
         </NInputGroup>
+        <NCheckbox
+          v-if="allFilteredSnapshotIds.length"
+          :checked="getCheckedStats(allFilteredSnapshotIds).checked"
+          :indeterminate="getCheckedStats(allFilteredSnapshotIds).indeterminate"
+          @update:checked="setCheckedByIds(allFilteredSnapshotIds, $event)"
+        >
+          {{ `全选当前结果 (${allFilteredSnapshotIds.length})` }}
+        </NCheckbox>
         <template v-if="checkedRowKeys.length">
           <NPopover>
             <template #trigger><NButton>批量下载</NButton></template>
@@ -455,9 +521,38 @@ const updateDarkModeEnd = () => {
           >
             <template #header>
               <div flex items-center gap-8px>
+                <NCheckbox
+                  :checked="getCheckedStats(getGroupSnapshotIds(group)).checked"
+                  :indeterminate="
+                    getCheckedStats(getGroupSnapshotIds(group)).indeterminate
+                  "
+                  @click.stop
+                  @update:checked="
+                    setCheckedByIds(getGroupSnapshotIds(group), $event)
+                  "
+                />
                 <NTag type="info" size="small">应用</NTag>
                 <code>{{ `${group.appName} (${group.packageName})` }}</code>
                 <NTag size="small">{{ group.activities.length }} 个界面</NTag>
+                <NTag
+                  v-if="getGroupRemark(getPackageRemarkKey(group.packageName))"
+                  size="small"
+                  class="max-w-240px"
+                >
+                  {{ getGroupRemark(getPackageRemarkKey(group.packageName)) }}
+                </NTag>
+                <NButton
+                  text
+                  size="tiny"
+                  @click.stop="
+                    openGroupRemarkModal(
+                      getPackageRemarkKey(group.packageName),
+                      `应用备注: ${group.packageName}`,
+                    )
+                  "
+                >
+                  备注
+                </NButton>
               </div>
             </template>
             <NCollapse
@@ -472,11 +567,64 @@ const updateDarkModeEnd = () => {
               >
                 <template #header>
                   <div flex items-center gap-8px>
+                    <NCheckbox
+                      :checked="
+                        getCheckedStats(getActivitySnapshotIds(activity))
+                          .checked
+                      "
+                      :indeterminate="
+                        getCheckedStats(getActivitySnapshotIds(activity))
+                          .indeterminate
+                      "
+                      @click.stop
+                      @update:checked="
+                        setCheckedByIds(
+                          getActivitySnapshotIds(activity),
+                          $event,
+                        )
+                      "
+                    />
                     <NTag type="success" size="small">Activity</NTag>
                     <code>{{ activity.activityId }}</code>
                     <NTag size="small"
                       >{{ activity.snapshots.length }} 个快照</NTag
                     >
+                    <NTag
+                      v-if="
+                        getGroupRemark(
+                          getActivityRemarkKey(
+                            group.packageName,
+                            activity.activityId,
+                          ),
+                        )
+                      "
+                      size="small"
+                      class="max-w-240px"
+                    >
+                      {{
+                        getGroupRemark(
+                          getActivityRemarkKey(
+                            group.packageName,
+                            activity.activityId,
+                          ),
+                        )
+                      }}
+                    </NTag>
+                    <NButton
+                      text
+                      size="tiny"
+                      @click.stop="
+                        openGroupRemarkModal(
+                          getActivityRemarkKey(
+                            group.packageName,
+                            activity.activityId,
+                          ),
+                          `界面备注: ${activity.activityId}`,
+                        )
+                      "
+                    >
+                      备注
+                    </NButton>
                   </div>
                 </template>
                 <NSpace vertical :size="6">
@@ -711,5 +859,26 @@ const updateDarkModeEnd = () => {
         />
       </div>
     </div>
+  </NModal>
+
+  <NModal
+    :show="groupRemarkModal.show"
+    preset="dialog"
+    :title="groupRemarkModal.title || '分组备注'"
+    :showIcon="false"
+    positiveText="保存"
+    negativeText="取消"
+    @positiveClick="saveGroupRemark"
+    @negativeClick="groupRemarkModal.show = false"
+    @close="groupRemarkModal.show = false"
+  >
+    <NInput
+      v-model:value="groupRemarkModal.value"
+      type="textarea"
+      maxlength="160"
+      show-count
+      :autosize="{ minRows: 3, maxRows: 6 }"
+      placeholder="请输入备注"
+    />
   </NModal>
 </template>

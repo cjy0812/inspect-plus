@@ -58,6 +58,7 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
     darkModeStart: '18:00',
     darkModeEnd: '06:00',
     autoExpandSnapshots: false,
+    groupRemarks: {},
     locale: 'zh',
   }),
 );

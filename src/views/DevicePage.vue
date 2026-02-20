@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import DraggableCard from '@/components/DraggableCard.vue';
+import { showTextDLg, waitShareAgree } from '@/utils/dialog';
 import { useDeviceApi } from '@/utils/api';
 import { message } from '@/utils/discrete';
 import { errorWrap } from '@/utils/error';
+import {
+  exportSnapshotAsImportId,
+  exportSnapshotAsImage,
+  exportSnapshotAsImageId,
+  exportSnapshotAsZip,
+} from '@/utils/export';
 import { getAppInfo, getDevice } from '@/utils/node';
 import { delay } from '@/utils/others';
 import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 import { useBatchTask, useTask } from '@/utils/task';
+import { getImagUrl } from '@/utils/url';
 import dayjs from 'dayjs';
 import JSON5 from 'json5';
 import pLimit from 'p-limit';
 
 const router = useRouter();
 const { api, origin, serverInfo } = useDeviceApi();
-const { settingsStore, snapshotImportTime } = useStorageStore();
+const { settingsStore, snapshotImportTime, snapshotViewedTime } =
+  useStorageStore();
 const link = useStorage('device_link', '');
 
 const normalizeDeviceUrl = (input: string): string | null => {
@@ -108,20 +117,30 @@ const downloadAllSnapshot = useTask(async () => {
   message.success(`导入${okCount}条新记录`);
 });
 
+const ensureSnapshotStored = async (row: Snapshot) => {
+  if (!(await snapshotStorage.hasItem(row.id))) {
+    await snapshotStorage.setItem(
+      row.id,
+      await api.getSnapshot({ id: row.id }),
+    );
+  }
+};
+const ensureScreenshotStored = async (row: Snapshot) => {
+  if (!(await screenshotStorage.hasItem(row.id))) {
+    await screenshotStorage.setItem(
+      row.id,
+      await api.getScreenshot({ id: row.id }),
+    );
+  }
+};
+const ensureLocalSnapshotData = async (row: Snapshot) => {
+  await Promise.all([ensureSnapshotStored(row), ensureScreenshotStored(row)]);
+};
+
 const previewSnapshot = useBatchTask(
   async (row: Snapshot) => {
-    if (!(await snapshotStorage.hasItem(row.id))) {
-      await snapshotStorage.setItem(
-        row.id,
-        await api.getSnapshot({ id: row.id }),
-      );
-    }
-    if (!(await screenshotStorage.hasItem(row.id))) {
-      await screenshotStorage.setItem(
-        row.id,
-        await api.getScreenshot({ id: row.id }),
-      );
-    }
+    await ensureLocalSnapshotData(row);
+    snapshotViewedTime[row.id] = Date.now();
     window.open(
       router.resolve({
         name: 'snapshot',
@@ -195,6 +214,105 @@ const getItemDeviceText = (item: Snapshot) =>
   `${getDevice(item).manufacturer} Android ${getDevice(item).release || ''}`;
 const getItemImportTimeText = (item: Snapshot) =>
   dayjs(snapshotImportTime[item.id] || item.id).format('YYYY-MM-DD HH:mm:ss');
+
+const previewUrlMap = shallowReactive<Record<number, string>>({});
+const previewLoadingMap = shallowReactive<Record<number, boolean>>({});
+const previewErrorMap = shallowReactive<Record<number, string>>({});
+const previewOrder = shallowRef<number[]>([]);
+const previewCacheLimit = computed(() =>
+  settingsStore.lowMemoryMode ? 6 : 24,
+);
+const clearPreviewById = (id: number) => {
+  const url = previewUrlMap[id];
+  if (url) {
+    URL.revokeObjectURL(url);
+    delete previewUrlMap[id];
+  }
+  delete previewErrorMap[id];
+  previewLoadingMap[id] = false;
+  previewOrder.value = previewOrder.value.filter((v) => v != id);
+};
+const clearPreviewCache = () => {
+  Object.keys(previewUrlMap).forEach((id) => clearPreviewById(Number(id)));
+};
+const ensurePreview = async (id: number) => {
+  if (previewUrlMap[id] || previewLoadingMap[id]) return;
+  previewErrorMap[id] = '';
+  previewLoadingMap[id] = true;
+  try {
+    const local = await screenshotStorage.getItem(id);
+    const raw = local || (await api.getScreenshot({ id }));
+    if (!raw) {
+      previewErrorMap[id] = '暂无预览图';
+      return;
+    }
+    const blob =
+      raw instanceof Blob
+        ? raw
+        : new Blob([raw as ArrayBuffer], { type: 'image/png' });
+    previewUrlMap[id] = URL.createObjectURL(blob);
+    previewOrder.value = [...previewOrder.value.filter((v) => v != id), id];
+    while (previewOrder.value.length > previewCacheLimit.value) {
+      const removeId = previewOrder.value[0];
+      if (typeof removeId == 'number') clearPreviewById(removeId);
+      else break;
+    }
+  } catch {
+    previewErrorMap[id] = '预览加载失败';
+  } finally {
+    previewLoadingMap[id] = false;
+  }
+};
+watch(
+  () => settingsStore.lowMemoryMode,
+  () => {
+    while (previewOrder.value.length > previewCacheLimit.value) {
+      const removeId = previewOrder.value[0];
+      if (typeof removeId == 'number') clearPreviewById(removeId);
+      else break;
+    }
+  },
+);
+onBeforeUnmount(clearPreviewCache);
+
+const downloadSnapshotZip = useBatchTask(
+  async (row: Snapshot) => {
+    await ensureLocalSnapshotData(row);
+    await exportSnapshotAsZip(row);
+  },
+  (r) => r.id,
+);
+const downloadSnapshotImage = useBatchTask(
+  async (row: Snapshot) => {
+    await ensureScreenshotStored(row);
+    await exportSnapshotAsImage(row);
+  },
+  (r) => r.id,
+);
+const shareSnapshotZipUrl = useBatchTask(
+  async (row: Snapshot) => {
+    await waitShareAgree();
+    await ensureLocalSnapshotData(row);
+    const importId = await exportSnapshotAsImportId(row);
+    showTextDLg({
+      title: '分享链接',
+      content: `${location.origin}/i/${importId}`,
+    });
+  },
+  (r) => r.id,
+);
+const shareSnapshotImageUrl = useBatchTask(
+  async (row: Snapshot) => {
+    await waitShareAgree();
+    await ensureScreenshotStored(row);
+    const imageId = await exportSnapshotAsImageId(row);
+    showTextDLg({
+      title: '分享链接',
+      content: getImagUrl(imageId),
+    });
+  },
+  (r) => r.id,
+);
 
 const expandedPackageNames = shallowRef<(string | number)[]>([]);
 const expandedActivityNames = shallowRef<(string | number)[]>([]);
@@ -446,48 +564,96 @@ const execSelector = useTask(async () => {
                 <div
                   v-for="item in activity.snapshots"
                   :key="item.id"
-                  class="rounded-8px border border-solid border-#efeff5 bg-white px-10px py-6px transition-colors"
+                  class="rounded-8px border border-solid px-10px py-6px transition-colors"
+                  :class="[
+                    snapshotViewedTime[item.id]
+                      ? 'snapshot-row-viewed'
+                      : 'border-#efeff5 bg-white',
+                  ]"
                 >
                   <div flex items-start gap-10px flex-wrap>
-                    <div
-                      class="min-w-0 inline-flex max-w-full cursor-default select-text flex-col"
+                    <NPopover
+                      trigger="hover"
+                      placement="right-start"
+                      :flip="true"
+                      :shift="true"
+                      @update:show="
+                        if ($event) {
+                          ensurePreview(item.id);
+                        }
+                      "
                     >
-                      <div flex items-center gap-6px leading-18px>
-                        <NTag size="small" type="warning">{{
-                          dayjs(item.id).format('MM-DD HH:mm:ss')
-                        }}</NTag>
-                        <span class="truncate font-600">{{
-                          getItemAppName(item)
-                        }}</span>
-                      </div>
-                      <div text-12px mt-2px class="font-600">
-                        界面ID: {{ item.activityId || '(unknown)' }}
-                      </div>
-                      <div mt-4px text-12px class="opacity-75">
-                        <span
-                          >创建时间:
+                      <template #trigger>
+                        <div
+                          class="min-w-0 inline-flex max-w-full cursor-default select-text flex-col"
+                          @mouseenter="ensurePreview(item.id)"
+                        >
+                          <div flex items-center gap-6px leading-18px>
+                            <NTag size="small" type="warning">{{
+                              dayjs(item.id).format('MM-DD HH:mm:ss')
+                            }}</NTag>
+                            <NTag
+                              v-if="snapshotViewedTime[item.id]"
+                              size="small"
+                              type="success"
+                            >
+                              已查看
+                            </NTag>
+                            <span class="truncate font-600">{{
+                              getItemAppName(item)
+                            }}</span>
+                          </div>
+                          <div text-12px mt-2px class="font-600">
+                            界面ID: {{ item.activityId || '(unknown)' }}
+                          </div>
+                          <div mt-4px text-12px class="opacity-75">
+                            <span
+                              >创建时间:
+                              {{
+                                dayjs(item.id).format('YYYY-MM-DD HH:mm:ss')
+                              }}</span
+                            >
+                            <span class="mx-6px opacity-45">|</span>
+                            <span
+                              >导入时间: {{ getItemImportTimeText(item) }}</span
+                            >
+                          </div>
+                          <div mt-2px text-12px class="opacity-70">
+                            <span>设备: {{ getItemDeviceText(item) }}</span>
+                            <span class="mx-6px opacity-45">|</span>
+                            <span>应用ID: {{ item.appId }}</span>
+                            <span class="mx-6px opacity-45">|</span>
+                            <span
+                              >版本代码:
+                              {{ getAppInfo(item).versionCode }}</span
+                            >
+                            <span class="mx-6px opacity-45">|</span>
+                            <span
+                              >版本号:
+                              {{
+                                getAppInfo(item).versionName || 'unknown'
+                              }}</span
+                            >
+                          </div>
+                        </div>
+                      </template>
+                      <div class="inline-block w-fit max-w-90vw">
+                        <img
+                          v-if="previewUrlMap[item.id]"
+                          :src="previewUrlMap[item.id]"
+                          class="block h-auto w-auto max-h-320px max-w-80vw rounded-6px"
+                          alt="preview"
+                        />
+                        <div v-else py-20px text-center opacity-70>
                           {{
-                            dayjs(item.id).format('YYYY-MM-DD HH:mm:ss')
-                          }}</span
-                        >
-                        <span class="mx-6px opacity-45">|</span>
-                        <span>导入时间: {{ getItemImportTimeText(item) }}</span>
+                            previewErrorMap[item.id] ||
+                            (previewLoadingMap[item.id]
+                              ? '预览加载中...'
+                              : '暂无预览')
+                          }}
+                        </div>
                       </div>
-                      <div mt-2px text-12px class="opacity-70">
-                        <span>设备: {{ getItemDeviceText(item) }}</span>
-                        <span class="mx-6px opacity-45">|</span>
-                        <span>应用ID: {{ item.appId }}</span>
-                        <span class="mx-6px opacity-45">|</span>
-                        <span
-                          >版本代码: {{ getAppInfo(item).versionCode }}</span
-                        >
-                        <span class="mx-6px opacity-45">|</span>
-                        <span
-                          >版本号:
-                          {{ getAppInfo(item).versionName || 'unknown' }}</span
-                        >
-                      </div>
-                    </div>
+                    </NPopover>
                     <NButton
                       text
                       size="small"
@@ -497,6 +663,58 @@ const execSelector = useTask(async () => {
                     >
                       <template #icon><SvgIcon name="code" /></template>
                     </NButton>
+                    <NPopover>
+                      <template #trigger>
+                        <NButton text>
+                          <template #icon><SvgIcon name="export" /></template>
+                        </NButton>
+                      </template>
+                      <NSpace vertical>
+                        <NButton
+                          :loading="downloadSnapshotZip.loading[item.id]"
+                          @click="downloadSnapshotZip.invoke(item)"
+                        >
+                          下载-快照
+                        </NButton>
+                        <NButton
+                          :loading="downloadSnapshotImage.loading[item.id]"
+                          @click="downloadSnapshotImage.invoke(item)"
+                        >
+                          下载-图片
+                        </NButton>
+                      </NSpace>
+                    </NPopover>
+                    <NPopover>
+                      <template #trigger>
+                        <NButton text>
+                          <template #icon><SvgIcon name="share" /></template>
+                        </NButton>
+                      </template>
+                      <NSpace vertical>
+                        <NButton
+                          :loading="shareSnapshotZipUrl.loading[item.id]"
+                          @click="shareSnapshotZipUrl.invoke(item)"
+                        >
+                          生成链接-快照
+                        </NButton>
+                        <NButton
+                          :loading="shareSnapshotImageUrl.loading[item.id]"
+                          @click="shareSnapshotImageUrl.invoke(item)"
+                        >
+                          生成链接-图片
+                        </NButton>
+                      </NSpace>
+                    </NPopover>
+                    <NTooltip>
+                      <template #trigger>
+                        <span class="inline-flex">
+                          <NButton text disabled>
+                            <template #icon><SvgIcon name="delete" /></template>
+                          </NButton>
+                        </span>
+                      </template>
+                      远端删除尚未实现
+                    </NTooltip>
                   </div>
                 </div>
               </NSpace>

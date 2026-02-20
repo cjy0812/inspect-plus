@@ -156,6 +156,7 @@ interface SettingsStore {
   darkModeStart: string;
   darkModeEnd: string;
   autoExpandSnapshots: boolean;
+  groupRemarks: Record<string, string>;
   locale: 'zh' | 'en';
 }
 
