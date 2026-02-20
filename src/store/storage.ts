@@ -53,8 +53,16 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
     ignoreUploadWarn: false,
     ignoreWasmWarn: false,
     maxShowNodeSize: 2000,
+    lowMemoryMode: false,
+    themeMode: 'auto',
+    darkModeStart: '18:00',
   }),
 );
+
+// snapshot id -> last viewed time
+export const snapshotViewedTime = await useReactiveIndexedDB<
+  Record<string, number>
+>('snapshotViewedTime', () => ({}));
 
 // snapshot id -> import time
 export const snapshotImportTime = await useReactiveIndexedDB<
@@ -132,6 +140,7 @@ export const importSnapshotId = await useReactiveIndexedDB<
 export const useStorageStore = () => ({
   settingsStore,
   snapshotImportTime,
+  snapshotViewedTime,
   snapshotImageId,
   snapshotImportId,
   importSnapshotId,
