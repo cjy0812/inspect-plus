@@ -2,6 +2,7 @@
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import TrackCard from '@/components/TrackCard.vue';
 import { loadingBar } from '@/utils/discrete';
+import { useI18n } from '@/utils/i18n';
 import AttrCard from './AttrCard.vue';
 import OverlapCard from './OverlapCard.vue';
 import RuleCard from './RuleCard.vue';
@@ -14,28 +15,20 @@ const { snapshot, rootNode, loading, redirected, trackData, trackShow } =
   useSnapshotStore();
 
 watchEffect(() => {
-  if (loading.value) {
-    loadingBar.start();
-  } else {
-    loadingBar.finish();
-  }
+  if (loading.value) loadingBar.start();
+  else loadingBar.finish();
 });
 
 const { settingsStore } = useStorageStore();
+const { t } = useI18n();
 const searchShow = useStorage('searchShow', true, sessionStorage);
 const ruleShow = useStorage('ruleShow', false, sessionStorage);
 const attrShow = useStorage('attrShow', true, sessionStorage);
 const settingsDlgShow = shallowRef(false);
 
-const clickSettings = () => {
-  settingsDlgShow.value = true;
-};
-
 const normalizeClock = (value: string) => {
   const v = value.trim();
-  if (!/^\d{1,2}:\d{1,2}$/.test(v)) {
-    return null;
-  }
+  if (!/^\d{1,2}:\d{1,2}$/.test(v)) return null;
   const [hText, mText] = v.split(':');
   const h = Number(hText);
   const m = Number(mText);
@@ -56,6 +49,7 @@ const updateDarkModeStart = () => {
     normalizeClock(settingsStore.darkModeStart) || '18:00';
 };
 </script>
+
 <template>
   <template v-if="snapshot && rootNode">
     <div page-size flex gap-5px>
@@ -71,43 +65,41 @@ const updateDarkModeStart = () => {
         <NTooltip placement="right">
           <template #trigger>
             <NButton text>
-              <RouterLink to="/">
-                <SvgIcon name="home" />
-              </RouterLink>
+              <RouterLink to="/"><SvgIcon name="home" /></RouterLink>
             </NButton>
           </template>
           回到首页
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="clickSettings">
-              <SvgIcon name="settings" />
-            </NButton>
+            <NButton text @click="settingsDlgShow = true"
+              ><SvgIcon name="settings"
+            /></NButton>
           </template>
           设置
         </NTooltip>
         <div />
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="searchShow = !searchShow">
-              <SvgIcon name="search-list" />
-            </NButton>
+            <NButton text @click="searchShow = !searchShow"
+              ><SvgIcon name="search-list"
+            /></NButton>
           </template>
           搜索面板
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="attrShow = !attrShow">
-              <SvgIcon name="prop" />
-            </NButton>
+            <NButton text @click="attrShow = !attrShow"
+              ><SvgIcon name="prop"
+            /></NButton>
           </template>
           属性面板
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="ruleShow = !ruleShow">
-              <SvgIcon name="test" />
-            </NButton>
+            <NButton text @click="ruleShow = !ruleShow"
+              ><SvgIcon name="test"
+            /></NButton>
           </template>
           测试规则
         </NTooltip>
@@ -121,9 +113,7 @@ const updateDarkModeStart = () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <NButton text>
-                <SvgIcon name="discussion" />
-              </NButton>
+              <NButton text><SvgIcon name="discussion" /></NButton>
             </a>
           </template>
           讨论交流
@@ -137,9 +127,7 @@ const updateDarkModeStart = () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <NButton text>
-                <SvgIcon name="warn" />
-              </NButton>
+              <NButton text><SvgIcon name="warn" /></NButton>
             </a>
           </template>
           分享须知
@@ -156,7 +144,7 @@ const updateDarkModeStart = () => {
     <FullScreenDialog v-model:show="trackShow" @closed="trackData = undefined">
       <TrackCard
         v-if="trackData"
-        class="bg-white"
+        class="snapshot-floating-panel"
         v-bind="trackData"
         @close="trackShow = false"
       />
@@ -171,13 +159,13 @@ const updateDarkModeStart = () => {
       style="width: 620px"
       @positiveClick="settingsDlgShow = false"
     >
-      <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn">
-        关闭生成分享链接弹窗提醒
-      </NCheckbox>
+      <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn"
+        >关闭生成分享链接弹窗提醒</NCheckbox
+      >
       <div h-1px my-10px bg="#eee" />
-      <NCheckbox v-model:checked="settingsStore.ignoreWasmWarn">
-        关闭浏览器版本正则表达式 WASM(GC) 提醒
-      </NCheckbox>
+      <NCheckbox v-model:checked="settingsStore.ignoreWasmWarn"
+        >关闭浏览器版本正则表达式 WASM(GC) 提醒</NCheckbox
+      >
       <div h-1px my-10px bg="#eee" />
       <div flex gap-10px>
         <NSwitch v-model:value="settingsStore.autoUploadImport" />
@@ -186,7 +174,22 @@ const updateDarkModeStart = () => {
       <div h-1px my-10px bg="#eee" />
       <div flex gap-10px items-center>
         <NSwitch v-model:value="settingsStore.lowMemoryMode" />
-        <div>低内存模式（限制预览缓存、减少动画、降低实时开销）</div>
+        <div>低内存模式（限制预览缓存、减少动画、降低实时更新开销）</div>
+      </div>
+      <div h-1px my-10px bg="#eee" />
+      <div flex gap-10px items-center>
+        <NSwitch v-model:value="settingsStore.autoExpandSnapshots" />
+        <div>{{ t('settings.autoExpandSnapshots') }}</div>
+      </div>
+      <div h-1px my-10px bg="#eee" />
+      <div flex gap-10px items-center>
+        <div class="w-100px">{{ t('settings.locale') }}</div>
+        <NRadioGroup v-model:value="settingsStore.locale">
+          <NSpace>
+            <NRadio value="zh">{{ t('settings.localeZh') }}</NRadio>
+            <NRadio value="en">{{ t('settings.localeEn') }}</NRadio>
+          </NSpace>
+        </NRadioGroup>
       </div>
       <div h-1px my-10px bg="#eee" />
       <div flex flex-col gap-10px>
@@ -206,7 +209,6 @@ const updateDarkModeStart = () => {
             class="w-120px"
             @blur="updateDarkModeStart"
           />
-          <span text-12px opacity-70>到达该时间后自动切换到夜间模式</span>
         </div>
       </div>
     </NModal>
