@@ -7,8 +7,27 @@ html {
   height: var(--win-h);
 }
 
+body {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
 .page-size,
 [page-size] {
   width: var(--gkd-w);
   height: var(--gkd-h);
+}
+
+html.dark-mode-active body {
+  background-color: #121217;
+  color: #e8e8ee;
+}
+
+html.dark-mode-active .bg-white {
+  background-color: #1b1b22 !important;
+}
+
+html.dark-mode-active [class*='border-#efeff5'] {
+  border-color: #373744 !important;
 }

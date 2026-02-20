@@ -230,6 +230,7 @@ const inputImportRef = shallowRef();
 
 const previewUrlMap = shallowReactive<Record<number, string>>({});
 const previewLoadingMap = shallowReactive<Record<number, boolean>>({});
+const previewErrorMap = shallowReactive<Record<number, string>>({});
 const previewOrder = shallowRef<number[]>([]);
 const previewCacheLimit = computed(() =>
   settingsStore.lowMemoryMode ? 6 : 24,
@@ -241,6 +242,8 @@ const clearPreviewById = (id: number) => {
     URL.revokeObjectURL(url);
     delete previewUrlMap[id];
   }
+  delete previewErrorMap[id];
+  previewLoadingMap[id] = false;
   previewOrder.value = previewOrder.value.filter((v) => v != id);
 };
 
@@ -250,15 +253,19 @@ const clearPreviewCache = () => {
 
 const ensurePreview = async (id: number) => {
   if (previewUrlMap[id] || previewLoadingMap[id]) return;
+  previewErrorMap[id] = '';
   previewLoadingMap[id] = true;
   try {
-    const bf = await screenshotStorage.getItem(id);
-    if (!bf) return;
-    previewUrlMap[id] = URL.createObjectURL(
-      new Blob([bf], {
-        type: 'image/png',
-      }),
-    );
+    const raw = await screenshotStorage.getItem(id);
+    if (!raw) {
+      previewErrorMap[id] = '暂无预览图';
+      return;
+    }
+    const blob =
+      raw instanceof Blob
+        ? raw
+        : new Blob([raw as ArrayBuffer], { type: 'image/png' });
+    previewUrlMap[id] = URL.createObjectURL(blob);
     previewOrder.value = [...previewOrder.value.filter((v) => v != id), id];
     while (previewOrder.value.length > previewCacheLimit.value) {
       const removeId = previewOrder.value[0];
@@ -268,8 +275,10 @@ const ensurePreview = async (id: number) => {
         break;
       }
     }
+  } catch {
+    previewErrorMap[id] = '预览加载失败';
   } finally {
-    delete previewLoadingMap[id];
+    previewLoadingMap[id] = false;
   }
 };
 
@@ -539,7 +548,8 @@ const updateDarkModeStart = () => {
                       />
                       <NPopover
                         trigger="hover"
-                        placement="right"
+                        placement="right-start"
+                        :to="false"
                         @update:show="
                           if ($event) {
                             ensurePreview(item.id);
@@ -585,7 +595,12 @@ const updateDarkModeStart = () => {
                               alt="preview"
                             />
                             <div v-else py-20px text-center opacity-70>
-                              预览加载中...
+                              {{
+                                previewErrorMap[item.id] ||
+                                (previewLoadingMap[item.id]
+                                  ? '预览加载中...'
+                                  : '暂无预览')
+                              }}
                             </div>
                           </NSpin>
                         </div>
