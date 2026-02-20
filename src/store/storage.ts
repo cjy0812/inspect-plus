@@ -68,7 +68,7 @@ if (!settingsStore.darkModeEnd) settingsStore.darkModeEnd = '06:00';
 
 // snapshot id -> last viewed time
 export const snapshotViewedTime = await useReactiveIndexedDB<
-  Record<string, number>
+  Record<number, number>
 >('snapshotViewedTime', () => ({}));
 
 // snapshot id -> import time

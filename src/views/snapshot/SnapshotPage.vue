@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
+import SettingsModal from '@/components/SettingsModal.vue';
 import TrackCard from '@/components/TrackCard.vue';
-import { formatClock, normalizeClock } from '@/utils/clock';
 import { loadingBar } from '@/utils/discrete';
 import AttrCard from './AttrCard.vue';
 import OverlapCard from './OverlapCard.vue';
@@ -20,23 +20,11 @@ watchEffect(() => {
   else loadingBar.finish();
 });
 
-const { settingsStore } = useStorageStore();
 const searchShow = useStorage('searchShow', true, sessionStorage);
 const ruleShow = useStorage('ruleShow', false, sessionStorage);
 const attrShow = useStorage('attrShow', true, sessionStorage);
 const selectorTestShow = useStorage('selectorTestShow', false, sessionStorage);
 const settingsDlgShow = shallowRef(false);
-
-const updateDarkModeStart = () => {
-  settingsStore.darkModeStart = formatClock(
-    normalizeClock(settingsStore.darkModeStart) ?? 18 * 60,
-  );
-};
-const updateDarkModeEnd = () => {
-  settingsStore.darkModeEnd = formatClock(
-    normalizeClock(settingsStore.darkModeEnd) ?? 6 * 60,
-  );
-};
 </script>
 
 <template>
@@ -151,67 +139,7 @@ const updateDarkModeEnd = () => {
       />
     </FullScreenDialog>
 
-    <NModal
-      v-model:show="settingsDlgShow"
-      preset="dialog"
-      title="设置"
-      :showIcon="false"
-      positiveText="关闭"
-      style="width: 620px"
-      @positiveClick="settingsDlgShow = false"
-    >
-      <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn"
-        >关闭生成分享链接弹窗提醒</NCheckbox
-      >
-      <div h-1px my-10px bg="#eee" />
-      <NCheckbox v-model:checked="settingsStore.ignoreWasmWarn"
-        >关闭浏览器版本正则表达式 WASM(GC) 提醒</NCheckbox
-      >
-      <div h-1px my-10px bg="#eee" />
-      <div flex gap-10px>
-        <NSwitch v-model:value="settingsStore.autoUploadImport" />
-        <div>打开快照页面自动生成分享链接（请确保不含隐私）</div>
-      </div>
-      <div h-1px my-10px bg="#eee" />
-      <div flex gap-10px items-center>
-        <NSwitch v-model:value="settingsStore.lowMemoryMode" />
-        <div>低内存模式（限制预览缓存、减少动画、降低实时更新开销）</div>
-      </div>
-      <div h-1px my-10px bg="#eee" />
-      <div flex gap-10px items-center>
-        <NSwitch v-model:value="settingsStore.autoExpandSnapshots" />
-        <div>自动展开快照</div>
-      </div>
-      <div h-1px my-10px bg="#eee" />
-      <div flex flex-col gap-10px>
-        <div>主题模式</div>
-        <NRadioGroup v-model:value="settingsStore.themeMode">
-          <NSpace>
-            <NRadio value="auto">自动</NRadio>
-            <NRadio value="light">强制日间</NRadio>
-            <NRadio value="dark">强制夜间</NRadio>
-          </NSpace>
-        </NRadioGroup>
-        <div flex items-center gap-10px>
-          <div class="w-100px">开始时间</div>
-          <NInput
-            v-model:value="settingsStore.darkModeStart"
-            placeholder="18:00"
-            class="w-120px"
-            @blur="updateDarkModeStart"
-          />
-        </div>
-        <div flex items-center gap-10px>
-          <div class="w-100px">结束时间</div>
-          <NInput
-            v-model:value="settingsStore.darkModeEnd"
-            placeholder="06:00"
-            class="w-120px"
-            @blur="updateDarkModeEnd"
-          />
-        </div>
-      </div>
-    </NModal>
+    <SettingsModal v-model:show="settingsDlgShow" />
   </template>
   <div
     v-else-if="!loading && !redirected"

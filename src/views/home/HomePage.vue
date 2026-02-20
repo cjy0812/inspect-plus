@@ -1,8 +1,8 @@
 ﻿<script setup lang="ts">
 import ActionCard from '@/components/ActionCard.vue';
+import SettingsModal from '@/components/SettingsModal.vue';
 import { usePreviewCache } from '@/composables/usePreviewCache';
 import { toValidURL } from '@/utils/check';
-import { formatClock, normalizeClock } from '@/utils/clock';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
 import { dialog } from '@/utils/discrete';
 import {
@@ -14,6 +14,7 @@ import {
 import { importFromLocal, importFromNetwork } from '@/utils/import';
 import { getAppInfo, getDevice } from '@/utils/node';
 import { filterQuery, getDragEventFiles } from '@/utils/others';
+import { buildGroupedSnapshots } from '@/utils/snapshotGroup';
 import {
   screenshotStorage,
   shallowSnapshotStorage,
@@ -60,40 +61,9 @@ const filteredSnapshots = computed(() => {
   });
 });
 
-const groupedSnapshots = computed(() => {
-  const packageMap = new Map<string, Map<string, Snapshot[]>>();
-  for (const snapshot of filteredSnapshots.value) {
-    const packageName = snapshot.appId || snapshot.appInfo?.id || '(unknown)';
-    const activityId = snapshot.activityId || '(unknown)';
-    if (!packageMap.has(packageName)) {
-      packageMap.set(packageName, new Map());
-    }
-    const activityMap = packageMap.get(packageName)!;
-    const list = activityMap.get(activityId) || [];
-    list.push(snapshot);
-    activityMap.set(activityId, list);
-  }
-  return [...packageMap.entries()]
-    .map(([packageName, activityMap]) => ({
-      packageName,
-      appName:
-        [...activityMap.values()]
-          .flat()
-          .map((s) => getAppInfo(s).name)
-          .find(Boolean) || packageName,
-      activities: [...activityMap.entries()]
-        .map(([activityId, items]) => ({
-          activityId,
-          snapshots: items.sort(
-            (a, b) =>
-              (snapshotImportTime[b.id] || b.id) -
-              (snapshotImportTime[a.id] || a.id),
-          ),
-        }))
-        .sort((a, b) => b.snapshots.length - a.snapshots.length),
-    }))
-    .sort((a, b) => b.activities.length - a.activities.length);
-});
+const groupedSnapshots = computed(() =>
+  buildGroupedSnapshots(filteredSnapshots.value, snapshotImportTime),
+);
 
 const expandedPackageNames = shallowRef<(string | number)[]>([]);
 const expandedActivityNames = shallowRef<(string | number)[]>([]);
@@ -294,17 +264,6 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
     getScreenshot: (id) => screenshotStorage.getItem(id),
     cacheLimit: previewCacheLimit,
   });
-
-const updateDarkModeStart = () => {
-  settingsStore.darkModeStart = formatClock(
-    normalizeClock(settingsStore.darkModeStart) ?? 18 * 60,
-  );
-};
-const updateDarkModeEnd = () => {
-  settingsStore.darkModeEnd = formatClock(
-    normalizeClock(settingsStore.darkModeEnd) ?? 6 * 60,
-  );
-};
 </script>
 
 <template>
@@ -734,67 +693,7 @@ const updateDarkModeEnd = () => {
     />
   </NModal>
 
-  <NModal
-    v-model:show="settingsDlgShow"
-    preset="dialog"
-    title="设置"
-    :showIcon="false"
-    positiveText="关闭"
-    style="width: 620px"
-    @positiveClick="settingsDlgShow = false"
-  >
-    <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn"
-      >关闭生成分享链接弹窗提醒</NCheckbox
-    >
-    <div h-1px my-10px bg="#eee" />
-    <NCheckbox v-model:checked="settingsStore.ignoreWasmWarn"
-      >关闭浏览器版本正则表达式 WASM(GC) 提醒</NCheckbox
-    >
-    <div h-1px my-10px bg="#eee" />
-    <div flex gap-10px>
-      <NSwitch v-model:value="settingsStore.autoUploadImport" />
-      <div>打开快照页面自动生成分享链接（请确保不含隐私）</div>
-    </div>
-    <div h-1px my-10px bg="#eee" />
-    <div flex gap-10px items-center>
-      <NSwitch v-model:value="settingsStore.lowMemoryMode" />
-      <div>低内存模式（限制预览缓存、减少动画、降低实时更新开销）</div>
-    </div>
-    <div h-1px my-10px bg="#eee" />
-    <div flex gap-10px items-center>
-      <NSwitch v-model:value="settingsStore.autoExpandSnapshots" />
-      <div>自动展开快照</div>
-    </div>
-    <div h-1px my-10px bg="#eee" />
-    <div flex flex-col gap-10px>
-      <div>主题模式</div>
-      <NRadioGroup v-model:value="settingsStore.themeMode">
-        <NSpace>
-          <NRadio value="auto">自动</NRadio>
-          <NRadio value="light">强制日间</NRadio>
-          <NRadio value="dark">强制夜间</NRadio>
-        </NSpace>
-      </NRadioGroup>
-      <div flex items-center gap-10px>
-        <div class="w-100px">开始时间</div>
-        <NInput
-          v-model:value="settingsStore.darkModeStart"
-          placeholder="18:00"
-          class="w-120px"
-          @blur="updateDarkModeStart"
-        />
-      </div>
-      <div flex items-center gap-10px>
-        <div class="w-100px">结束时间</div>
-        <NInput
-          v-model:value="settingsStore.darkModeEnd"
-          placeholder="06:00"
-          class="w-120px"
-          @blur="updateDarkModeEnd"
-        />
-      </div>
-    </div>
-  </NModal>
+  <SettingsModal v-model:show="settingsDlgShow" />
 
   <NModal
     :show="groupRemarkModal.show"
