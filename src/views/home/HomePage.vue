@@ -378,14 +378,6 @@ const updateDarkModeEnd = () => {
           </template>
           设置
         </NTooltip>
-        <NTooltip>
-          <template #trigger>
-            <RouterLink flex to="/selector"
-              ><NButton text><SvgIcon name="terminal" /></NButton
-            ></RouterLink>
-          </template>
-          测试选择器
-        </NTooltip>
         <NPopover>
           <template #trigger
             ><NButton text><SvgIcon name="import" /></NButton

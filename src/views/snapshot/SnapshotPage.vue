@@ -7,6 +7,7 @@ import OverlapCard from './OverlapCard.vue';
 import RuleCard from './RuleCard.vue';
 import ScreenshotCard from './ScreenshotCard.vue';
 import SearchCard from './SearchCard.vue';
+import SelectorTestCard from './SelectorTestCard.vue';
 import { useSnapshotStore } from './snapshot';
 import WindowCard from './WindowCard.vue';
 
@@ -22,6 +23,7 @@ const { settingsStore } = useStorageStore();
 const searchShow = useStorage('searchShow', true, sessionStorage);
 const ruleShow = useStorage('ruleShow', false, sessionStorage);
 const attrShow = useStorage('attrShow', true, sessionStorage);
+const selectorTestShow = useStorage('selectorTestShow', false, sessionStorage);
 const settingsDlgShow = shallowRef(false);
 
 const normalizeClock = (value: string) => {
@@ -99,6 +101,14 @@ const updateDarkModeEnd = () => {
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
+            <NButton text @click="selectorTestShow = !selectorTestShow"
+              ><SvgIcon name="terminal"
+            /></NButton>
+          </template>
+          测试选择器
+        </NTooltip>
+        <NTooltip placement="right">
+          <template #trigger>
             <NButton text @click="ruleShow = !ruleShow"
               ><SvgIcon name="test"
             /></NButton>
@@ -140,6 +150,10 @@ const updateDarkModeEnd = () => {
     </div>
 
     <SearchCard :show="searchShow" @updateShow="searchShow = $event" />
+    <SelectorTestCard
+      :show="selectorTestShow"
+      @updateShow="selectorTestShow = $event"
+    />
     <RuleCard :show="ruleShow" @updateShow="ruleShow = $event" />
     <AttrCard :show="attrShow" @updateShow="attrShow = $event" />
     <OverlapCard />

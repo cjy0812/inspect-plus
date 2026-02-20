@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DraggableCard from '@/components/DraggableCard.vue';
 import { useDeviceApi } from '@/utils/api';
 import { message } from '@/utils/discrete';
 import { errorWrap } from '@/utils/error';
@@ -236,57 +237,92 @@ const execSelector = useTask(async () => {
 </script>
 
 <template>
-  <NModal
-    v-model:show="showSubsModel"
-    preset="dialog"
-    style="width: 800px"
-    title="修改内存订阅"
-    positiveText="确认"
-    :positiveButtonProps="{
-      loading: updateSubs.loading,
-      onClick: () => updateSubs.invoke(),
-    }"
+  <DraggableCard
+    v-slot="{ onRef }"
+    :initialValue="{ top: 84, left: 120 }"
+    class="box-shadow-dim"
+    :show="showSubsModel"
   >
-    <NInput
-      v-model:value="subsText"
-      :disabled="updateSubs.loading"
-      type="textarea"
-      class="gkd_code"
-      :autosize="{ minRows: 20, maxRows: 25 }"
-      placeholder="请输入订阅文本(JSON5)"
-    />
-  </NModal>
-
-  <NModal
-    v-model:show="showSelectorModel"
-    preset="dialog"
-    style="width: 800px"
-    title="执行选择器"
-    positiveText="确认"
-    :positiveButtonProps="{
-      loading: execSelector.loading,
-      onClick: () => execSelector.invoke(),
-    }"
+    <NCard
+      size="small"
+      closable
+      style="width: 90vw; max-width: 800px"
+      @close="showSubsModel = false"
+    >
+      <template #header>
+        <div flex items-center>
+          <span>修改内存订阅</span>
+          <div :ref="onRef" flex-1 cursor-move />
+        </div>
+      </template>
+      <NInput
+        v-model:value="subsText"
+        :disabled="updateSubs.loading"
+        type="textarea"
+        class="gkd_code"
+        :autosize="{ minRows: 20, maxRows: 25 }"
+        placeholder="请输入订阅文本(JSON5)"
+      />
+      <div mt-10px flex justify-end gap-8px>
+        <NButton @click="showSubsModel = false">取消</NButton>
+        <NButton
+          type="primary"
+          :loading="updateSubs.loading"
+          @click="updateSubs.invoke"
+        >
+          确认
+        </NButton>
+      </div>
+    </NCard>
+  </DraggableCard>
+  <DraggableCard
+    v-slot="{ onRef }"
+    :initialValue="{ top: 120, left: 180 }"
+    class="box-shadow-dim"
+    :show="showSelectorModel"
   >
-    <NInput
-      v-model:value="clickAction.selector"
-      :disabled="execSelector.loading"
-      type="textarea"
-      class="gkd_code"
-      :autosize="{ minRows: 4, maxRows: 10 }"
-      placeholder="请输入合法选择器"
-    />
-    <div h-15px />
-    <NSpace>
-      <NCheckbox v-model:checked="clickAction.quickFind">快速查找</NCheckbox>
-    </NSpace>
-    <div h-10px />
-    <NSelect
-      v-model:value="clickAction.action"
-      :options="actionOptions"
-      class="w-150px"
-    />
-  </NModal>
+    <NCard
+      size="small"
+      closable
+      style="width: 90vw; max-width: 800px"
+      @close="showSelectorModel = false"
+    >
+      <template #header>
+        <div flex items-center>
+          <span>执行选择器</span>
+          <div :ref="onRef" flex-1 cursor-move />
+        </div>
+      </template>
+      <NInput
+        v-model:value="clickAction.selector"
+        :disabled="execSelector.loading"
+        type="textarea"
+        class="gkd_code"
+        :autosize="{ minRows: 4, maxRows: 10 }"
+        placeholder="请输入合法选择器"
+      />
+      <div h-15px />
+      <NSpace>
+        <NCheckbox v-model:checked="clickAction.quickFind">快速查询</NCheckbox>
+      </NSpace>
+      <div h-10px />
+      <NSelect
+        v-model:value="clickAction.action"
+        :options="actionOptions"
+        class="w-150px"
+      />
+      <div mt-10px flex justify-end gap-8px>
+        <NButton @click="showSelectorModel = false">取消</NButton>
+        <NButton
+          type="primary"
+          :loading="execSelector.loading"
+          @click="execSelector.invoke"
+        >
+          确认
+        </NButton>
+      </div>
+    </NCard>
+  </DraggableCard>
 
   <div page-size flex flex-col p-10px gap-10px>
     <div flex items-center gap-24px>
@@ -298,7 +334,7 @@ const execSelector = useTask(async () => {
       <NInputGroup>
         <NInput
           v-model:value="link"
-          placeholder="请输入设备地址（可不写 http://，默认尝试 :8888）"
+          placeholder="请输入设备地址 默认端口:8888"
           class="gkd_code"
           :style="{ width: '320px' }"
           @keyup.enter="connect.invoke"
@@ -376,10 +412,12 @@ const execSelector = useTask(async () => {
                 <div
                   v-for="item in activity.snapshots"
                   :key="item.id"
-                  class="rounded-8px border border-solid border-#efeff5 bg-white px-10px py-8px"
+                  class="rounded-8px border border-solid border-#efeff5 bg-white px-10px py-6px transition-colors"
                 >
-                  <div flex items-center gap-12px>
-                    <div class="min-w-0 flex-1">
+                  <div flex items-start gap-10px flex-wrap>
+                    <div
+                      class="min-w-0 inline-flex max-w-full cursor-default select-text flex-col"
+                    >
                       <div text-12px opacity-70>
                         创建时间:
                         {{ dayjs(item.id).format('YYYY-MM-DD HH:mm:ss') }}
@@ -413,11 +451,13 @@ const execSelector = useTask(async () => {
                       </div>
                     </div>
                     <NButton
+                      text
                       size="small"
+                      class="ml-auto shrink-0"
                       :loading="previewSnapshot.loading[item.id]"
                       @click="previewSnapshot.invoke(item)"
                     >
-                      查看
+                      <template #icon><SvgIcon name="code" /></template>
                     </NButton>
                   </div>
                 </div>

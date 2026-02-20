@@ -47,6 +47,13 @@ html.dark-mode-active [class*='border-#efeff5'] {
   border-color: #bbf7d0;
 }
 
+.overlap-pos-token {
+  padding: 0 2px;
+  border-radius: 4px;
+  background-color: #eef1f7;
+  color: #1f2937;
+}
+
 .selector-ast-view {
   background-color: #d4d4d8;
   color: #111;
@@ -96,6 +103,11 @@ html.dark-mode-active [bg='#eee'] {
 html.dark-mode-active .snapshot-row-viewed {
   background-color: #203229 !important;
   border-color: #355746 !important;
+}
+
+html.dark-mode-active .overlap-pos-token {
+  background-color: #2d3340 !important;
+  color: #e7eaf3 !important;
 }
 
 html.dark-mode-active .selector-ast-view {
