@@ -56,10 +56,14 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
     lowMemoryMode: false,
     themeMode: 'auto',
     darkModeStart: '18:00',
+    darkModeEnd: '06:00',
     autoExpandSnapshots: false,
     locale: 'zh',
   }),
 );
+
+if (!settingsStore.darkModeStart) settingsStore.darkModeStart = '18:00';
+if (!settingsStore.darkModeEnd) settingsStore.darkModeEnd = '06:00';
 
 // snapshot id -> last viewed time
 export const snapshotViewedTime = await useReactiveIndexedDB<

@@ -23,7 +23,8 @@ useEventListener('click', () => {
 const { settingsStore } = useStorageStore();
 const now = useNow({ interval: 60_000 });
 
-const parseClock = (value: string): number | null => {
+const parseClock = (value?: string | null): number | null => {
+  if (!value) return null;
   const [hourText = '', minuteText = ''] = value.split(':');
   const hour = Number(hourText);
   const minute = Number(minuteText);
@@ -40,6 +41,18 @@ const parseClock = (value: string): number | null => {
   return hour * 60 + minute;
 };
 
+const isInDarkRange = (
+  currentMinutes: number,
+  startMinutes: number,
+  endMinutes: number,
+) => {
+  if (startMinutes === endMinutes) return true;
+  if (startMinutes < endMinutes) {
+    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  }
+  return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+};
+
 const appTheme = computed(() => {
   if (settingsStore.themeMode == 'dark') {
     return darkTheme;
@@ -48,8 +61,9 @@ const appTheme = computed(() => {
     return null;
   }
   const darkStart = parseClock(settingsStore.darkModeStart) ?? 18 * 60;
+  const darkEnd = parseClock(settingsStore.darkModeEnd) ?? 6 * 60;
   const currentMinutes = now.value.getHours() * 60 + now.value.getMinutes();
-  return currentMinutes >= darkStart ? darkTheme : null;
+  return isInDarkRange(currentMinutes, darkStart, darkEnd) ? darkTheme : null;
 });
 
 watchEffect(() => {

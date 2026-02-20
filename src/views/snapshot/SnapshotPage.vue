@@ -46,6 +46,10 @@ const updateDarkModeStart = () => {
   settingsStore.darkModeStart =
     normalizeClock(settingsStore.darkModeStart) || '18:00';
 };
+const updateDarkModeEnd = () => {
+  settingsStore.darkModeEnd =
+    normalizeClock(settingsStore.darkModeEnd) || '06:00';
+};
 </script>
 
 <template>
@@ -196,6 +200,15 @@ const updateDarkModeStart = () => {
             placeholder="18:00"
             class="w-120px"
             @blur="updateDarkModeStart"
+          />
+        </div>
+        <div flex items-center gap-10px>
+          <div class="w-100px">结束时间</div>
+          <NInput
+            v-model:value="settingsStore.darkModeEnd"
+            placeholder="06:00"
+            class="w-120px"
+            @blur="updateDarkModeEnd"
           />
         </div>
       </div>

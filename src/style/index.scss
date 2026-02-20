@@ -79,6 +79,14 @@ html.dark-mode-active .n-dialog.snapshot-floating-panel {
   color: #e8e8ee !important;
 }
 
+html.dark-mode-active .snapshot-floating-panel .n-dialog__title {
+  color: #f4f6ff !important;
+}
+
+html.dark-mode-active .snapshot-floating-panel .n-checkbox .n-checkbox__label {
+  color: #e8e8ee !important;
+}
+
 html.dark-mode-active .snapshot-token,
 html.dark-mode-active [bg='#eee'] {
   background-color: #2d3340 !important;

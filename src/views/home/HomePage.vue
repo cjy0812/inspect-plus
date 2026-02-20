@@ -308,6 +308,10 @@ const updateDarkModeStart = () => {
   settingsStore.darkModeStart =
     normalizeClock(settingsStore.darkModeStart) || '18:00';
 };
+const updateDarkModeEnd = () => {
+  settingsStore.darkModeEnd =
+    normalizeClock(settingsStore.darkModeEnd) || '06:00';
+};
 </script>
 
 <template>
@@ -494,7 +498,7 @@ const updateDarkModeStart = () => {
                         : 'bg-white border-#efeff5',
                     ]"
                   >
-                    <div flex items-start gap-10px>
+                    <div flex items-start gap-10px flex-wrap>
                       <NCheckbox
                         :checked="checkedSet.has(item.id)"
                         @update:checked="toggleChecked(item.id, $event)"
@@ -601,11 +605,13 @@ const updateDarkModeStart = () => {
                         </div>
                       </NPopover>
                       <NButton
-                        quaternary
+                        text
                         size="small"
+                        class="ml-auto shrink-0"
                         @click="goToSnapshot(item.id)"
-                        >查看</NButton
                       >
+                        <template #icon><SvgIcon name="code" /></template>
+                      </NButton>
                       <ActionCard
                         :snapshot="item"
                         :showPreview="false"
@@ -701,6 +707,15 @@ const updateDarkModeStart = () => {
           placeholder="18:00"
           class="w-120px"
           @blur="updateDarkModeStart"
+        />
+      </div>
+      <div flex items-center gap-10px>
+        <div class="w-100px">结束时间</div>
+        <NInput
+          v-model:value="settingsStore.darkModeEnd"
+          placeholder="06:00"
+          class="w-120px"
+          @blur="updateDarkModeEnd"
         />
       </div>
     </div>

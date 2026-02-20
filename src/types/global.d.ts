@@ -154,6 +154,7 @@ interface SettingsStore {
   lowMemoryMode: boolean;
   themeMode: 'auto' | 'light' | 'dark';
   darkModeStart: string;
+  darkModeEnd: string;
   autoExpandSnapshots: boolean;
   locale: 'zh' | 'en';
 }
