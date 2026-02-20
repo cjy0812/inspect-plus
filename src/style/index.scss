@@ -70,6 +70,10 @@ html.dark-mode-active .snapshot-floating-panel {
   color: #e8e8ee !important;
 }
 
+html.dark-mode-active .snapshot-floating-panel .n-dialog {
+  background-color: #1b1b22 !important;
+}
+
 html.dark-mode-active .snapshot-token,
 html.dark-mode-active [bg='#eee'] {
   background-color: #2d3340 !important;

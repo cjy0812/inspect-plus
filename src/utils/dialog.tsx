@@ -3,6 +3,7 @@ import { dialog, message } from './discrete';
 export const showTextDLg = ({ title = `批量分享链接`, content = '' }) => {
   dialog.success({
     title,
+    class: 'snapshot-floating-panel',
     style: {
       width: `800px`,
     },
@@ -58,6 +59,7 @@ export const waitShareAgree = async () => {
   if (settingsStore.ignoreUploadWarn) return;
   return new Promise((resolve, reject) => {
     dialog.warning({
+      class: 'snapshot-floating-panel',
       title: '生成分享链接须知',
       content() {
         return (
