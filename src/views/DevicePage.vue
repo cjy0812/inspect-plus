@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DraggableCard from '@/components/DraggableCard.vue';
+import { usePreviewCache } from '@/composables/usePreviewCache';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
 import { useDeviceApi } from '@/utils/api';
 import { message } from '@/utils/discrete';
@@ -215,65 +216,17 @@ const getItemDeviceText = (item: Snapshot) =>
 const getItemImportTimeText = (item: Snapshot) =>
   dayjs(snapshotImportTime[item.id] || item.id).format('YYYY-MM-DD HH:mm:ss');
 
-const previewUrlMap = shallowReactive<Record<number, string>>({});
-const previewLoadingMap = shallowReactive<Record<number, boolean>>({});
-const previewErrorMap = shallowReactive<Record<number, string>>({});
-const previewOrder = shallowRef<number[]>([]);
 const previewCacheLimit = computed(() =>
   settingsStore.lowMemoryMode ? 6 : 24,
 );
-const clearPreviewById = (id: number) => {
-  const url = previewUrlMap[id];
-  if (url) {
-    URL.revokeObjectURL(url);
-    delete previewUrlMap[id];
-  }
-  delete previewErrorMap[id];
-  previewLoadingMap[id] = false;
-  previewOrder.value = previewOrder.value.filter((v) => v != id);
-};
-const clearPreviewCache = () => {
-  Object.keys(previewUrlMap).forEach((id) => clearPreviewById(Number(id)));
-};
-const ensurePreview = async (id: number) => {
-  if (previewUrlMap[id] || previewLoadingMap[id]) return;
-  previewErrorMap[id] = '';
-  previewLoadingMap[id] = true;
-  try {
-    const local = await screenshotStorage.getItem(id);
-    const raw = local || (await api.getScreenshot({ id }));
-    if (!raw) {
-      previewErrorMap[id] = '暂无预览图';
-      return;
-    }
-    const blob =
-      raw instanceof Blob
-        ? raw
-        : new Blob([raw as ArrayBuffer], { type: 'image/png' });
-    previewUrlMap[id] = URL.createObjectURL(blob);
-    previewOrder.value = [...previewOrder.value.filter((v) => v != id), id];
-    while (previewOrder.value.length > previewCacheLimit.value) {
-      const removeId = previewOrder.value[0];
-      if (typeof removeId == 'number') clearPreviewById(removeId);
-      else break;
-    }
-  } catch {
-    previewErrorMap[id] = '预览加载失败';
-  } finally {
-    previewLoadingMap[id] = false;
-  }
-};
-watch(
-  () => settingsStore.lowMemoryMode,
-  () => {
-    while (previewOrder.value.length > previewCacheLimit.value) {
-      const removeId = previewOrder.value[0];
-      if (typeof removeId == 'number') clearPreviewById(removeId);
-      else break;
-    }
-  },
-);
-onBeforeUnmount(clearPreviewCache);
+const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
+  usePreviewCache({
+    getScreenshot: async (id) => {
+      const local = await screenshotStorage.getItem(id);
+      return local || (await api.getScreenshot({ id }));
+    },
+    cacheLimit: previewCacheLimit,
+  });
 
 const downloadSnapshotZip = useBatchTask(
   async (row: Snapshot) => {
