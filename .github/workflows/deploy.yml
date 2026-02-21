@@ -27,7 +27,10 @@ jobs:
       - uses: actions/configure-pages@v5
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsx ./scripts/updateVersion.ts
-      - run: pnpm run build:gh
+      - name: Build for GitHub Pages (repo base path)
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          BASE_URL="/${REPO_NAME}/" pnpm run build
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
