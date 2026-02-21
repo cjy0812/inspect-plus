@@ -1,29 +1,65 @@
-# @gkd-kit/inspect
+# GKD快照审查工具Plus
 
-- <https://i.gkd.li>
+GKD 网页端审查工具-优化版,
 
-GKD 网页端审查工具,
+- 原版
+<details open>
 
-- 抓取快照
-- 审查快照
-- 分享快照
-- 连接调试 GKD 内部 HTTP Server
-- 实时启用订阅规则, 实时执行点击选择器
-- 选择器路径视图
+  - 抓取快照
+  - 审查快照
+  - 分享快照
+  - 连接调试 GKD 内部 HTTP Server
+  - 实时启用订阅规则, 实时执行点击选择器
+  - 选择器路径视图
+
+</details>
+
+- 功能
+  - [x] 快照树分类
+  - [ ] 快照组备注
+  - [x] 打开前预览快照图片
+  - [x] 几乎完美支持**夜间模式**(99.8%)
+  - [x] 搬入**测试选择器**至快照页
+  - [ ] 属性面板参数停留2s可显示解释
+  - [x] 设置面板实现管理
+  - [ ] 同web页内快照审查快速切换快照
+  - [ ] 低内存模式
+  - [ ] 国际化支持
+- 优化
+  - [x] 界面UI重构
+  - [x] 点过快照标记**已查看**并有绿色遮罩
+  - [ ] 快照图片时间戳难以辨识
+  - [x] 小放大图坐标难以辨识
+
+## 功能演示
+
+### 快照图片预览 & 快照树分类 & UI重构
+#### 白天
+
+<video src="./images/00_Snap-tree-demo.mp4" autoplay muted loop width="80%"></video>
+
+#### 夜间
+<video src="./images/01_Snap-tree-demo-dark.mp4" autoplay muted loop width="80%"></video>
 
 <details open>
-  <summary>示例: 审查快照</summary>
+  <summary>示例: 审查快照-搬入 测试选择器</summary>
+<video src="./images/02_Snap-tools.mp4" autoplay muted loop width="100%"></video>
 
-![image](https://github.com/gkd-kit/inspect/assets/38517192/f37ec43c-cb39-4745-ad5b-e11a02cc5c28)
+<details open>
+  <summary>示例: 属性面板参数停留2s可显示解释</summary>
+<video src="./images/03_Property-Panel_Tip.mp4" autoplay muted loop width="100%"></video>
 
 </details>
 
 <details open>
-  <summary>示例: 选择器路径视图</summary>
-
-![image](https://github.com/gkd-kit/inspect/assets/38517192/27d0656a-2239-426c-930c-749ffb9f189b)
+  <summary>示例: 选择器路径视图 白/夜 显示</summary>
+<video src="./images/04_Drak_sport.mp4"  autoplay muted loop width="100%"></video>
 
 </details>
+
+### 设置面板
+#### 你可以在里面自定义想要的喜好设置
+![设置面板](./images/05_settings.webp)
 
 <details open>
   <summary>示例: 实时执行点击选择器</summary>
@@ -44,7 +80,3 @@ GKD 网页端审查工具,
 - <https://i.gkd.li/i/13999908>
 
 ## 其它
-
-[本项目 CDN 加速及安全防护由 Tencent EdgeOne 赞助](https://edgeone.ai/zh?from=github)
-
-<img src="https://edgeone.ai/media/34fe3a45-492d-4ea4-ae5d-ea1087ca7b4b.png" alt="" width="75%" />
