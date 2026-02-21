@@ -1,18 +1,5 @@
 # GKD快照审查工具Plus
-
-GKD 网页端审查工具-优化版,
-
-- 原版
-<details open>
-
-  - 抓取快照
-  - 审查快照
-  - 分享快照
-  - 连接调试 GKD 内部 HTTP Server
-  - 实时启用订阅规则, 实时执行点击选择器
-  - 选择器路径视图
-
-</details>
+## 基于原版进行重构并增加一些功能
 
 - 功能
   - [x] 快照树分类
@@ -34,6 +21,7 @@ GKD 网页端审查工具-优化版,
 ## 功能演示
 
 ### 快照图片预览 & 快照树分类 & UI重构
+
 #### 白天
 
 <video src="./images/00_Snap-tree-demo.mp4" controls autoplay loop muted width="80%"></video>
@@ -68,6 +56,7 @@ https://github.com/user-attachments/assets/f0c85372-7176-4530-b379-6f573e600f9a
 </details>
 
 ### 设置面板
+
 #### 你可以在里面自定义想要的喜好设置
 ![设置面板](./images/05_settings.webp)
 
@@ -80,6 +69,8 @@ https://github.com/user-attachments/assets/f0c85372-7176-4530-b379-6f573e600f9a
 
 ## 快照示例
 
+<details close>
+
 - <https://i.gkd.li/i/14045424>
 - <https://i.gkd.li/i/14039510>
 - <https://i.gkd.li/i/14035418>
@@ -89,4 +80,18 @@ https://github.com/user-attachments/assets/f0c85372-7176-4530-b379-6f573e600f9a
 - <https://i.gkd.li/i/14011298>
 - <https://i.gkd.li/i/13999908>
 
-## 其它
+</details>
+
+## 🎉感谢以下项目
+
+- [gkd-kit/inspect](https://github.com/gkd-kit/inspect) 原项目
+
+## 🥇感谢以下开发者的贡献
+
+- [CodeX](https://chatgpt.com/codex)
+
+## 📈Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=cjy0812/inspect-plus&type=date&legend=top-left)](https://www.star-history.com/#cjy0812/inspect-plus&type=date&legend=top-left)
+
+
