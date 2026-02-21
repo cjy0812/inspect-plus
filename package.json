@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:gh": "cross-env BASE_URL=/inspect-Desktop/ vite build",
+    "build:cf": "cross-env BASE_URL=/ vite build",
     "build:mirror": "cross-env MIRROR=ON vite build",
     "preview": "vite preview",
     "build-only": "vite build",
