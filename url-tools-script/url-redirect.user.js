@@ -1,21 +1,40 @@
 // ==UserScript==
 // @name         GKD Redirect by ChatGPT
 // @namespace    your.namespace
-// @version      1.0
-// @description  Redirect i.gkd.li to li.chenge.eu.org
-// @match        https://i.gkd.li/i/*
-// @description 2026/2/21 21:21:34
+// @version      1.1
+// @description  Redirect i.gkd.li and patch device redirect
+// @match        https://i.gkd.li/*
 // @run-at       document-start
 // ==/UserScript==
 
 (function () {
   'use strict';
 
-  const path = location.pathname; // /i/00000000
-  const id = path.replace('/i/', '');
+  const customDomain = 'https://li.chenge.eu.org'; // 修改成你自己的审查工具域名
 
-  if (id) {
-    const target = `https://li.chenge.eu.org/${id}`;
-    location.replace(target);
+  const url = new URL(location.href);
+
+  // ===============================
+  // 1. 处理 /i/xxxx 直接跳转
+  // ===============================
+  if (url.pathname.startsWith('/i/')) {
+    const id = url.pathname.replace('/i/', '');
+
+    if (id) {
+      const target = `${customDomain}/${id}`;
+      location.replace(target);
+      return;
+    }
+  }
+
+  // ===============================
+  // 2. 处理 device 接口重定向
+  // ===============================
+  if (url.pathname === '/device') {
+    if (url.hostname === 'i.gkd.li') {
+      url.hostname = 'li.chenge.eu.org';
+      location.replace(url.href);
+      return;
+    }
   }
 })();
