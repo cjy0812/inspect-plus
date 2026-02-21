@@ -7,44 +7,55 @@ on:
     paths-ignore:
       - 'README.md'
 
-permissions:
-  contents: write
-
 jobs:
-  deploy:
+  deploy-github-pages:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
-
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: latest
-
-      - uses: pnpm/action-setup@v4
-
-      - run: pnpm install
-
+          cache: pnpm
+      - uses: actions/configure-pages@v5
+      - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsx ./scripts/updateVersion.ts
-      - run: pnpm run build:mirror
-      - name: Publish package
+      - name: Build for GitHub Pages (repo base path)
         run: |
-      #          pnpm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
-      #          pnpm publish --no-git-checks
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          BASE_URL="/${REPO_NAME}/" pnpm run build
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
 
+  deploy-cloudflare-pages:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HAS_CF_SECRETS: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: latest
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx ./scripts/updateVersion.ts
+      - run: pnpm run build:cf
       - uses: cloudflare/wrangler-action@v3
+        if: ${{ env.HAS_CF_SECRETS == 'true' }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=gkd-inspect
-
-#      - uses: nwtgck/actions-netlify@v3
-#        with:
-#          publish-dir: ./dist
-#          production-branch: main
-#          github-token: ${{ secrets.GITHUB_TOKEN }}
-#          deploy-message: 'Deploy from GitHub Actions'
-#          enable-pull-request-comment: false
-#          enable-commit-comment: false
-#        env:
-#          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-#          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
