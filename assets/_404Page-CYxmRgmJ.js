@@ -1,0 +1,2 @@
+import{_ as o}from"./_plugin-vue_export-helper-DlAUqK2U.js";import{v as s,x as n,H as r,y as a,z as l,A as c,I as f}from"./index-DpSxqACn.js";const i={},p={"page-size":"",flex:"","flex-col":"","flex-items-center":"","w-full":"","pt-50px":"","gap-8px":""};function x(_,e){const t=s("RouterLink");return r(),n("div",p,[e[1]||(e[1]=a("div",null,"当前页面不存在可访问资源",-1)),l(t,{to:"/"},{default:c(()=>[...e[0]||(e[0]=[f(" 回到首页 ",-1)])]),_:1})])}const u=o(i,[["render",x]]);export{u as default};
+//# sourceMappingURL=_404Page-CYxmRgmJ.js.map
