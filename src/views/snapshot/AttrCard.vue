@@ -96,28 +96,28 @@ const selectText = computed(() => {
 });
 
 const attrExplainMap: Record<string, string> = {
-  id: '控件资源 ID，通常最稳定，常用于构建精准选择器。',
-  vid: '虚拟 ID，部分场景可辅助定位同类控件。',
-  name: '控件类型名，表示当前节点的组件/类名。',
-  text: '控件文本内容，适合定位按钮、标题等可见文案。',
-  textLen: '文本长度，便于快速过滤长文本节点。',
-  desc: '无障碍描述信息，常见于图标按钮。',
-  descLen: '描述文本长度，用于补充筛选条件。',
-  isClickable: '是否可点击，可用于判断交互节点。',
-  childCount: '子节点数量，用于识别容器节点结构。',
-  index: '在父节点中的序号，结构变动时稳定性一般。',
-  depth: '节点深度，层级过深时通常更脆弱。',
-  left: '节点左边界像素坐标。',
-  top: '节点上边界像素坐标。',
-  right: '节点右边界像素坐标。',
-  bottom: '节点下边界像素坐标。',
-  width: '节点宽度（像素）。',
-  height: '节点高度（像素）。',
-  _id: '快照生成时的遍历序号，仅用于本地分析。',
-  _pid: '父节点的 _id，用于还原树结构。',
-  'text.length': 'text 字段的字符数量。',
-  'desc.length': 'desc 字段的字符数量。',
-  _selector: '自动生成的节点选择器表达式。',
+  id: '控件资源 ID(R.id.xxx)',
+  vid: '虚拟 ID,用于区分同类动态控件',
+  name: '控件类名(如 TextView、ImageView)',
+  text: '控件显示文本内容',
+  textLen: 'text 的字符数量',
+  desc: '无障碍描述(content-desc)',
+  descLen: 'desc 的字符数量',
+  isClickable: '控件是否可点击',
+  childCount: '子节点数量',
+  index: '在父节点中的位置序号',
+  depth: '在控件树中的层级深度',
+  left: '左边界坐标(像素)',
+  top: '上边界坐标(像素)',
+  right: '右边界坐标(像素)',
+  bottom: '下边界坐标(像素)',
+  width: '控件宽度(像素)',
+  height: '控件高度(像素)',
+  _id: '快照遍历序号',
+  _pid: '父节点的遍历序号',
+  'text.length': 'text 字段长度',
+  'desc.length': 'desc 字段长度',
+  _selector: '自动生成的选择器表达式',
 };
 
 const getAttrExplain = (name: string) => {
@@ -161,7 +161,7 @@ const getAttrExplain = (name: string) => {
       <NTbody>
         <NTr v-for="attrx in attrs" :key="attrx.name">
           <NTd @click="copy(`${attrx.name}=${attrx.desc}`)">
-            <NTooltip :delay="2000" placement="top-start">
+            <NTooltip :delay="1600" placement="top-start">
               <template #trigger>
                 <div v-if="attrx.tip" flex justify-between items-center>
                   <div>
