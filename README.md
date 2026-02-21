@@ -37,23 +37,28 @@ GKD 网页端审查工具-优化版,
 #### 白天
 
 <video src="./images/00_Snap-tree-demo.mp4" autoplay muted loop width="80%"></video>
+https://github.com/user-attachments/assets/079a48b0-aca8-46bb-95cf-589b08d7b546
 
 #### 夜间
 <video src="./images/01_Snap-tree-demo-dark.mp4" autoplay muted loop width="80%"></video>
+https://github.com/user-attachments/assets/3f97bf89-3e9f-4369-b080-d70049969b05
 
 <details open>
   <summary>示例: 审查快照-搬入 测试选择器</summary>
 <video src="./images/02_Snap-tools.mp4" autoplay muted loop width="100%"></video>
+https://github.com/user-attachments/assets/7724a546-7722-4964-8f17-b55591fcef63
 
 <details open>
   <summary>示例: 属性面板参数停留2s可显示解释</summary>
 <video src="./images/03_Property-Panel_Tip.mp4" autoplay muted loop width="100%"></video>
+https://github.com/user-attachments/assets/4127ae50-b1a1-4714-b314-3844c06a2890
 
 </details>
 
 <details open>
   <summary>示例: 选择器路径视图 白/夜 显示</summary>
 <video src="./images/04_Drak_sport.mp4"  autoplay muted loop width="100%"></video>
+https://github.com/user-attachments/assets/f0c85372-7176-4530-b379-6f573e600f9a
 
 </details>
 
