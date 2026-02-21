@@ -49,6 +49,10 @@ const router = createRouter({
       redirect: redirectImport,
     },
     {
+      path: '/:github_asset_id(\\d+)',
+      redirect: redirectImport,
+    },
+    {
       path: '/import',
       redirect(to) {
         return {
