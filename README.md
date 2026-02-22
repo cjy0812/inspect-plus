@@ -6,10 +6,14 @@
   - [ ] 快照组备注
   - [x] 打开前预览快照图片
   - [x] 几乎完美支持**夜间模式**(99.8%)
-  - [x] 搬入**测试选择器**至快照页
+  - [ ] `测试选择器`至快照页与搜索面板合并
+  - [ ] `执行选择器`至快照页
+  - [ ] `修改内存订阅`至快照页面
+  - [ ] 更强大的`内存订阅管理器`
   - [x] 属性面板参数停留可显示解释
   - [x] 设置面板实现管理
   - [ ] 同web页内快照审查快速切换快照
+  - [ ] 快查节点特殊颜色标记
   - [ ] 低内存模式
   - [ ] 国际化支持
 - 优化
@@ -29,15 +33,21 @@
 https://github.com/user-attachments/assets/079a48b0-aca8-46bb-95cf-589b08d7b546
 
 #### 夜间
+
+<details close>
 <video src="./images/01_Snap-tree-demo-dark.mp4" controls autoplay loop muted width="80%"></video>
 
 https://github.com/user-attachments/assets/3f97bf89-3e9f-4369-b080-d70049969b05
+
+</details>
 
 <details open>
   <summary>示例: 审查快照-搬入 测试选择器</summary>
 <video src="./images/02_Snap-tools.mp4" controls autoplay loop muted width="100%"></video>
   
 https://github.com/user-attachments/assets/7724a546-7722-4964-8f17-b55591fcef63
+
+</details>
 
 <details open>
   <summary>示例: 属性面板参数停留2s可显示解释</summary>
