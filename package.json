@@ -98,5 +98,8 @@
     "*.{json,yml,html}": [
       "prettier --cache --write"
     ]
+  },
+  "devDependencies": {
+    "vue-tsc": "^3.2.5"
   }
 }

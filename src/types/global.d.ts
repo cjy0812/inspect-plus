@@ -160,6 +160,8 @@ interface SettingsStore {
   shareUseOfficialImportDomain: boolean;
   shareCustomImportDomain: string;
   locale: 'zh' | 'en';
+  debugMode?: boolean;
+  showDebugTools?: boolean;
 }
 
 interface GlobalStore {

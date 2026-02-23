@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showTextDLg } from '@/utils/dialog';
 import { formatClock, normalizeClock } from '@/utils/clock';
 import { normalizeOriginText } from '@/utils/url';
 
@@ -11,6 +12,7 @@ const emit = defineEmits<{
 }>();
 
 const { settingsStore } = useStorageStore();
+const showDebugPanel = ref(false);
 
 const updateDarkModeStart = () => {
   settingsStore.darkModeStart = formatClock(
@@ -29,6 +31,15 @@ const updateCustomDomain = () => {
     settingsStore.shareCustomImportDomain,
   );
 };
+
+const triggerDebugShareDialog = () => {
+  showTextDLg({
+    title: '调试 - 链接复制窗口',
+    content: 'https://i.gkd.li/i/123456',
+    extraContent: `${window.location.origin}/i/123456`,
+    extraTitle: '当前域链接',
+  });
+};
 </script>
 
 <template>
@@ -42,6 +53,18 @@ const updateCustomDomain = () => {
     @update:show="emit('update:show', $event)"
     @positiveClick="emit('update:show', false)"
   >
+    <NCheckbox v-model:checked="settingsStore.debugMode">调试模式</NCheckbox>
+    <div v-if="settingsStore.debugMode" h-1px my-10px bg="#eee" />
+    <NButton
+      v-if="settingsStore.debugMode"
+      type="primary"
+      secondary
+      block
+      @click="showDebugPanel = true"
+    >
+      打开调试子菜单
+    </NButton>
+    <div h-1px my-10px bg="#eee" />
     <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn"
       >关闭生成分享链接弹窗提醒</NCheckbox
     >
@@ -57,7 +80,7 @@ const updateCustomDomain = () => {
     <div h-1px my-10px bg="#eee" />
     <div flex gap-10px items-center>
       <NSwitch v-model:value="settingsStore.shareUseOfficialImportDomain" />
-      <div>分享快照链接默认使用官方域名 i.gkd.li</div>
+      <div>分享快照链接默认复制官方域名 i.gkd.li</div>
     </div>
     <div h-1px my-10px bg="#eee" />
     <div flex items-center gap-10px>
@@ -108,5 +131,23 @@ const updateCustomDomain = () => {
         />
       </div>
     </div>
+  </NModal>
+
+  <NModal
+    v-model:show="showDebugPanel"
+    preset="dialog"
+    title="调试子菜单"
+    :showIcon="false"
+    positiveText="关闭"
+    style="width: 460px"
+  >
+    <NSpace vertical size="large">
+      <div class="text-13px opacity-70">
+        这里用于调试弹窗能力，不影响正常用户流程。
+      </div>
+      <NButton type="primary" block @click="triggerDebugShareDialog">
+        直接触发链接弹窗
+      </NButton>
+    </NSpace>
   </NModal>
 </template>

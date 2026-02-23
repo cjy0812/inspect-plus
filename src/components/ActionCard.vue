@@ -66,6 +66,7 @@ const exportZipUrl = useTask(async () => {
       ? getOfficialImportUrl(importId)
       : getImportUrl(importId),
     extraContent: getCustomDomainImportUrl(importId),
+    quickPick: true,
   });
 });
 
