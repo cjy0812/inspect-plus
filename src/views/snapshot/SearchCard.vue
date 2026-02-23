@@ -8,7 +8,13 @@ import { buildEmptyFn, copy } from '@/utils/others';
 import { parseSelector, wasmLoadTask } from '@/utils/selector';
 import { gkdWidth, vw } from '@/utils/size';
 import { getImagUrl, getImportUrl, getOfficialImportUrl } from '@/utils/url';
-import { FastQuery, GkdException } from '@gkd-kit/selector';
+import {
+  AstNode,
+  FastQuery,
+  GkdException,
+  Selector,
+  SyntaxException,
+} from '@gkd-kit/selector';
 import dayjs from 'dayjs';
 import * as base64url from 'universal-base64url';
 import type { ShallowRef } from 'vue';
@@ -34,6 +40,7 @@ const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
 const { focusNode, updateFocusNode } = snapshotStore;
 
 const searchText = shallowRef(``);
+const searchTextLazy = useDebounce(searchText, 220);
 
 const selectorResults = shallowReactive<SearchResult[]>([]);
 const expandedKeys = shallowRef<number[]>([]);
@@ -199,6 +206,59 @@ const generateRules = errorTry(async (result: SelectorSearchResult) => {
   copy(JSON5.stringify(rule, undefined, 2));
 });
 const enableSearchBySelector = shallowRef(true);
+const selectorSyntaxText = computed(() => {
+  if (!enableSearchBySelector.value) return '';
+  return searchTextLazy.value.trim();
+});
+const selectorSyntaxResult = computed(() => {
+  const text = selectorSyntaxText.value;
+  if (!text) return;
+  try {
+    return Selector.Companion.parseAst(text);
+  } catch (e) {
+    return e as GkdException;
+  }
+});
+const selectorSyntaxAst = computed(() => {
+  if (selectorSyntaxResult.value instanceof AstNode) {
+    return selectorSyntaxResult.value;
+  }
+  return undefined;
+});
+const selectorSyntaxError = computed(() => {
+  const result = selectorSyntaxResult.value;
+  const text = selectorSyntaxText.value;
+  if (result instanceof SyntaxException) {
+    const hasErrorChar = result.index < text.length;
+    const eofLike =
+      !hasErrorChar || /expect\s+eof/i.test(result.outMessage || '');
+    return {
+      isEof: eofLike,
+      headText: text.substring(0, result.index),
+      errorText: hasErrorChar
+        ? text.substring(result.index, result.index + 1)
+        : '',
+      tailText: hasErrorChar ? text.substring(result.index + 1) : '',
+      message: result.outMessage,
+    };
+  }
+  if (result && !(result instanceof AstNode)) {
+    const msg =
+      typeof (result as any).outMessage == 'string'
+        ? (result as any).outMessage
+        : typeof (result as any).message == 'string'
+          ? (result as any).message
+          : '';
+    return {
+      isEof: /expect\s+eof/i.test(msg),
+      headText: '',
+      errorText: '',
+      tailText: '',
+      message: msg,
+    };
+  }
+  return undefined;
+});
 const hasZipId = computed(() => {
   return snapshotImportId[snapshot.value.id];
 });
@@ -268,6 +328,58 @@ const shareResult = (result: SearchResult) => {
           </template>
         </NButton>
       </NInputGroup>
+      <div
+        v-if="enableSearchBySelector && selectorSyntaxText"
+        mt-6px
+        mb-8px
+        p-4px
+        gkd_code
+        transition-colors
+        class="selector-ast-view"
+        :class="selectorSyntaxError ? `selector-ast-view-error` : ``"
+      >
+        <div v-if="selectorSyntaxAst" overflow-x-scroll scrollbar-hidden>
+          <SelectorText
+            :source="selectorSyntaxText"
+            :node="selectorSyntaxAst"
+          />
+        </div>
+        <span v-else-if="selectorSyntaxError" whitespace-pre-wrap>
+          <span v-if="selectorSyntaxError.headText">{{
+            selectorSyntaxError.headText
+          }}</span>
+          <span bg-red relative>
+            <span v-if="selectorSyntaxError.errorText">{{
+              selectorSyntaxError.errorText
+            }}</span>
+            <span v-else pl-20px />
+            <div
+              absolute
+              left-0
+              right-0
+              top--12px
+              flex
+              flex-col
+              items-center
+              animate-bounce
+              pointer-events-none
+            >
+              <SvgIcon name="arrow" class="text-18px selector-error-arrow" />
+            </div>
+          </span>
+          <span v-if="selectorSyntaxError.tailText">{{
+            selectorSyntaxError.tailText
+          }}</span>
+        </span>
+      </div>
+      <div
+        v-if="selectorSyntaxError && !selectorSyntaxError.isEof"
+        p-4px
+        gkd_code
+        class="selector-error-box"
+      >
+        {{ selectorSyntaxError.message }}
+      </div>
       <div p-5px />
       <NCollapse v-model:expandedNames="expandedKeys">
         <NCollapseItem

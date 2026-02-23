@@ -90,7 +90,7 @@ const error = computed(() => {
       <NInput
         v-model:value="inputText"
         type="textarea"
-        placeholder="请输入选择器"
+        placeholder="请输入选择器 语法高亮/错误解析"
         class="gkd_code py-4px"
         :autosize="{
           minRows: 3,
