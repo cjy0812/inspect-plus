@@ -1,6 +1,7 @@
 import { message, modal, dialog } from './discrete';
 import ConnectSvg from '@/assets/svg/Connect.svg';
 import { getImportId } from './url';
+import { settingsStore } from '@/store/storage';
 import { defineComponent } from 'vue';
 
 // 1. 分享链接弹窗 (使用 modal 实现非阻塞)
@@ -30,9 +31,11 @@ export const showTextDLg = ({
 
   const importId = getImportId(content) || getImportId(extraContent);
   const officialUrl = importId ? `https://i.gkd.li/i/${importId}` : content;
-  const currentOriginUrl = importId
-    ? `${window.location.origin}/i/${importId}`
-    : extraContent || content;
+  const currentOriginUrl = extraContent
+    ? extraContent
+    : importId
+      ? `${window.location.origin}/i/${importId}`
+      : content;
 
   let reactive: ReturnType<typeof modal.create> | null = null;
   const close = () => {

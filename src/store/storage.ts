@@ -73,6 +73,10 @@ if (typeof settingsStore.shareUseOfficialImportDomain != 'boolean')
   settingsStore.shareUseOfficialImportDomain = true;
 if (typeof settingsStore.shareCustomImportDomain != 'string')
   settingsStore.shareCustomImportDomain = '';
+if (typeof settingsStore.debugMode != 'boolean')
+  settingsStore.debugMode = false;
+if (typeof settingsStore.showDebugTools != 'boolean')
+  settingsStore.showDebugTools = false;
 
 // snapshot id -> last viewed time
 export const snapshotViewedTime = await useReactiveIndexedDB<
