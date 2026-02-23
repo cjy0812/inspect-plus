@@ -209,7 +209,12 @@ watch(el, async () => {
           labelFontWeight: qf && !placeholdered ? 'bold' : undefined,
           labelOpacity: placeholdered ? 0.5 : undefined,
           labelPointerEvents: 'none',
-          labelStroke: isTarget ? '#0FF' : undefined,
+          // 核心修改：如果是目标则按模式选色，否则不描边
+          labelStroke: isTarget
+            ? darkMode.value
+              ? '#337dff'
+              : '#0FF'
+            : undefined,
         };
       },
     },
