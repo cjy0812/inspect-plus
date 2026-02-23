@@ -104,6 +104,13 @@ const attrExplainMap: Record<string, string> = {
   desc: '无障碍描述(content-desc)',
   descLen: 'desc 的字符数量',
   isClickable: '控件是否可点击',
+  clickable: '控件是否可点击',
+  focusable: '控件是否可获取焦点',
+  checkable: '控件是否可勾选',
+  checked: '控件是否已勾选',
+  editable: '控件是否可编辑',
+  longClickable: '控件是否支持长按',
+  visibleTouser: '控件是否对用户可见',
   childCount: '子节点数量',
   index: '在父节点中的位置序号',
   depth: '在控件树中的层级深度',
@@ -161,7 +168,7 @@ const getAttrExplain = (name: string) => {
       <NTbody>
         <NTr v-for="attrx in attrs" :key="attrx.name">
           <NTd @click="copy(`${attrx.name}=${attrx.desc}`)">
-            <NTooltip :delay="1600" placement="top-start">
+            <NTooltip :delay="500" placement="top-start">
               <template #trigger>
                 <div v-if="attrx.tip" flex justify-between items-center>
                   <div>
