@@ -53,6 +53,13 @@ const triggerDebugShareDialog = () => {
     @update:show="emit('update:show', $event)"
     @positiveClick="emit('update:show', false)"
   >
+    <template #header>
+      <div flex items-center>
+        <SvgIcon name="settings" class="mr-6px" style="color: #22c55e" />
+        <span>设置</span>
+        <div flex-1 />
+      </div>
+    </template>
     <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn"
       >关闭生成分享链接弹窗提醒</NCheckbox
     >

@@ -192,3 +192,12 @@ html.dark-mode-active .selector-error-arrow {
   width: var(--app-icon-size) !important;
   height: var(--app-icon-size) !important;
 }
+
+.home-topbar-icons {
+  --n-icon-size: var(--app-icon-size);
+  --svg-h: var(--app-icon-size);
+}
+.home-topbar-icons .SvgIcon {
+  width: var(--app-icon-size) !important;
+  height: var(--app-icon-size) !important;
+}

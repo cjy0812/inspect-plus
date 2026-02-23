@@ -20,6 +20,55 @@ const {
   clickAction,
   execSelector,
 } = useDeviceControlTools();
+
+const subsPlaceholder = `
+请输入订阅文本(JSON5语法):
+示例1-更新单个应用的规则:
+{
+  id: 'appId',
+  groups: []
+}
+
+示例2-更新多个应用的规则:
+[
+  {
+    id: 'appId1',
+    groups: []
+  },
+  {
+    id: 'appId2',
+    groups: []
+  }
+]
+
+示例3-更新全局规则(1.7.0):
+{
+  name: '全局规则-1',
+  key: 0,
+  rules: []
+}
+
+示例3-更新多个全局规则(1.7.0):
+[
+  {
+    name: '全局规则-1',
+    key: 0,
+    rules: []
+  },
+  {
+    name: '全局规则-2',
+    key: 1,
+    rules: []
+  }
+]
+
+示例4-更新整个订阅(1.7.0):
+{
+  apps: [],
+  globalGroups: [],
+  categories: [],
+}
+`.trim();
 </script>
 
 <template>
@@ -28,7 +77,7 @@ const {
       <NButton
         text
         :style="{ '--n-icon-size': props.iconSize }"
-        class="[--svg-h:20px]"
+        class="[--svg-h:24px]"
         @click="showSubsModel = true"
       >
         <template #icon>
@@ -43,7 +92,7 @@ const {
       <NButton
         text
         :style="{ '--n-icon-size': props.iconSize }"
-        class="[--svg-h:20px]"
+        class="[--svg-h:24px]"
         @click="showSelectorModel = true"
       >
         <template #icon>
@@ -68,6 +117,7 @@ const {
     >
       <template #header>
         <div :ref="onRef" flex items-center cursor-move>
+          <SvgIcon name="CacheSub" class="mr-6px" style="color: #22c55e" />
           <span>修改内存订阅</span>
           <div flex-1 />
         </div>
@@ -78,7 +128,7 @@ const {
         type="textarea"
         class="gkd_code"
         :autosize="{ minRows: 20, maxRows: 25 }"
-        placeholder="请输入订阅文本(JSON5)"
+        :placeholder="subsPlaceholder"
       />
       <div mt-10px flex justify-end gap-8px>
         <NButton @click="showSubsModel = false">取消</NButton>
@@ -107,6 +157,7 @@ const {
     >
       <template #header>
         <div :ref="onRef" flex items-center cursor-move>
+          <SvgIcon name="Exe-Sel" class="mr-6px" style="color: #22c55e" />
           <span>执行选择器</span>
           <div flex-1 />
         </div>
@@ -122,13 +173,29 @@ const {
       <div h-15px />
       <NSpace>
         <NCheckbox v-model:checked="clickAction.quickFind">快速查询</NCheckbox>
+        <a
+          href="https://gkd.li/api/interfaces/RawCommonProps.html#quickfind"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          查找说明
+        </a>
       </NSpace>
       <div h-10px />
-      <NSelect
-        v-model:value="clickAction.action"
-        :options="actionOptions"
-        class="w-150px"
-      />
+      <div flex gap-10px flex-items-center>
+        <NSelect
+          v-model:value="clickAction.action"
+          :options="actionOptions"
+          class="w-150px"
+        />
+        <a
+          href="https://gkd.li/api/interfaces/RawRuleProps#action"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          操作说明
+        </a>
+      </div>
       <div mt-10px flex justify-end gap-8px>
         <NButton @click="showSelectorModel = false">取消</NButton>
         <NButton

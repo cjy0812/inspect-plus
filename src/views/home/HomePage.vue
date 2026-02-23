@@ -348,13 +348,7 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
         </template>
       </NSpace>
       <div flex-1 />
-      <div
-        flex
-        gap-24px
-        items-center
-        pr-8px
-        class="[--svg-h:var(--app-icon-size)]"
-      >
+      <div flex gap-24px items-center pr-8px class="home-topbar-icons">
         <NTooltip>
           <template #trigger>
             <NButton text @click="settingsDlgShow = true"

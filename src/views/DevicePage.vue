@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DeviceControlTools from '@/components/DeviceControlTools.vue';
+import SettingsModal from '@/components/SettingsModal.vue';
 import { usePreviewCache } from '@/composables/usePreviewCache';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
 import { useDeviceApi } from '@/utils/api';
@@ -30,6 +31,7 @@ const { api, origin, serverInfo } = useDeviceApi();
 const { settingsStore, snapshotImportTime, snapshotViewedTime } =
   useStorageStore();
 const link = useStorage('device_link', '');
+const settingsDlgShow = shallowRef(false);
 
 const normalizeDeviceUrl = (input: string): string | null => {
   const raw = input.trim();
@@ -301,6 +303,8 @@ watchEffect(() => {
           捕获快照
         </NTooltip>
 
+        <DeviceControlTools />
+
         <NTooltip>
           <template #trigger>
             <NButton
@@ -316,7 +320,19 @@ watchEffect(() => {
           下载所有快照
         </NTooltip>
 
-        <DeviceControlTools />
+        <NTooltip>
+          <template #trigger>
+            <NButton
+              text
+              style="--n-icon-size: var(--app-icon-size)"
+              class="device-top-icon"
+              @click="settingsDlgShow = true"
+            >
+              <SvgIcon name="settings" />
+            </NButton>
+          </template>
+          设置
+        </NTooltip>
       </template>
     </div>
 
@@ -523,4 +539,6 @@ watchEffect(() => {
       </NCollapse>
     </div>
   </div>
+
+  <SettingsModal v-model:show="settingsDlgShow" />
 </template>
