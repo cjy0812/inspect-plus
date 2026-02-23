@@ -197,7 +197,7 @@ const targetNode = computed(() => {
     }"
     :minWidth="300"
     sizeDraggable
-    class="box-shadow-dim"
+    class="box-shadow-dim snapshot-window window-anim"
     :show="show"
   >
     <div
@@ -205,10 +205,11 @@ const targetNode = computed(() => {
       b-1px
       b-solid
       b-gray-200
-      rounded-4px
+      rounded-12px
       p-8px
     >
       <div flex m-b-4px pr-4px>
+        <SvgIcon name="test" class="mr-6px" style="color: #10b981" />
         <div>测试规则</div>
         <div :ref="onRef" flex-1 cursor-move />
         <NButton text title="最小化" @click="onUpdateShow(!show)">

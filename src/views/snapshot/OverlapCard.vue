@@ -12,7 +12,7 @@ const left = _1vw * 25.5;
   <DraggableCard
     v-slot="{ onRef }"
     :initialValue="{ top: 215, left }"
-    class="box-shadow-dim w-420px"
+    class="box-shadow-dim w-420px snapshot-window window-anim"
     :show="Boolean(overlapNodes && focusPosition)"
   >
     <NCard

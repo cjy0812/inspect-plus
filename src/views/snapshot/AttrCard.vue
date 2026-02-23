@@ -138,95 +138,110 @@ const getAttrExplain = (name: string) => {
   <DraggableCard
     v-slot="{ onRef }"
     :initialValue="{ top: 40, right: 10 }"
-    class="box-shadow-dim"
+    class="box-shadow-dim snapshot-window window-anim"
     :show="show && Boolean(focusNode)"
   >
-    <div absolute top-0 right-0 pt-4px pr-8px>
-      <NButton text title="最小化" @click="onUpdateShow(!show)">
-        <template #icon>
-          <SvgIcon name="minus" />
-        </template>
-      </NButton>
-    </div>
-    <NTable
-      v-if="focusNode"
-      size="small"
-      striped
-      :singleLine="false"
-      class="gkd_code"
-      :themeOverrides="{
-        thPaddingSmall: '1px 3px',
-        tdPaddingSmall: '0px 3px',
-      }"
-    >
-      <thead>
-        <tr :ref="onRef" cursor-move>
-          <th>Name</th>
-          <th>Value</th>
-        </tr>
-      </thead>
-      <NTbody>
-        <NTr v-for="attrx in attrs" :key="attrx.name">
-          <NTd @click="copy(`${attrx.name}=${attrx.desc}`)">
-            <NTooltip :delay="500" placement="top-start">
-              <template #trigger>
-                <div v-if="attrx.tip" flex justify-between items-center>
-                  <div>
-                    {{ attrx.name }}
-                  </div>
-                  <NTooltip>
-                    <template #trigger>
-                      <NIcon size="16">
-                        <SvgIcon v-if="attrx.tip.type == 'info'" name="info" />
-                        <SvgIcon
-                          v-else-if="attrx.tip.type == 'quickFind'"
-                          name="ok"
-                        />
-                      </NIcon>
-                    </template>
-                    {{ attrx.tip.desc }}
-                  </NTooltip>
-                </div>
-                <template v-else>
-                  {{ attrx.name }}
-                </template>
-              </template>
-              {{ getAttrExplain(attrx.name) }}
-            </NTooltip>
-          </NTd>
-          <NTd>
-            <NEllipsis
-              class="w-[calc(var(--gkd-w)*0.12)]"
-              :class="{
-                'text-left direction-rtl': attrx.name == 'id',
-                'opacity-50': attrx.value === null,
-              }"
-            >
-              {{ attrx.desc }}
-            </NEllipsis>
-          </NTd>
-        </NTr>
-        <NTr>
-          <NTd colspan="2">
-            <div flex items-center h-24px px-2px>
-              <NTooltip>
+    <div class="snapshot-floating-panel relative p-8px">
+      <div absolute top-0 right-0 pt-4px pr-8px>
+        <NButton text title="最小化" @click="onUpdateShow(!show)">
+          <template #icon>
+            <SvgIcon name="minus" />
+          </template>
+        </NButton>
+      </div>
+      <NTable
+        v-if="focusNode"
+        size="small"
+        striped
+        :singleLine="false"
+        class="gkd_code"
+        :themeOverrides="{
+          thPaddingSmall: '1px 3px',
+          tdPaddingSmall: '0px 3px',
+        }"
+      >
+        <thead>
+          <tr :ref="onRef" cursor-move>
+            <th>Name</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <NTbody>
+          <NTr v-for="attrx in attrs" :key="attrx.name">
+            <NTd @click="copy(`${attrx.name}=${attrx.desc}`)">
+              <NTooltip :delay="500" placement="top-start">
                 <template #trigger>
-                  <NButton text @click="copy(selectText)">
-                    <template #icon>
-                      <NIcon size="20">
-                        <SvgIcon name="path" />
-                      </NIcon>
-                    </template>
-                  </NButton>
+                  <div v-if="attrx.tip" flex justify-between items-center>
+                    <div>
+                      {{ attrx.name }}
+                    </div>
+                    <NTooltip
+                      trigger="click"
+                      placement="top"
+                      :show-arrow="false"
+                    >
+                      <template #trigger>
+                        <NIcon
+                          size="16"
+                          :style="{
+                            color:
+                              attrx.tip.type == 'quickFind' ? '#22c55e' : '',
+                          }"
+                        >
+                          <SvgIcon
+                            v-if="attrx.tip.type == 'info'"
+                            name="info"
+                          />
+                          <SvgIcon
+                            v-else-if="attrx.tip.type == 'quickFind'"
+                            name="ok"
+                          />
+                        </NIcon>
+                      </template>
+                      {{ attrx.tip.desc }}
+                    </NTooltip>
+                  </div>
+                  <template v-else>
+                    {{ attrx.name }}
+                  </template>
                 </template>
-                <div max-w-500px>
-                  {{ selectText }}
-                </div>
+                {{ getAttrExplain(attrx.name) }}
               </NTooltip>
-            </div>
-          </NTd>
-        </NTr>
-      </NTbody>
-    </NTable>
+            </NTd>
+            <NTd>
+              <NEllipsis
+                class="w-[calc(var(--gkd-w)*0.12)]"
+                :class="{
+                  'text-left direction-rtl': attrx.name == 'id',
+                  'opacity-50': attrx.value === null,
+                }"
+              >
+                {{ attrx.desc }}
+              </NEllipsis>
+            </NTd>
+          </NTr>
+          <NTr>
+            <NTd colspan="2">
+              <div flex items-center h-24px px-2px>
+                <NTooltip>
+                  <template #trigger>
+                    <NButton text @click="copy(selectText)">
+                      <template #icon>
+                        <NIcon size="20">
+                          <SvgIcon name="path" />
+                        </NIcon>
+                      </template>
+                    </NButton>
+                  </template>
+                  <div max-w-500px>
+                    {{ selectText }}
+                  </div>
+                </NTooltip>
+              </div>
+            </NTd>
+          </NTr>
+        </NTbody>
+      </NTable>
+    </div>
   </DraggableCard>
 </template>
