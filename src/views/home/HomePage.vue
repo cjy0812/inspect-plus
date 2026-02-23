@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import ActionCard from '@/components/ActionCard.vue';
+import DeviceControlTools from '@/components/DeviceControlTools.vue';
 import SettingsModal from '@/components/SettingsModal.vue';
 import { usePreviewCache } from '@/composables/usePreviewCache';
 import { toValidURL } from '@/utils/check';
@@ -347,7 +348,7 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
         </template>
       </NSpace>
       <div flex-1 />
-      <div flex gap-24px items-center pr-8px class="[--svg-h:24px]">
+      <div flex gap-24px items-center pr-8px class="home-topbar-icons">
         <NTooltip>
           <template #trigger>
             <NButton text @click="settingsDlgShow = true"
@@ -381,6 +382,7 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
           </template>
           连接设备
         </NTooltip>
+        <DeviceControlTools />
         <NTooltip>
           <template #trigger>
             <a

@@ -24,6 +24,13 @@ html.dark-mode-active body {
   color: #e8e8ee;
 }
 
+html.dark-mode-active .device-top-icon {
+  color: #cfeee0;
+}
+html.dark-mode-active .device-top-icon:hover {
+  color: #a7e7c4;
+}
+
 html.dark-mode-active .bg-white {
   background-color: #1b1b22 !important;
 }
@@ -170,4 +177,27 @@ html.dark-mode-active .selector-error-box {
 
 html.dark-mode-active .selector-error-arrow {
   color: #f4c2c2 !important;
+}
+
+.snapshot-page .n-button {
+  --n-icon-size: var(--app-icon-size);
+}
+
+.snapshot-sidebar {
+  width: calc(var(--app-icon-size) + 16px);
+  --n-icon-size: var(--app-icon-size);
+  --svg-h: var(--app-icon-size);
+}
+.snapshot-sidebar .SvgIcon {
+  width: var(--app-icon-size) !important;
+  height: var(--app-icon-size) !important;
+}
+
+.home-topbar-icons {
+  --n-icon-size: var(--app-icon-size);
+  --svg-h: var(--app-icon-size);
+}
+.home-topbar-icons .SvgIcon {
+  width: var(--app-icon-size) !important;
+  height: var(--app-icon-size) !important;
 }

@@ -126,7 +126,7 @@ const error = computed(() => {
               animate-bounce
               pointer-events-none
             >
-              <SvgIcon name="arrow" class="text-18px selector-error-arrow" />
+              <SvgIcon name="arrow" class="selector-error-arrow" />
             </div>
           </span>
           <span v-if="error.tailText">{{ error.tailText }}</span>
