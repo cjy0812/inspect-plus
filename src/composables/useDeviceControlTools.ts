@@ -24,14 +24,14 @@ export const useDeviceControlTools = () => {
   const updateSubs = useTask(async () => {
     ensureDeviceConnected();
     const data = errorWrap(() => JSON5.parse(subsText.value.trim()));
-    if (data === undefined) return;
-    if (data.categories || data.globalGroups || data.apps) {
+    if (data == null) return;
+    if (data?.categories || data?.globalGroups || data?.apps) {
       await api.updateSubscription(data);
-    } else if (typeof data.id == 'string') {
+    } else if (typeof data?.id == 'string') {
       await api.updateSubscription({ apps: [data] });
     } else if (Array.isArray(data) && typeof data[0]?.id == 'string') {
       await api.updateSubscription({ apps: data });
-    } else if (typeof data.key == 'number') {
+    } else if (typeof data?.key == 'number') {
       await api.updateSubscription({ globalGroups: [data] });
     } else if (Array.isArray(data) && typeof data[0]?.key == 'number') {
       await api.updateSubscription({ globalGroups: data });
@@ -60,18 +60,21 @@ export const useDeviceControlTools = () => {
   });
   const execSelector = useTask(async () => {
     ensureDeviceConnected();
+    const { quickFind, ...payload } = clickAction;
     const result = await api.execSelector({
-      ...clickAction,
-      fastQuery: clickAction.quickFind,
+      ...payload,
+      fastQuery: quickFind,
     });
     if (result.message) {
       message.success(`操作成功: ${result.message}`);
       return;
     }
     if (result.action) {
-      message.success(
-        (result.result ? '操作成功: ' : '操作失败: ') + result.action,
-      );
+      if (result.result) {
+        message.success(`操作成功: ${result.action}`);
+      } else {
+        message.error(`操作失败: ${result.action}`);
+      }
     } else if (result.result) {
       message.success('查询成功');
     }

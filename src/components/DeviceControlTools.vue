@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import DraggableCard from '@/components/DraggableCard.vue';
 import { useDeviceControlTools } from '@/composables/useDeviceControlTools';
+import type { TooltipProps } from 'naive-ui';
 
 const props = withDefaults(
   defineProps<{
     iconSize?: string;
-    tooltipPlacement?: 'top' | 'right' | 'bottom' | 'left';
+    tooltipPlacement?: TooltipProps['placement'];
   }>(),
   { iconSize: 'var(--app-icon-size)', tooltipPlacement: 'right' },
 );
