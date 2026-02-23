@@ -110,7 +110,7 @@ const attrExplainMap: Record<string, string> = {
   checked: '控件是否已勾选',
   editable: '控件是否可编辑',
   longClickable: '控件是否支持长按',
-  visibleTouser: '控件是否对用户可见',
+  visibleToUser: '控件是否对用户可见',
   childCount: '子节点数量',
   index: '在父节点中的位置序号',
   depth: '在控件树中的层级深度',
