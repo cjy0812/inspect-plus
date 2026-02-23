@@ -5,8 +5,9 @@ import { useDeviceControlTools } from '@/composables/useDeviceControlTools';
 const props = withDefaults(
   defineProps<{
     iconSize?: string;
+    tooltipPlacement?: 'top' | 'right' | 'bottom' | 'left';
   }>(),
-  { iconSize: 'var(--app-icon-size)' },
+  { iconSize: 'var(--app-icon-size)', tooltipPlacement: 'right' },
 );
 
 const {
@@ -21,7 +22,7 @@ const {
 </script>
 
 <template>
-  <NTooltip placement="right">
+  <NTooltip :placement="props.tooltipPlacement">
     <template #trigger>
       <NButton
         text
@@ -33,7 +34,7 @@ const {
     </template>
     修改内存订阅
   </NTooltip>
-  <NTooltip placement="right">
+  <NTooltip :placement="props.tooltipPlacement">
     <template #trigger>
       <NButton
         text

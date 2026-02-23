@@ -24,7 +24,7 @@ export const useDeviceControlTools = () => {
   const updateSubs = useTask(async () => {
     ensureDeviceConnected();
     const data = errorWrap(() => JSON5.parse(subsText.value.trim()));
-    if (!data) return;
+    if (data === undefined) return;
     if (data.categories || data.globalGroups || data.apps) {
       await api.updateSubscription(data);
     } else if (typeof data.id == 'string') {
