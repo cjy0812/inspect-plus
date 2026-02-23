@@ -1,39 +1,73 @@
 import { dialog, message } from './discrete';
 
-export const showTextDLg = ({ title = `批量分享链接`, content = '' }) => {
+export const showTextDLg = ({
+  title = `批量分享链接`,
+  content = '',
+  extraContent = '',
+  extraTitle = '自定义域链接',
+}: {
+  title?: string;
+  content?: string;
+  extraContent?: string;
+  extraTitle?: string;
+}) => {
+  const copyText = async (text: string) => {
+    return navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        message.success(`复制成功`);
+      })
+      .catch(() => {
+        message.success(`复制失败`);
+      });
+  };
+
   dialog.success({
     title,
     class: 'snapshot-floating-panel',
+    draggable: true,
     style: {
-      width: `800px`,
+      width: `560px`,
     },
     content() {
       return (
-        <NInput
-          type="textarea"
-          class="snapshot-floating-panel"
-          autosize={{
-            minRows: 8,
-            maxRows: 16,
-          }}
-          inputProps={{
-            style: `white-space: nowrap;`,
-            class: `gkd_code`,
-          }}
-          value={content}
-        />
+        <NSpace vertical size={8}>
+          <NInput
+            type="textarea"
+            class="snapshot-floating-panel"
+            autosize={{
+              minRows: 4,
+              maxRows: 10,
+            }}
+            inputProps={{
+              style: `white-space: nowrap;`,
+              class: `gkd_code`,
+            }}
+            value={content}
+          />
+          {extraContent ? (
+            <NSpace vertical size={4}>
+              <div class="text-12px opacity-70">{extraTitle}</div>
+              <NInput
+                type="textarea"
+                autosize={{ minRows: 2, maxRows: 6 }}
+                inputProps={{
+                  style: 'white-space: nowrap;',
+                  class: 'gkd_code',
+                }}
+                value={extraContent}
+              />
+              <NButton size="small" onClick={() => copyText(extraContent)}>
+                复制自定义域链接
+              </NButton>
+            </NSpace>
+          ) : null}
+        </NSpace>
       );
     },
-    positiveText: `复制`,
+    positiveText: `复制主链接`,
     onPositiveClick() {
-      navigator.clipboard
-        .writeText(content)
-        .then(() => {
-          message.success(`复制成功`);
-        })
-        .catch(() => {
-          message.success(`复制失败`);
-        });
+      copyText(content);
       return false;
     },
   });

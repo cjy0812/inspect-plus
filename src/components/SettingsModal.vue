@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatClock, normalizeClock } from '@/utils/clock';
+import { normalizeOriginText } from '@/utils/url';
 
 const props = defineProps<{
   show: boolean;
@@ -20,6 +21,12 @@ const updateDarkModeStart = () => {
 const updateDarkModeEnd = () => {
   settingsStore.darkModeEnd = formatClock(
     normalizeClock(settingsStore.darkModeEnd) ?? 6 * 60,
+  );
+};
+
+const updateCustomDomain = () => {
+  settingsStore.shareCustomImportDomain = normalizeOriginText(
+    settingsStore.shareCustomImportDomain,
   );
 };
 </script>
@@ -46,6 +53,21 @@ const updateDarkModeEnd = () => {
     <div flex gap-10px>
       <NSwitch v-model:value="settingsStore.autoUploadImport" />
       <div>打开快照页面自动生成分享链接（请确保不含隐私）</div>
+    </div>
+    <div h-1px my-10px bg="#eee" />
+    <div flex gap-10px items-center>
+      <NSwitch v-model:value="settingsStore.shareUseOfficialImportDomain" />
+      <div>分享快照链接默认使用官方域名 i.gkd.li</div>
+    </div>
+    <div h-1px my-10px bg="#eee" />
+    <div flex items-center gap-10px>
+      <div class="w-120px">自定义分享域</div>
+      <NInput
+        v-model:value="settingsStore.shareCustomImportDomain"
+        placeholder="https://li.chenge.eu.org"
+        class="w-320px"
+        @blur="updateCustomDomain"
+      />
     </div>
     <div h-1px my-10px bg="#eee" />
     <div flex gap-10px items-center>

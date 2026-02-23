@@ -59,12 +59,18 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
     darkModeEnd: '06:00',
     autoExpandSnapshots: false,
     groupRemarks: {},
+    shareUseOfficialImportDomain: true,
+    shareCustomImportDomain: '',
     locale: 'zh',
   }),
 );
 
 if (!settingsStore.darkModeStart) settingsStore.darkModeStart = '18:00';
 if (!settingsStore.darkModeEnd) settingsStore.darkModeEnd = '06:00';
+if (typeof settingsStore.shareUseOfficialImportDomain != 'boolean')
+  settingsStore.shareUseOfficialImportDomain = true;
+if (typeof settingsStore.shareCustomImportDomain != 'string')
+  settingsStore.shareCustomImportDomain = '';
 
 // snapshot id -> last viewed time
 export const snapshotViewedTime = await useReactiveIndexedDB<

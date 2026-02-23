@@ -10,7 +10,12 @@ import {
 import { buildEmptyFn, delay } from '@/utils/others';
 import { snapshotStorage } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
-import { getImportUrl, getImagUrl } from '@/utils/url';
+import {
+  getCustomDomainImportUrl,
+  getOfficialImportUrl,
+  getImportUrl,
+  getImagUrl,
+} from '@/utils/url';
 
 const props = withDefaults(
   defineProps<{
@@ -31,7 +36,7 @@ const props = withDefaults(
 );
 
 const router = useRouter();
-const { snapshotImportId, snapshotImageId } = useStorageStore();
+const { settingsStore, snapshotImportId, snapshotImageId } = useStorageStore();
 
 const exportJpg = useTask(async () => exportSnapshotAsImage(props.snapshot));
 const exportZip = useTask(async () => exportSnapshotAsZip(props.snapshot));
@@ -57,7 +62,10 @@ const exportZipUrl = useTask(async () => {
   const importId = await exportSnapshotAsImportId(props.snapshot);
   showTextDLg({
     title: `分享链接`,
-    content: location.origin + `/i/${importId}`,
+    content: settingsStore.shareUseOfficialImportDomain
+      ? getOfficialImportUrl(importId)
+      : getImportUrl(importId),
+    extraContent: getCustomDomainImportUrl(importId),
   });
 });
 
@@ -70,7 +78,9 @@ const deleteSnapshot = async () => {
 const snapshotImportUrl = computed(() => {
   const t = snapshotImportId[props.snapshot.id];
   if (!t) return '';
-  return getImportUrl(t);
+  return settingsStore.shareUseOfficialImportDomain
+    ? getOfficialImportUrl(t)
+    : getImportUrl(t);
 });
 const snapshotImageUrl = computed(() => {
   const t = snapshotImageId[props.snapshot.id];

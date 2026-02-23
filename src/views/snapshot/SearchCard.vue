@@ -7,7 +7,7 @@ import { getAppInfo, getNodeLabel, getNodeStyle } from '@/utils/node';
 import { buildEmptyFn, copy } from '@/utils/others';
 import { parseSelector, wasmLoadTask } from '@/utils/selector';
 import { gkdWidth, vw } from '@/utils/size';
-import { getImagUrl, getImportUrl } from '@/utils/url';
+import { getImagUrl, getImportUrl, getOfficialImportUrl } from '@/utils/url';
 import { FastQuery, GkdException } from '@gkd-kit/selector';
 import dayjs from 'dayjs';
 import * as base64url from 'universal-base64url';
@@ -26,7 +26,7 @@ withDefaults(
 );
 
 const route = useRoute();
-const { snapshotImportId, snapshotImageId } = useStorageStore();
+const { settingsStore, snapshotImportId, snapshotImageId } = useStorageStore();
 
 const snapshotStore = useSnapshotStore();
 const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
@@ -148,7 +148,11 @@ onMounted(async () => {
 const generateRules = errorTry(async (result: SelectorSearchResult) => {
   const imageId = snapshotImageId[snapshot.value.id];
   const importId = snapshotImportId[snapshot.value.id];
-  const snapshotUrls = importId ? getImportUrl(importId) : undefined;
+  const snapshotUrls = importId
+    ? settingsStore.shareUseOfficialImportDomain
+      ? getOfficialImportUrl(importId)
+      : getImportUrl(importId)
+    : undefined;
   const exampleUrls = imageId ? getImagUrl(imageId) : undefined;
 
   const s = result.selector;
@@ -200,7 +204,11 @@ const hasZipId = computed(() => {
 });
 const shareResult = (result: SearchResult) => {
   if (!hasZipId.value) return;
-  const importUrl = new URL(getImportUrl(snapshotImportId[snapshot.value.id]));
+  const importUrl = new URL(
+    settingsStore.shareUseOfficialImportDomain
+      ? getOfficialImportUrl(snapshotImportId[snapshot.value.id])
+      : getImportUrl(snapshotImportId[snapshot.value.id]),
+  );
   if (typeof result.selector == 'object') {
     importUrl.searchParams.set(
       'gkd',
