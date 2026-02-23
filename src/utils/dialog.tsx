@@ -19,6 +19,10 @@ export const showTextDLg = ({
   quickPick?: boolean;
 }) => {
   const copyText = async (text: string) => {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      message.error('复制失败');
+      return Promise.reject(new Error('clipboard unavailable'));
+    }
     return navigator.clipboard
       .writeText(text)
       .then(() => {
