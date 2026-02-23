@@ -102,36 +102,9 @@ html.dark-mode-active .floating-panel {
   border-radius: 6px !important;
 }
 
-.n-tooltip .n-tooltip__content {
-  border-radius: 10px;
-  padding: 6px 10px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
-  background-color: #ffffff;
-  color: #0f172a;
-}
-html.dark-mode-active .n-tooltip .n-tooltip__content {
-  background-color: #111827;
-  color: #eef2f7;
-  border-color: rgba(226, 232, 240, 0.12);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
-}
-
-.quickfind-icon {
+ .quickfind-icon {
   color: #22c55e;
-}
-
-.n-popover .n-popover__content {
-  border-radius: 10px;
-  border: 1px solid rgba(128, 128, 128, 0.15);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
-  background-color: #fff;
-}
-html.dark-mode-active .n-popover .n-popover__content {
-  background-color: #161821;
-  border-color: rgba(226, 232, 240, 0.16);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
-}
+ }
 
 .snapshot-token {
   background-color: #eee;
