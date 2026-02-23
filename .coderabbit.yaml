@@ -1,0 +1,66 @@
+# 指定配置文件使用的 JSON Schema（提高编辑器提示）
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# 全局语言设置（这里写中文输出提示）
+language: 'zh-CN' # 审查输出以中文为主
+
+# 语气说明（可以自定义提示 CodeRabbit 审查的语气）
+tone_instructions: '请以专业、结构清晰、详实但不过度冗长的语气点评代码修改。'
+
+# 启用 CodeRabbit 测试版功能（建议保留最新特性）
+early_access: true
+
+# 自动启用基本免费层（若适用）
+enable_free_tier: true
+
+# 审查主配置
+reviews:
+  # 审查详尽程度
+  # chill: 默认平衡模式，assertive: 更深入具体点评
+  profile: 'assertive' # 设为 assertive 以偏认真、详尽审查
+  high_level_summary: true # 输出高层总结
+  review_details: true # 输出更详细的审查具体建议
+
+  # PR 审查自动请求更改流程（false 表示不自动触发“请求更改”）
+  request_changes_workflow: false
+
+  # 自动审查行为
+  auto_review:
+    enabled: true # 自动触发对新 PR 的审查
+    drafts: false # 不审查 Draft / 草稿 PR
+
+  # 路径过滤器：仅关注相关代码，避免生成文件等
+  # 只包含项目中常见的前端代码路径，排除 node_modules 等
+  path_filters:
+    - 'src/**' # 主要源代码目录
+    - '!node_modules/**' # 排除依赖目录
+    - '!dist/**' # 排除打包产物
+    - '!**/*.map' # 排除 sourcemap
+    # 如果需要仅审查变更文件可以额外去掉静态资源等
+
+  # 集成静态分析工具（按你的项目语言设定）
+  tools:
+    # ESLint 用于 JS/TS 规则检查
+    eslint:
+      enabled: true
+
+    # TypeScript 类型检查（如可配置 .eslintrc 或单独 tsconfig）
+    # 这里启用 ESLint 已经包含 TS 支持
+    # 若需单独启用其他 TypeScript 工具，可补充
+
+    # SCSS 相关检查器（若支持）
+    # CodeRabbit 默认不强制 SCSS 除非开启对应工具
+    # YAMLlint 保留（检查配置文件）
+    yamllint:
+      enabled: true
+
+    htmlhint:
+      enabled: true # HTML 相关检查（适合 Vue 单文件模板）
+
+    # 默认秘钥扫描与通用分析器保持启用
+    gitleaks:
+      enabled: true
+
+# Chat 部分配置（如果审查中需要自动回复）
+chat:
+  auto_reply: true # 自动应对 Chat 互动
