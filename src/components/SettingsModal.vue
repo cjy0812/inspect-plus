@@ -12,7 +12,7 @@ const emit = defineEmits<{
 }>();
 
 const { settingsStore } = useStorageStore();
-const showDebugPanel = ref(false);
+const showDebugMenu = ref(false);
 
 const updateDarkModeStart = () => {
   settingsStore.darkModeStart = formatClock(
@@ -53,18 +53,6 @@ const triggerDebugShareDialog = () => {
     @update:show="emit('update:show', $event)"
     @positiveClick="emit('update:show', false)"
   >
-    <NCheckbox v-model:checked="settingsStore.debugMode">调试模式</NCheckbox>
-    <div v-if="settingsStore.debugMode" h-1px my-10px bg="#eee" />
-    <NButton
-      v-if="settingsStore.debugMode"
-      type="primary"
-      secondary
-      block
-      @click="showDebugPanel = true"
-    >
-      打开调试子菜单
-    </NButton>
-    <div h-1px my-10px bg="#eee" />
     <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn"
       >关闭生成分享链接弹窗提醒</NCheckbox
     >
@@ -131,23 +119,52 @@ const triggerDebugShareDialog = () => {
         />
       </div>
     </div>
-  </NModal>
-
-  <NModal
-    v-model:show="showDebugPanel"
-    preset="dialog"
-    title="调试子菜单"
-    :showIcon="false"
-    positiveText="关闭"
-    style="width: 460px"
-  >
-    <NSpace vertical size="large">
-      <div class="text-13px opacity-70">
-        这里用于调试弹窗能力，不影响正常用户流程。
+    <div h-1px my-10px bg="#eee" />
+    <div flex items-center justify-between>
+      <div
+        class="text-12px"
+        :style="{ color: settingsStore.debugMode ? '#d03050' : '#999' }"
+      >
+        调试模式
       </div>
-      <NButton type="primary" block @click="triggerDebugShareDialog">
-        直接触发链接弹窗
+      <NSwitch
+        v-model:value="settingsStore.debugMode"
+        size="small"
+        @update:value="
+          (value) => {
+            if (!value) showDebugMenu = false;
+          }
+        "
+      />
+    </div>
+    <div v-if="settingsStore.debugMode" mt-8px>
+      <NButton
+        text
+        size="tiny"
+        :type="showDebugMenu ? 'error' : 'default'"
+        @click="showDebugMenu = !showDebugMenu"
+      >
+        {{ showDebugMenu ? '隐藏调试菜单' : '展开调试菜单' }}
       </NButton>
-    </NSpace>
+      <NCard
+        v-if="showDebugMenu"
+        embedded
+        size="small"
+        class="mt-8px"
+        style="border-radius: 8px"
+      >
+        <NSpace vertical size="small">
+          <div class="text-12px opacity-65">预留后续调试工具入口</div>
+          <NButton
+            size="small"
+            secondary
+            type="error"
+            @click="triggerDebugShareDialog"
+          >
+            触发链接弹窗测试
+          </NButton>
+        </NSpace>
+      </NCard>
+    </div>
   </NModal>
 </template>

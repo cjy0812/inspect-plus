@@ -1,4 +1,4 @@
-import { message, modal, dialog } from './discrete'; // 找回 dialog
+import { message, modal, dialog } from './discrete';
 import ConnectSvg from '@/assets/svg/Connect.svg';
 import { getImportId } from './url';
 import { defineComponent } from 'vue';
@@ -53,16 +53,16 @@ export const showTextDLg = ({
         class="snapshot-floating-panel snapshot-floating-panel--passthrough"
         size="small"
         style={{
-          width: '500px',
-          borderRadius: '12px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          width: quickPick ? '520px' : '500px',
+          borderRadius: '10px',
+          boxShadow: '0 10px 28px rgba(15, 23, 42, 0.14)',
           overflow: 'hidden',
         }}
       >
         {{
           header: () => (
             <NSpace
-              class={quickPick ? 'n-draggable' : undefined}
+              class="n-draggable"
               align="center"
               justify="space-between"
               style={{ width: '100%', cursor: 'move' }}
@@ -89,8 +89,8 @@ export const showTextDLg = ({
                   inputProps={{
                     class: 'gkd_code',
                     wrap: 'off',
-                    spellcheck: 'false',
-                    readonly: true,
+                    spellCheck: false,
+                    readOnly: true,
                     style: 'white-space: pre; font-size: 13px; padding: 6px;',
                   }}
                   value={officialUrl}
@@ -104,8 +104,8 @@ export const showTextDLg = ({
                   inputProps={{
                     class: 'gkd_code',
                     wrap: 'off',
-                    spellcheck: 'false',
-                    readonly: true,
+                    spellCheck: false,
+                    readOnly: true,
                     style: 'white-space: pre; font-size: 13px; padding: 6px;',
                   }}
                   value={currentOriginUrl}
@@ -118,7 +118,7 @@ export const showTextDLg = ({
               <NGi>
                 <NButton
                   block
-                  style={{ borderRadius: '8px' }}
+                  style={{ borderRadius: '7px', fontWeight: 600 }}
                   type={!preferOfficial ? 'success' : 'tertiary'}
                   onClick={() => {
                     settingsStore.shareUseOfficialImportDomain = false;
@@ -126,13 +126,13 @@ export const showTextDLg = ({
                     if (quickPick) setTimeout(close, 220);
                   }}
                 >
-                  复制当前域
+                  当前域链接
                 </NButton>
               </NGi>
               <NGi>
                 <NButton
                   block
-                  style={{ borderRadius: '8px' }}
+                  style={{ borderRadius: '7px', fontWeight: 600 }}
                   type={preferOfficial ? 'success' : 'tertiary'}
                   onClick={() => {
                     settingsStore.shareUseOfficialImportDomain = true;
@@ -140,7 +140,7 @@ export const showTextDLg = ({
                     if (quickPick) setTimeout(close, 220);
                   }}
                 >
-                  复制官方
+                  官方链接
                 </NButton>
               </NGi>
             </NGrid>
