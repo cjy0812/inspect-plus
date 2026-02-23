@@ -63,6 +63,7 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
     shareCustomImportDomain: '',
     locale: 'zh',
     debugMode: false,
+    showDebugTools: false,
   }),
 );
 

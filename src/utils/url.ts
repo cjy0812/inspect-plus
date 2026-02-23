@@ -1,3 +1,5 @@
+import { settingsStore } from '@/store/storage';
+
 export const isValidUrl = (url: string): URL | undefined => {
   try {
     return new URL(url);

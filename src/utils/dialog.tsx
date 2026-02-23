@@ -33,7 +33,6 @@ export const showTextDLg = ({
   const currentOriginUrl = importId
     ? `${window.location.origin}/i/${importId}`
     : extraContent || content;
-  const preferOfficial = settingsStore.shareUseOfficialImportDomain;
 
   let reactive: ReturnType<typeof modal.create> | null = null;
   const close = () => {
@@ -89,8 +88,8 @@ export const showTextDLg = ({
                   inputProps={{
                     class: 'gkd_code',
                     wrap: 'off',
-                    spellCheck: false,
-                    readOnly: true,
+                    spellcheck: false,
+                    readonly: true,
                     style: 'white-space: pre; font-size: 13px; padding: 6px;',
                   }}
                   value={officialUrl}
@@ -104,8 +103,8 @@ export const showTextDLg = ({
                   inputProps={{
                     class: 'gkd_code',
                     wrap: 'off',
-                    spellCheck: false,
-                    readOnly: true,
+                    spellcheck: false,
+                    readonly: true,
                     style: 'white-space: pre; font-size: 13px; padding: 6px;',
                   }}
                   value={currentOriginUrl}
@@ -119,7 +118,11 @@ export const showTextDLg = ({
                 <NButton
                   block
                   style={{ borderRadius: '7px', fontWeight: 600 }}
-                  type={!preferOfficial ? 'success' : 'tertiary'}
+                  type={
+                    !settingsStore.shareUseOfficialImportDomain
+                      ? 'success'
+                      : 'tertiary'
+                  }
                   onClick={() => {
                     settingsStore.shareUseOfficialImportDomain = false;
                     void copyText(currentOriginUrl);
@@ -133,7 +136,11 @@ export const showTextDLg = ({
                 <NButton
                   block
                   style={{ borderRadius: '7px', fontWeight: 600 }}
-                  type={preferOfficial ? 'success' : 'tertiary'}
+                  type={
+                    settingsStore.shareUseOfficialImportDomain
+                      ? 'success'
+                      : 'tertiary'
+                  }
                   onClick={() => {
                     settingsStore.shareUseOfficialImportDomain = true;
                     void copyText(officialUrl);
