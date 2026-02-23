@@ -195,6 +195,7 @@ const getAttrExplain = (name: string) => {
                           <SvgIcon
                             v-else-if="attrx.tip.type == 'quickFind'"
                             name="ok"
+                            class="quickfind-icon"
                           />
                         </NIcon>
                       </template>
