@@ -29,15 +29,7 @@ const settingsDlgShow = shallowRef(false);
 <template>
   <template v-if="snapshot && rootNode">
     <div page-size flex gap-5px class="snapshot-page">
-      <div
-        w-40px
-        py-12px
-        flex
-        flex-col
-        items-center
-        gap-16px
-        class="[--svg-h:var(--app-icon-size)]"
-      >
+      <div py-12px flex flex-col items-center gap-16px class="snapshot-sidebar">
         <NTooltip placement="right">
           <template #trigger>
             <NButton text>

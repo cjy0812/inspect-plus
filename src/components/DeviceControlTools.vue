@@ -28,9 +28,12 @@ const {
       <NButton
         text
         :style="{ '--n-icon-size': props.iconSize }"
+        class="[--svg-h:20px]"
         @click="showSubsModel = true"
       >
-        <SvgIcon name="CacheSub" />
+        <template #icon>
+          <SvgIcon name="CacheSub" class="dark:fill-[#ffffff]" />
+        </template>
       </NButton>
     </template>
     修改内存订阅
@@ -40,9 +43,12 @@ const {
       <NButton
         text
         :style="{ '--n-icon-size': props.iconSize }"
+        class="[--svg-h:20px]"
         @click="showSelectorModel = true"
       >
-        <SvgIcon name="Exe-Sel" />
+        <template #icon>
+          <SvgIcon name="Exe-Sel" class="dark:fill-[#ffffff]" />
+        </template>
       </NButton>
     </template>
     执行选择器
