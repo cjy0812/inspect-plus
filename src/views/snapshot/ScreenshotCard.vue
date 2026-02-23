@@ -54,10 +54,24 @@ const { clickImg, imgHover, imgMove, imgLoadTime, positionStyle, imgRef } =
       flex
       gap-4px
     >
-      <div py-1px px-2px bg="#ffffff90" title="尺寸">
+      <div
+        py-1px
+        px-2px
+        bg="#ffffff90"
+        text="#000000"
+        dark:text="#ffffff"
+        title="尺寸"
+      >
         {{ `${snapshot.screenWidth}x${snapshot.screenHeight}` }}
       </div>
-      <div py-1px px-2px bg="#ffffff90" title="创建时间">
+      <div
+        py-1px
+        px-2px
+        bg="#ffffff90"
+        text="#000000"
+        dark:text="#ffffff"
+        title="创建时间"
+      >
         {{ dayjs(snapshot.id).format('YYYY-MM-DD HH:mm:ss') }}
       </div>
     </div>
