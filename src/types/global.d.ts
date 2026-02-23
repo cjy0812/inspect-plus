@@ -162,6 +162,7 @@ interface SettingsStore {
   locale: 'zh' | 'en';
   debugMode?: boolean;
   showDebugTools?: boolean;
+  focusNodeColor?: string;
 }
 
 interface GlobalStore {

@@ -277,10 +277,15 @@ export const isRawNode = (node: any): node is RawNode => {
   return false;
 };
 
+import { settingsStore } from '@/store/storage';
+
 export const getNodeStyle = (node: RawNode, focusNode?: RawNode) => {
   const qf = Boolean(node.idQf || node.textQf || node.quickFind);
   const fontWeight = qf ? 'bold' : undefined;
-  const color = node.id === focusNode?.id ? '#00F' : undefined;
+  const color =
+    node.id === focusNode?.id
+      ? settingsStore.focusNodeColor || 'rgb(0, 220, 255)'
+      : undefined;
   return {
     fontWeight,
     color,

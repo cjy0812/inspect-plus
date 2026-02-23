@@ -162,6 +162,14 @@ const triggerDebugShareDialog = () => {
       >
         <NSpace vertical size="small">
           <div class="text-12px opacity-65">预留后续调试工具入口</div>
+          <div flex items-center gap-10px>
+            <span>选中节点高亮颜色:</span>
+            <NColorPicker
+              v-model:value="settingsStore.focusNodeColor"
+              :modes="['rgb']"
+              size="small"
+            />
+          </div>
           <NButton
             size="small"
             secondary

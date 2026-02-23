@@ -3,5 +3,6 @@
   "settings.locale": "语言",
   "settings.localeZh": "中文",
   "settings.localeEn": "English",
+  "settings.focusNodeColor": "选中节点高亮颜色",
   "snapshot.viewed": "已查看"
 }
