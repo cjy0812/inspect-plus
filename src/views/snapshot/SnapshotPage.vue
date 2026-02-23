@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import DeviceControlTools from '@/components/DeviceControlTools.vue';
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import SettingsModal from '@/components/SettingsModal.vue';
 import TrackCard from '@/components/TrackCard.vue';
@@ -8,7 +9,6 @@ import OverlapCard from './OverlapCard.vue';
 import RuleCard from './RuleCard.vue';
 import ScreenshotCard from './ScreenshotCard.vue';
 import SearchCard from './SearchCard.vue';
-import SelectorTestCard from './SelectorTestCard.vue';
 import { useSnapshotStore } from './snapshot';
 import WindowCard from './WindowCard.vue';
 
@@ -23,13 +23,12 @@ watchEffect(() => {
 const searchShow = useStorage('searchShow', true, sessionStorage);
 const ruleShow = useStorage('ruleShow', false, sessionStorage);
 const attrShow = useStorage('attrShow', true, sessionStorage);
-const selectorTestShow = useStorage('selectorTestShow', false, sessionStorage);
 const settingsDlgShow = shallowRef(false);
 </script>
 
 <template>
   <template v-if="snapshot && rootNode">
-    <div page-size flex gap-5px>
+    <div page-size flex gap-5px class="snapshot-page">
       <div
         w-40px
         py-12px
@@ -37,7 +36,7 @@ const settingsDlgShow = shallowRef(false);
         flex-col
         items-center
         gap-16px
-        class="[--svg-h:24px]"
+        class="[--svg-h:var(--app-icon-size)]"
       >
         <NTooltip placement="right">
           <template #trigger>
@@ -64,6 +63,7 @@ const settingsDlgShow = shallowRef(false);
           </template>
           搜索面板
         </NTooltip>
+        <DeviceControlTools />
         <NTooltip placement="right">
           <template #trigger>
             <NButton text @click="attrShow = !attrShow"
@@ -71,14 +71,6 @@ const settingsDlgShow = shallowRef(false);
             /></NButton>
           </template>
           属性面板
-        </NTooltip>
-        <NTooltip placement="right">
-          <template #trigger>
-            <NButton text @click="selectorTestShow = !selectorTestShow"
-              ><SvgIcon name="terminal"
-            /></NButton>
-          </template>
-          测试选择器
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
@@ -123,10 +115,6 @@ const settingsDlgShow = shallowRef(false);
     </div>
 
     <SearchCard :show="searchShow" @updateShow="searchShow = $event" />
-    <SelectorTestCard
-      :show="selectorTestShow"
-      @updateShow="selectorTestShow = $event"
-    />
     <RuleCard :show="ruleShow" @updateShow="ruleShow = $event" />
     <AttrCard :show="attrShow" @updateShow="attrShow = $event" />
     <OverlapCard />

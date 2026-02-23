@@ -35,7 +35,8 @@ watchEffect(() => {
 .SvgIcon {
   display: block;
   overflow: hidden;
-  height: var(--svg-h, 1em);
+  height: var(--svg-h, var(--n-icon-size, var(--app-icon-size, 1em)));
+  width: var(--svg-w, var(--n-icon-size, var(--app-icon-size, 1em)));
 }
 .SvgIcon:not([fill]) {
   fill: currentColor;

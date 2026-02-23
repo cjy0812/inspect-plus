@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DraggableCard from '@/components/DraggableCard.vue';
+import DeviceControlTools from '@/components/DeviceControlTools.vue';
 import { usePreviewCache } from '@/composables/usePreviewCache';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
 import { useDeviceApi } from '@/utils/api';
@@ -23,7 +23,6 @@ import {
   getOfficialImportUrl,
 } from '@/utils/url';
 import dayjs from 'dayjs';
-import JSON5 from 'json5';
 import pLimit from 'p-limit';
 
 const router = useRouter();
@@ -78,7 +77,6 @@ watchEffect(async () => {
   const result = await api.getSnapshots();
   result.sort((a, b) => b.id - a.id);
   snapshots.value = result;
-  subsText.value = '';
 });
 
 const captureSnapshot = useTask(async () => {
@@ -255,156 +253,13 @@ watchEffect(() => {
   expandedPackageNames.value = packageNames;
   expandedActivityNames.value = activityNames;
 });
-
-const showSubsModel = shallowRef(false);
-const subsText = shallowRef('');
-const updateSubs = useTask(async () => {
-  const data = errorWrap(() => JSON5.parse(subsText.value.trim()));
-  if (!data) return;
-  if (data.categories || data.globalGroups || data.apps) {
-    await api.updateSubscription(data);
-  } else if (typeof data.id == 'string') {
-    await api.updateSubscription({ apps: [data] });
-  } else if (Array.isArray(data) && typeof data[0]?.id == 'string') {
-    await api.updateSubscription({ apps: data });
-  } else if (typeof data.key == 'number') {
-    await api.updateSubscription({ globalGroups: [data] });
-  } else if (Array.isArray(data) && typeof data[0]?.key == 'number') {
-    await api.updateSubscription({ globalGroups: data });
-  } else {
-    message.error('无法识别的订阅文本');
-    return;
-  }
-  message.success('修改成功');
-});
-
-const showSelectorModel = shallowRef(false);
-const actionOptions: { value?: string; label: string }[] = [
-  { label: '仅查询', value: '' },
-  { value: 'click', label: 'click' },
-  { value: 'clickNode', label: 'clickNode' },
-  { value: 'clickCenter', label: 'clickCenter' },
-  { value: 'back', label: 'back' },
-  { value: 'longClick', label: 'longClick' },
-  { value: 'longClickNode', label: 'longClickNode' },
-  { value: 'longClickCenter', label: 'longClickCenter' },
-];
-const clickAction = shallowReactive({
-  selector: '',
-  action: 'click',
-  quickFind: false,
-});
-const execSelector = useTask(async () => {
-  const result = await api.execSelector({
-    ...clickAction,
-    fastQuery: clickAction.quickFind,
-  });
-  if (result.message) {
-    message.success(`操作成功: ${result.message}`);
-    return;
-  }
-  if (result.action) {
-    message.success(
-      (result.result ? '操作成功: ' : '操作失败: ') + result.action,
-    );
-  } else if (result.result) {
-    message.success('查询成功');
-  }
-});
 </script>
 
 <template>
-  <DraggableCard
-    v-slot="{ onRef }"
-    :initialValue="{ top: 84, left: 120 }"
-    class="box-shadow-dim"
-    :show="showSubsModel"
-  >
-    <NCard
-      size="small"
-      closable
-      style="width: 90vw; max-width: 800px"
-      @close="showSubsModel = false"
-    >
-      <template #header>
-        <div :ref="onRef" flex items-center cursor-move>
-          <span>修改内存订阅</span>
-          <div flex-1 />
-        </div>
-      </template>
-      <NInput
-        v-model:value="subsText"
-        :disabled="updateSubs.loading"
-        type="textarea"
-        class="gkd_code"
-        :autosize="{ minRows: 20, maxRows: 25 }"
-        placeholder="请输入订阅文本(JSON5)"
-      />
-      <div mt-10px flex justify-end gap-8px>
-        <NButton @click="showSubsModel = false">取消</NButton>
-        <NButton
-          type="primary"
-          :loading="updateSubs.loading"
-          @click="updateSubs.invoke"
-        >
-          确认
-        </NButton>
-      </div>
-    </NCard>
-  </DraggableCard>
-  <DraggableCard
-    v-slot="{ onRef }"
-    :initialValue="{ top: 120, left: 180 }"
-    class="box-shadow-dim"
-    :show="showSelectorModel"
-  >
-    <NCard
-      size="small"
-      closable
-      style="width: 90vw; max-width: 800px"
-      @close="showSelectorModel = false"
-    >
-      <template #header>
-        <div :ref="onRef" flex items-center cursor-move>
-          <span>执行选择器</span>
-          <div flex-1 />
-        </div>
-      </template>
-      <NInput
-        v-model:value="clickAction.selector"
-        :disabled="execSelector.loading"
-        type="textarea"
-        class="gkd_code"
-        :autosize="{ minRows: 4, maxRows: 10 }"
-        placeholder="请输入合法选择器"
-      />
-      <div h-15px />
-      <NSpace>
-        <NCheckbox v-model:checked="clickAction.quickFind">快速查询</NCheckbox>
-      </NSpace>
-      <div h-10px />
-      <NSelect
-        v-model:value="clickAction.action"
-        :options="actionOptions"
-        class="w-150px"
-      />
-      <div mt-10px flex justify-end gap-8px>
-        <NButton @click="showSelectorModel = false">取消</NButton>
-        <NButton
-          type="primary"
-          :loading="execSelector.loading"
-          @click="execSelector.invoke"
-        >
-          确认
-        </NButton>
-      </div>
-    </NCard>
-  </DraggableCard>
-
   <div page-size flex flex-col p-10px gap-10px>
     <div flex items-center gap-24px>
       <RouterLink to="/" class="flex ml-12px" title="首页">
-        <NButton text style="--n-icon-size: 24px">
+        <NButton text style="--n-icon-size: var(--app-icon-size)">
           <template #icon><SvgIcon name="home" /></template>
         </NButton>
       </RouterLink>
@@ -413,7 +268,7 @@ const execSelector = useTask(async () => {
           v-model:value="link"
           placeholder="请输入设备地址 默认端口:8888"
           class="gkd_code"
-          :style="{ width: '320px' }"
+          :style="{ width: '260px' }"
           @keyup.enter="connect.invoke"
         />
         <NButton :loading="connect.loading" @click="connect.invoke"
@@ -431,18 +286,37 @@ const execSelector = useTask(async () => {
         </div>
       </NInputGroup>
       <template v-if="serverInfo">
-        <NButton
-          :loading="captureSnapshot.loading"
-          @click="captureSnapshot.invoke"
-          >捕获快照</NButton
-        >
-        <NButton
-          :loading="downloadAllSnapshot.loading"
-          @click="downloadAllSnapshot.invoke"
-          >下载所有快照</NButton
-        >
-        <NButton @click="showSubsModel = true">修改内存订阅</NButton>
-        <NButton @click="showSelectorModel = true">执行选择器</NButton>
+        <NTooltip>
+          <template #trigger>
+            <NButton
+              text
+              style="--n-icon-size: var(--app-icon-size)"
+              class="device-top-icon"
+              :loading="captureSnapshot.loading"
+              @click="captureSnapshot.invoke"
+            >
+              <SvgIcon name="Snapshot" class="dark:fill-[#ffffff]" />
+            </NButton>
+          </template>
+          捕获快照
+        </NTooltip>
+
+        <NTooltip>
+          <template #trigger>
+            <NButton
+              text
+              style="--n-icon-size: var(--app-icon-size)"
+              class="device-top-icon"
+              :loading="downloadAllSnapshot.loading"
+              @click="downloadAllSnapshot.invoke"
+            >
+              <SvgIcon name="Down-all" />
+            </NButton>
+          </template>
+          下载所有快照
+        </NTooltip>
+
+        <DeviceControlTools />
       </template>
     </div>
 
