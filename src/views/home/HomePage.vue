@@ -21,7 +21,12 @@ import {
   snapshotStorage,
 } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
-import { getImagUrl } from '@/utils/url';
+import {
+  getCustomDomainImportUrl,
+  getImagUrl,
+  getImportUrl,
+  getOfficialImportUrl,
+} from '@/utils/url';
 import dayjs from 'dayjs';
 
 const route = useRoute();
@@ -223,8 +228,17 @@ const batchShareImageUrl = useTask(async () => {
 const batchShareZipUrl = useTask(async () => {
   await waitShareAgree();
   const zipUrls = await batchCreateZipUrl(await checkedSnapshots());
+  const primaryUrls = zipUrls.map((s) =>
+    settingsStore.shareUseOfficialImportDomain
+      ? getOfficialImportUrl(s)
+      : getImportUrl(s),
+  );
+  const customUrls = zipUrls
+    .map((s) => getCustomDomainImportUrl(s))
+    .filter((s) => !!s);
   showTextDLg({
-    content: zipUrls.map((s) => location.origin + '/i/' + s).join('\n') + '\n',
+    content: primaryUrls.join('\n') + '\n',
+    extraContent: customUrls.length ? customUrls.join('\n') + '\n' : '',
   });
 });
 

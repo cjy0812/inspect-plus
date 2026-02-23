@@ -157,7 +157,11 @@ interface SettingsStore {
   darkModeEnd: string;
   autoExpandSnapshots: boolean;
   groupRemarks: Record<string, string>;
+  shareUseOfficialImportDomain: boolean;
+  shareCustomImportDomain: string;
   locale: 'zh' | 'en';
+  debugMode?: boolean;
+  showDebugTools?: boolean;
 }
 
 interface GlobalStore {

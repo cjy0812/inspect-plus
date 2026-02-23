@@ -16,7 +16,12 @@ import { delay } from '@/utils/others';
 import { buildGroupedSnapshots } from '@/utils/snapshotGroup';
 import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 import { useBatchTask, useTask } from '@/utils/task';
-import { getImagUrl } from '@/utils/url';
+import {
+  getCustomDomainImportUrl,
+  getImagUrl,
+  getImportUrl,
+  getOfficialImportUrl,
+} from '@/utils/url';
 import dayjs from 'dayjs';
 import JSON5 from 'json5';
 import pLimit from 'p-limit';
@@ -213,7 +218,10 @@ const shareSnapshotZipUrl = useBatchTask(
     const importId = await exportSnapshotAsImportId(row);
     showTextDLg({
       title: '分享链接',
-      content: `${location.origin}/i/${importId}`,
+      content: settingsStore.shareUseOfficialImportDomain
+        ? getOfficialImportUrl(importId)
+        : getImportUrl(importId),
+      extraContent: getCustomDomainImportUrl(importId),
     });
   },
   (r) => r.id,
