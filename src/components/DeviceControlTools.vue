@@ -23,50 +23,28 @@ const {
 
 const subsPlaceholder = `
 请输入订阅文本(JSON5语法):
-示例1-更新单个应用的规则:
+示例1-单个应用的规则:
 {
-  id: 'appId',
-  groups: []
-}
-
-示例2-更新多个应用的规则:
-[
-  {
-    id: 'appId1',
-    groups: []
-  },
-  {
-    id: 'appId2',
-    groups: []
-  }
-]
-
-示例3-更新全局规则(1.7.0):
-{
-  name: '全局规则-1',
-  key: 0,
-  rules: []
-}
-
-示例3-更新多个全局规则(1.7.0):
-[
-  {
-    name: '全局规则-1',
-    key: 0,
-    rules: []
-  },
-  {
-    name: '全局规则-2',
-    key: 1,
-    rules: []
-  }
-]
-
-示例4-更新整个订阅(1.7.0):
-{
-  apps: [],
-  globalGroups: [],
-  categories: [],
+  id: 'cn.dxy.clinmaster',
+  name: '临床决策',
+  groups: [
+    {
+      key: 1,
+      name: '更新提示',
+      matchTime: 10000,
+      actionMaximum: 1,
+      resetMatch: 'app',
+      rules: [
+        {
+          fastQuery: true,
+          activityIds: 'cn.dxy.clinmaster.home.MainActivity',
+          matches:
+            '@[vid="iv_close"][clickable=true][visibleToUser=true] -2 [text="立即更新"]',
+          snapshotUrls: 'https://i.gkd.li/i/25459821',
+        },
+      ],
+    },
+  ],
 }
 `.trim();
 </script>

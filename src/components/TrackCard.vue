@@ -78,7 +78,12 @@ const getNodeStyle = (node: AstNode<any>): StyleValue => {
     gap-8px
     overflow-hidden
   >
-    <div flex justify-between items-center class="snapshot-sidebar">
+    <div
+      flex
+      justify-between
+      items-center
+      class="[--svg-h:var(--app-icon-size)]"
+    >
       <div flex items-center gap-4px>
         <SvgIcon name="path" />
         <div text="20px/28px" font-bold>选择器路径视图</div>
