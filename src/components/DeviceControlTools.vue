@@ -54,8 +54,7 @@ const subsPlaceholder = `
     <template #trigger>
       <NButton
         text
-        :style="{ '--n-icon-size': props.iconSize }"
-        class="[--svg-h:24px]"
+        :style="{ '--n-icon-size': props.iconSize, '--svg-h': props.iconSize }"
         @click="showSubsModel = true"
       >
         <template #icon>
@@ -69,8 +68,7 @@ const subsPlaceholder = `
     <template #trigger>
       <NButton
         text
-        :style="{ '--n-icon-size': props.iconSize }"
-        class="[--svg-h:24px]"
+        :style="{ '--n-icon-size': props.iconSize, '--svg-h': props.iconSize }"
         @click="showSelectorModel = true"
       >
         <template #icon>
@@ -107,6 +105,7 @@ const subsPlaceholder = `
         class="gkd_code"
         :autosize="{ minRows: 20, maxRows: 25 }"
         :placeholder="subsPlaceholder"
+        aria-label="订阅文本输入框"
       />
       <div mt-10px flex justify-end gap-8px>
         <NButton @click="showSubsModel = false">取消</NButton>
@@ -147,6 +146,7 @@ const subsPlaceholder = `
         class="gkd_code"
         :autosize="{ minRows: 4, maxRows: 10 }"
         placeholder="请输入合法选择器"
+        aria-label="选择器输入框"
       />
       <div h-15px />
       <NSpace>
