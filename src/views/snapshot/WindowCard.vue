@@ -30,8 +30,11 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
   if (!focusNode.value) return;
   const key = focusNode.value.id;
 
-  // Check if focus change was not triggered by tree node click
-  if (!Number.isNaN(lastClickId) && lastClickId !== key) {
+  // Check if focus change was triggered by tree node click
+  if (lastClickId === key) {
+    // When click targeted this node, skip quick find
+    lastClickId = Number.NaN;
+  } else {
     // Reset lastClickId for next time
     lastClickId = Number.NaN;
 
@@ -47,11 +50,6 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
   nextTick().then(async () => {
     await delay(300);
     if (key === focusNode.value?.id) {
-      if (lastClickId === key) {
-        // 当点击节点树中的节点时, 不滚动
-        lastClickId = Number.NaN;
-        return;
-      }
       selectedKeys.value = [key];
 
       // Scroll to node using native scrollIntoView for better control
@@ -97,9 +95,9 @@ const treeNodeProps = (info: {
   // Create new style object with proper type
   const newStyle: Record<string, string | number | undefined> = { ...style };
 
-  // Add opacity only if node has no quick find potential
-  if (meta && !meta.has && !newStyle.opacity) {
-    newStyle.opacity = 0.8;
+  // Add opacity only if node has no quick find potential and opacity is undefined
+  if (meta && !meta.has && newStyle.opacity === undefined) {
+    newStyle.opacity = 0.7;
   }
 
   return {
@@ -216,10 +214,19 @@ const quickFindMeta = computed(() => {
 
 // Find first quick target in subtree
 const findQuickTarget = (node: RawNode): RawNode | null => {
-  if (getNodeQf(node)) {
+  const meta = quickFindMeta.value.get(node.id);
+
+  // If node has no quick find potential, return null immediately
+  if (!meta || !meta.has) {
+    return null;
+  }
+
+  // If node itself is a quick find target, return it
+  if (meta.self) {
     return node;
   }
 
+  // Otherwise, recurse into children
   for (const child of node.children) {
     const target = findQuickTarget(child);
     if (target) {
