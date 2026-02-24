@@ -6,11 +6,11 @@
 ## P0 本周先做（低风险高收益）
 
 - [X] `src/utils/node.ts`：将 `settingsStore` 导入移到文件顶部，修复导入顺序问题。
-- [ ] `src/views/snapshot/WindowCard.vue`：去掉 `as any`（`data/filter/nodeProps/renderLabel`），补齐 Naive UI Tree 对应类型。
-- [ ] `src/views/snapshot/WindowCard.vue`：将 `QuickFindMeta` 类型上移到脚本顶部，统一类型定义位置。
-- [ ] `src/style/var.scss`：新增最小主题变量（背景、文本、边框、强调色、focusNodeColor）。
-- [ ] `src/App.vue` + `src/style/index.scss`：先保留现有类切换逻辑，改为“类名 + CSS 变量”并存，移除一批可替代的硬编码颜色。
-- [ ] `src/views/snapshot/AttrCard.vue`：拆解同一单元格中的双 Tooltip 触发逻辑，避免交互冲突（保留一个主 Tooltip，另一个改为图标说明或合并内容）。
+- [X] `src/views/snapshot/WindowCard.vue`：去掉 `as any`（`data/filter/nodeProps/renderLabel`），补齐 Naive UI Tree 对应类型。
+- [X] `src/views/snapshot/WindowCard.vue`：将 `QuickFindMeta` 类型上移到脚本顶部，统一类型定义位置。
+- [X] `src/style/var.scss`：新增最小主题变量（背景、文本、边框、强调色、focusNodeColor）。
+- [X] `src/App.vue` + `src/style/index.scss`：先保留现有类切换逻辑，改为“类名 + CSS 变量”并存，移除一批可替代的硬编码颜色。
+- [X] `src/views/snapshot/AttrCard.vue`：拆解同一单元格中的双 Tooltip 触发逻辑，避免交互冲突（保留一个主 Tooltip，另一个改为图标说明或合并内容）。
 
 ## P1 下个迭代（中风险，需回归测试）
 
