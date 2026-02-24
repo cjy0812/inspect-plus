@@ -18,6 +18,32 @@
   --settings-section-bg-color: rgba(255, 255, 255, 0.7);
   --settings-section-border-color: rgba(128, 128, 128, 0.15);
   --focus-node-color: rgb(0, 220, 255);
+  --device-top-icon-color: #0f172a;
+  --device-top-icon-hover-color: #0b1220;
+  --mini-hover-image-bg-color: #ffffff;
+  --mini-hover-token-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0.72)
+  );
+  --mini-hover-token-color: #0b1220;
+  --mini-hover-token-border-color: rgba(15, 23, 42, 0.34);
+  --mini-hover-token-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35) inset,
+    0 1px 4px rgba(0, 0, 0, 0.28);
+  --mini-hover-token-text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.85),
+    0 0 1px rgba(0, 0, 0, 0.95);
+  --overlap-pos-token-bg-color: #eef1f7;
+  --overlap-pos-token-color: #1f2937;
+  --selector-ast-bg-color: #d4d4d8;
+  --selector-ast-color: #111111;
+  --selector-ast-error-bg-color: #fecaca;
+  --selector-error-box-bg-color: #fca5a5;
+  --selector-error-box-color: #111111;
+  --selector-error-arrow-color: #1f2937;
+  --snapshot-card-border-color: rgba(128, 128, 128, 0.15);
+  --snapshot-card-shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 html.dark-mode-active {
@@ -36,4 +62,30 @@ html.dark-mode-active {
   --tree-line-color: rgba(232, 232, 238, 0.25);
   --settings-section-bg-color: rgba(23, 25, 32, 0.9);
   --settings-section-border-color: rgba(226, 232, 240, 0.16);
+  --device-top-icon-color: #cfeee0;
+  --device-top-icon-hover-color: #a7e7c4;
+  --mini-hover-image-bg-color: #1b1b22;
+  --mini-hover-token-bg: linear-gradient(
+    180deg,
+    rgba(12, 16, 24, 0.94),
+    rgba(18, 23, 32, 0.84)
+  );
+  --mini-hover-token-color: #f8fbff;
+  --mini-hover-token-border-color: rgba(226, 232, 240, 0.42);
+  --mini-hover-token-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.5) inset,
+    0 1px 5px rgba(0, 0, 0, 0.62);
+  --mini-hover-token-text-shadow:
+    0 1px 2px rgba(0, 0, 0, 1),
+    0 0 1px rgba(0, 0, 0, 1);
+  --overlap-pos-token-bg-color: #2d3340;
+  --overlap-pos-token-color: #e7eaf3;
+  --selector-ast-bg-color: #2d3340;
+  --selector-ast-color: #e7eaf3;
+  --selector-ast-error-bg-color: #5a1f26;
+  --selector-error-box-bg-color: #4a1e24;
+  --selector-error-box-color: #ffdede;
+  --selector-error-arrow-color: #f4c2c2;
+  --snapshot-card-border-color: rgba(226, 232, 240, 0.16);
+  --snapshot-card-shadow-color: rgba(0, 0, 0, 0.45);
 }

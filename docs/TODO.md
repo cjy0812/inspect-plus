@@ -19,7 +19,7 @@
   - 时间段策略
   - `prefers-color-scheme` 系统监听
   - DOM 类名与变量注入
-- [ ] `src/style/index.scss`：按组件域分层替换颜色，逐步消除 `html.dark-mode-active ... !important`。
+- [X] `src/style/index.scss`：按组件域分层替换颜色，逐步消除 `html.dark-mode-active ... !important`。
 - [ ] `src/views/snapshot/WindowCard.vue`：统一滚动策略（二选一）：
   - 仅 `treeRef.scrollTo`
   - 或仅 `scrollIntoView`
