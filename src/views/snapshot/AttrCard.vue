@@ -3,6 +3,8 @@ import DraggableCard from '@/components/DraggableCard.vue';
 import { getNodeSelectorText } from '@/utils/node';
 import { buildEmptyFn, copy } from '@/utils/others';
 import { useSnapshotStore } from './snapshot';
+import AttrNameCell from './AttrNameCell.vue';
+import AttrValueCell from './AttrValueCell.vue';
 
 withDefaults(
   defineProps<{
@@ -169,54 +171,18 @@ const getAttrExplain = (name: string) => {
         <NTbody>
           <NTr v-for="attrx in attrs" :key="attrx.name">
             <NTd @click="copy(`${attrx.name}=${attrx.desc}`)">
-              <NTooltip
-                :delay="300"
-                placement="top-start"
-                :show-arrow="true"
-                :keep-alive-on-hover="true"
-              >
-                <template #trigger>
-                  <div flex justify-between items-center gap-4px>
-                    <span>{{ attrx.name }}</span>
-                    <NIcon
-                      v-if="attrx.tip"
-                      size="14"
-                      :style="{
-                        color:
-                          attrx.tip.type == 'quickFind'
-                            ? 'var(--quickfind-color)'
-                            : 'var(--info-color)',
-                      }"
-                      class="cursor-help transition-all hover:scale-110"
-                      @click.stop
-                    >
-                      <SvgIcon v-if="attrx.tip.type == 'info'" name="info" />
-                      <SvgIcon
-                        v-else-if="attrx.tip.type == 'quickFind'"
-                        name="ok"
-                        class="quickfind-icon"
-                      />
-                    </NIcon>
-                  </div>
-                </template>
-                <div class="p-2px">
-                  <div>{{ getAttrExplain(attrx.name) }}</div>
-                  <div v-if="attrx.tip" class="mt-4px">
-                    {{ attrx.tip.desc }}
-                  </div>
-                </div>
-              </NTooltip>
+              <AttrNameCell
+                :name="attrx.name"
+                :explain="getAttrExplain(attrx.name)"
+                :tip="attrx.tip"
+              />
             </NTd>
             <NTd>
-              <NEllipsis
-                class="w-[calc(var(--gkd-w)*0.12)]"
-                :class="{
-                  'text-left direction-rtl': attrx.name == 'id',
-                  'opacity-50': attrx.value === null,
-                }"
-              >
-                {{ attrx.desc }}
-              </NEllipsis>
+              <AttrValueCell
+                :name="attrx.name"
+                :desc="attrx.desc"
+                :isNull="attrx.value === null"
+              />
             </NTd>
           </NTr>
           <NTr>
