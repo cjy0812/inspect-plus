@@ -211,7 +211,11 @@ const resetAllLocal = () => {
                 />
               </div>
               <div flex gap-8px flex-wrap>
-                <NButton size="small" secondary @click="clearIndexCache">
+                <NButton
+                  size="small"
+                  secondary
+                  @click="() => clearIndexCache()"
+                >
                   清理索引缓存
                 </NButton>
                 <NButton
