@@ -123,12 +123,11 @@ const bodyHoverd = useElementHover(document.body);
         w-full
         rounded-4px
         transition-colors
-        bg="#9093994c"
-        hover:bg="#9093997f"
+        class="BodyScrollbar-bar"
         :style="yStyle"
         :class="{
-          'bg-#9093997f': yDragging,
-          'bg-#0000!': !bodyHoverd,
+          'is-dragging': yDragging,
+          'is-hidden': !bodyHoverd,
         }"
         @click.stop
       />
@@ -150,12 +149,11 @@ const bodyHoverd = useElementHover(document.body);
         h-full
         rounded-4px
         transition-colors
-        bg="#9093994c"
-        hover:bg="#9093997f"
+        class="BodyScrollbar-bar"
         :style="xStyle"
         :class="{
-          'bg-#9093997f': xDragging,
-          'bg-#0000!': !bodyHoverd,
+          'is-dragging': xDragging,
+          'is-hidden': !bodyHoverd,
         }"
         @click.stop
       />
@@ -168,5 +166,17 @@ body:not(.mobile)::-webkit-scrollbar {
 }
 html:not(.mobile) {
   scrollbar-width: none;
+}
+.BodyScrollbar-bar {
+  background-color: var(--scrollbar-thumb-color);
+}
+.BodyScrollbar-bar:hover {
+  background-color: var(--scrollbar-thumb-hover-color);
+}
+.BodyScrollbar-bar.is-dragging {
+  background-color: var(--scrollbar-thumb-active-color);
+}
+.BodyScrollbar-bar.is-hidden {
+  background-color: var(--scrollbar-thumb-hidden-color);
 }
 </style>

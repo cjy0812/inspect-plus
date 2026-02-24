@@ -209,7 +209,11 @@ const targetNode = computed(() => {
       p-8px
     >
       <div flex m-b-4px pr-4px>
-        <SvgIcon name="test" class="mr-6px" style="color: #10b981" />
+        <SvgIcon
+          name="test"
+          class="mr-6px"
+          style="color: var(--accent-success-color)"
+        />
         <div>测试规则</div>
         <div :ref="onRef" flex-1 cursor-move />
         <NButton text title="最小化" @click="onUpdateShow(!show)">

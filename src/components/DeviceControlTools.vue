@@ -58,7 +58,7 @@ const subsPlaceholder = `
         @click="showSubsModel = !showSubsModel"
       >
         <template #icon>
-          <SvgIcon name="CacheSub" class="dark:fill-[#ffffff]" />
+          <SvgIcon name="CacheSub" style="color: var(--icon-contrast-color)" />
         </template>
       </NButton>
     </template>
@@ -72,7 +72,7 @@ const subsPlaceholder = `
         @click="showSelectorModel = !showSelectorModel"
       >
         <template #icon>
-          <SvgIcon name="Exe-Sel" class="dark:fill-[#ffffff]" />
+          <SvgIcon name="Exe-Sel" style="color: var(--icon-contrast-color)" />
         </template>
       </NButton>
     </template>
@@ -95,7 +95,11 @@ const subsPlaceholder = `
     >
       <template #header>
         <div :ref="onRef" flex items-center cursor-move>
-          <SvgIcon name="CacheSub" class="mr-6px" style="color: #22c55e" />
+          <SvgIcon
+            name="CacheSub"
+            class="mr-6px"
+            style="color: var(--accent-success-color)"
+          />
           <span>修改内存订阅</span>
           <div flex-1 />
         </div>
@@ -138,7 +142,11 @@ const subsPlaceholder = `
     >
       <template #header>
         <div :ref="onRef" flex items-center cursor-move>
-          <SvgIcon name="Exe-Sel" class="mr-6px" style="color: #22c55e" />
+          <SvgIcon
+            name="Exe-Sel"
+            class="mr-6px"
+            style="color: var(--accent-success-color)"
+          />
           <span>执行选择器</span>
           <div flex-1 />
         </div>

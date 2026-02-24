@@ -28,7 +28,6 @@ watchEffect(() => {
     class="SvgIcon"
     :name="name"
     :viewBox="svgEl.getAttributeNS(null, 'viewBox') || undefined"
-    :fill="svgEl.getAttribute('fill') || undefined"
   ></svg>
 </template>
 <style>
@@ -37,8 +36,11 @@ watchEffect(() => {
   overflow: hidden;
   height: var(--svg-h, var(--n-icon-size, var(--app-icon-size, 1em)));
   width: var(--svg-w, var(--n-icon-size, var(--app-icon-size, 1em)));
-}
-.SvgIcon:not([fill]) {
   fill: currentColor;
+  stroke: currentColor;
+}
+.SvgIcon * {
+  fill: currentColor;
+  stroke: currentColor;
 }
 </style>

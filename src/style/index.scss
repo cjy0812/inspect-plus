@@ -28,12 +28,9 @@ body {
   color: var(--device-top-icon-hover-color);
 }
 
-html.dark-mode-active .bg-white {
-  background-color: #1b1b22 !important;
-}
-
-html.dark-mode-active [class*='border-#efeff5'] {
-  border-color: #373744 !important;
+.surface-card {
+  background-color: var(--surface-card-bg-color);
+  border-color: var(--surface-card-border-color);
 }
 
 .snapshot-floating-panel {
@@ -60,20 +57,20 @@ html.dark-mode-active .snapshot-floating-panel--passthrough {
 html.dark-mode-active .snapshot-floating-panel .n-input,
 html.dark-mode-active .snapshot-floating-panel .n-input__input-el,
 html.dark-mode-active .snapshot-floating-panel .n-input__textarea-el {
-  background-color: #1b1f2a !important;
-  color: #e8e8ee !important;
+  background-color: var(--snapshot-input-bg-color) !important;
+  color: var(--snapshot-input-text-color) !important;
 }
 html.dark-mode-active .snapshot-floating-panel .n-input__border {
-  border-color: rgba(226, 232, 240, 0.2) !important;
+  border-color: var(--snapshot-input-border-color) !important;
 }
 html.dark-mode-active .snapshot-floating-panel .n-button--tertiary-type {
-  color: #d9dee7 !important;
+  color: var(--snapshot-tertiary-text-color) !important;
 }
 html.dark-mode-active .snapshot-floating-panel .n-button--success-type {
-  color: #13c67b !important;
+  color: var(--snapshot-success-text-color) !important;
 }
 html.dark-mode-active .snapshot-floating-panel .n-text {
-  color: #d9dee7 !important;
+  color: var(--snapshot-text-color) !important;
 }
 
 .floating-panel {
@@ -154,24 +151,23 @@ html.dark-mode-active .floating-panel {
 }
 
 html.dark-mode-active .snapshot-floating-panel .n-dialog {
-  background-color: #161821 !important;
+  background-color: var(--snapshot-dialog-bg-color) !important;
 }
 
 html.dark-mode-active .n-dialog.snapshot-floating-panel {
-  background-color: #161821 !important;
-  color: #e8e8ee !important;
+  background-color: var(--snapshot-dialog-bg-color) !important;
+  color: var(--snapshot-dialog-text-color) !important;
 }
 
 html.dark-mode-active .snapshot-floating-panel .n-dialog__title {
-  color: #f4f6ff !important;
+  color: var(--snapshot-dialog-title-color) !important;
 }
 
 html.dark-mode-active .snapshot-floating-panel .n-checkbox .n-checkbox__label {
-  color: #e8e8ee !important;
+  color: var(--snapshot-dialog-checkbox-label-color) !important;
 }
 
-html.dark-mode-active .snapshot-token,
-html.dark-mode-active [bg='#eee'] {
+html.dark-mode-active .snapshot-token {
   background-color: var(--token-bg-color) !important;
   color: var(--token-text-color) !important;
 }

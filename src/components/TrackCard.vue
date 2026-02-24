@@ -8,11 +8,12 @@ setTimeout(TrackGraphLoader, 3000);
 </script>
 <script setup lang="ts">
 import SelectorText from '@/components/SelectorText.vue';
-import { buildEmptyFn, colorList } from '@/utils/others';
+import { buildEmptyFn } from '@/utils/others';
 import { type ResolvedSelector } from '@/utils/selector';
 import type { AstNode, QueryResult } from '@gkd-kit/selector';
 import { UnitSelectorExpression } from '@gkd-kit/selector';
 import type { StyleValue } from 'vue';
+import { useTheme } from '@/composables/useTheme';
 
 const props = withDefaults(
   defineProps<{
@@ -61,11 +62,18 @@ const getNodeStyle = (node: AstNode<any>): StyleValue => {
     !node.outChildren.some((v) => v.value instanceof UnitSelectorExpression)
   ) {
     return {
-      outline: '1px solid #00F',
+      outline: '1px solid var(--track-card-outline-color)',
     };
   }
   return '';
 };
+
+const { themeTokens } = useTheme();
+const palette = computed(() => {
+  return themeTokens.value.palette.length
+    ? themeTokens.value.palette
+    : [themeTokens.value.graphEdgeFallbackStroke];
+});
 </script>
 <template>
   <div
@@ -103,13 +111,25 @@ const getNodeStyle = (node: AstNode<any>): StyleValue => {
           class="h-[calc(100%-2px)] b-1px b-solid"
         />
         <div relative pointer-events-none z-1>
-          <div absolute left-8px bottom-8px text="14px/14px #6C6E71">
+          <div
+            absolute
+            left-8px
+            bottom-8px
+            text="14px/14px"
+            style="color: var(--track-card-text-color)"
+          >
             *为简化视图已隐藏无关节点
           </div>
         </div>
       </div>
       <NScrollbar class="self-stretch flex-1 text-20px leading-28px gkd_code">
-        <div mb-24px break-all px-4px py-2px bg="#eee">
+        <div
+          mb-24px
+          break-all
+          px-4px
+          py-2px
+          style="background-color: var(--track-card-bg-color)"
+        >
           <SelectorText
             :source="selector.source"
             :node="selector.ast"
@@ -126,7 +146,7 @@ const getNodeStyle = (node: AstNode<any>): StyleValue => {
               py-2px
               b-1px
               b-solid
-              b="#ccc"
+              style="border-color: var(--track-card-border-color)"
             >
               <SelectorText
                 :source="selector.source"
@@ -145,9 +165,9 @@ const getNodeStyle = (node: AstNode<any>): StyleValue => {
             b-solid
             transition-colors
             :style="{
-              borderColor: colorList[i % colorList.length],
+              borderColor: palette[i % palette.length],
               backgroundColor: filterUnitResults.includes(unitResult)
-                ? '#eee'
+                ? 'var(--track-card-bg-color)'
                 : undefined,
             }"
             @click="switchUnitResult(unitResult)"
@@ -157,7 +177,7 @@ const getNodeStyle = (node: AstNode<any>): StyleValue => {
               align-middle
               size-20px
               :style="{
-                backgroundColor: colorList[i % colorList.length],
+                backgroundColor: palette[i % palette.length],
               }"
             />
             <span pl-4px />

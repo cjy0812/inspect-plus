@@ -146,10 +146,10 @@ const renderLabel: NonNullable<TreeProps['renderLabel']> = (info) => {
         style: {
           width: '14px',
           height: '14px',
-          color: 'var(--n-success-color, #00a240)',
-          fill: 'var(--n-success-color, #00a240)',
+          color: 'var(--n-success-color, var(--accent-success-color))',
+          fill: 'var(--n-success-color, var(--accent-success-color))',
           opacity: meta.self ? '1' : '0.4',
-          stroke: 'var(--n-success-color, #00a240)',
+          stroke: 'var(--n-success-color, var(--accent-success-color))',
           strokeWidth: '2',
           display: 'inline-block',
           verticalAlign: 'middle',
@@ -336,7 +336,7 @@ const findQuickTarget = (node: RawNode): RawNode | null => {
         @delete="onDelete"
       />
     </div>
-    <div h-1px mt-4px bg="#efeff5" />
+    <div h-1px mt-4px style="background-color: var(--divider-color)" />
     <div flex-1 min-h-0>
       <NTree
         ref="treeRef"

@@ -119,47 +119,47 @@ const getDataValue = (str: string) => {
 </template>
 <style>
 [data-name~='Unknown'] {
-  background-color: red;
+  background-color: var(--selector-unknown-bg-color);
 }
 [data-name~='PropertySegment'] {
-  color: blueviolet;
+  color: var(--selector-property-color);
 }
 [data-name~='PropertySegment'] [data-name='String'][data-value='@'] {
-  color: rgb(98, 55, 138);
+  color: var(--selector-property-prefix-color);
 }
 [data-name~='ConnectOperator'] {
-  color: green;
+  color: var(--selector-connect-operator-color);
 }
 [data-name~='ConnectExpression'] {
-  color: cadetblue;
+  color: var(--selector-connect-expression-color);
 }
 [data-name~='ValueExpression'] {
-  color: green;
+  color: var(--selector-value-expression-color);
 }
 [data-name~='ValueExpression'][data-name~='LiteralExpression'] {
-  color: steelblue;
+  color: var(--selector-value-literal-color);
 }
 [data-name~='CompareOperator'] {
-  color: mediumblue;
+  color: var(--selector-compare-operator-color);
 }
 [data-name~='LogicalOperator'] {
-  color: darkgreen;
+  color: var(--selector-logical-operator-color);
 }
 [data-name~='SelectorLogicalOperator'] {
-  color: darkgreen;
+  color: var(--selector-logical-operator-color);
 }
 [data-name='String'][data-value=')'],
 [data-name='String'][data-value='('] {
-  color: #b392f0;
+  color: var(--selector-string-bracket-color);
 }
 [data-name='String'][data-value=']'],
 [data-name='String'][data-value='['] {
-  color: #b392f0;
+  color: var(--selector-string-bracket-color);
 }
 [data-name='String'][data-value=','] {
-  color: #5e418c;
+  color: var(--selector-string-comma-color);
 }
 [data-name='String'][data-value='.'] {
-  color: #b392f0;
+  color: var(--selector-string-bracket-color);
 }
 </style>
