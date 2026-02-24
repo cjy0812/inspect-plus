@@ -160,32 +160,6 @@ const getNodeArea = (node: RawNode) => {
   return w * h;
 };
 
-export function* traverseNode(node: RawNode, skipKeys: number[] = []) {
-  const stack: RawNode[] = [];
-  stack.push(node);
-  while (stack.length > 0) {
-    const top = stack.pop()!;
-    if (skipKeys.includes(top.id)) {
-      continue;
-    }
-    yield top;
-    stack.push(...[...top.children].reverse());
-  }
-}
-
-export const getImageSize = async (src: string) => {
-  return new Promise<SizeExt>((res, rej) => {
-    const img = new Image();
-    img.onload = () => {
-      res({
-        height: img.naturalHeight,
-        width: img.naturalWidth,
-      });
-    };
-    img.onerror = rej;
-    img.src = src;
-  });
-};
 const getSafeName = (node: RawNode) => {
   const c = node.attr.childCount;
   return (node.attr.name || `🐔` + (c > 1 ? `` : ` [${c}]`)).split('.').at(-1)!;

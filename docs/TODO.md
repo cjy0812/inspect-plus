@@ -29,7 +29,7 @@
 
 - [X] `src/views/snapshot/AttrCard.vue`：按职责拆小组件（属性名单元格、属性值单元格、解释 Tooltip）。
 - [ ] `src/views/snapshot/WindowCard.vue`：统一风格选择（继续 TSX 或迁回模板渲染），避免混合风格继续扩散。
-- [ ] `src/utils/node.ts`：清理未使用工具函数（先通过引用扫描确认后再删）。
+- [X] `src/utils/node.ts`：清理未使用工具函数（先通过引用扫描确认后再删）。
 
 ## 验收清单（每项完成都要过）
 
