@@ -119,17 +119,19 @@ const renderLabel = (info: {
   checked: boolean;
   selected: boolean;
 }) => {
+  // Compute node label once and reuse
+  const label = getNodeLabel(info.option);
   const meta = quickFindMeta.value.get(info.option.id);
 
   // If node has no quick find potential, return original label
   if (!meta || !meta.has) {
-    return getNodeLabel(info.option);
+    return label;
   }
 
   // If node has quick find potential, return label with icon
   return (
     <span style="display: inline-flex; align-items: center; gap: 4px;">
-      {getNodeLabel(info.option)}
+      {label}
       <SvgIcon
         name="ok"
         class="quickfind-icon"
