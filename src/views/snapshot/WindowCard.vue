@@ -1,4 +1,4 @@
-<script setup lang="tsx">
+<script setup lang="ts">
 import ActionCard from '@/components/ActionCard.vue';
 import GapList from '@/components/GapList';
 import { message } from '@/utils/discrete';
@@ -12,7 +12,7 @@ import {
 } from '@/utils/node';
 import { copy, delay } from '@/utils/others';
 import type { TreeInst, TreeOption, TreeProps } from 'naive-ui';
-import type { ShallowRef } from 'vue';
+import { h, type ShallowRef } from 'vue';
 import { useSnapshotStore } from './snapshot';
 import SvgIcon from '@/components/SvgIcon.vue';
 
@@ -129,13 +129,21 @@ const renderLabel: NonNullable<TreeProps['renderLabel']> = (info) => {
   }
 
   // If node has quick find potential, return label with icon
-  return (
-    <span style="display: inline-flex; align-items: center; gap: 4px;">
-      {label}
-      <SvgIcon
-        name="ok"
-        class="quickfind-icon"
-        style={{
+  return h(
+    'span',
+    {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+      },
+    },
+    [
+      label,
+      h(SvgIcon, {
+        name: 'ok',
+        class: 'quickfind-icon',
+        style: {
           width: '14px',
           height: '14px',
           color: 'var(--n-success-color, #00a240)',
@@ -146,9 +154,9 @@ const renderLabel: NonNullable<TreeProps['renderLabel']> = (info) => {
           display: 'inline-block',
           verticalAlign: 'middle',
           marginLeft: '2px',
-        }}
-      />
-    </span>
+        },
+      }),
+    ],
   );
 };
 
