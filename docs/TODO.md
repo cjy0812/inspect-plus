@@ -14,7 +14,7 @@
 
 ## P1 下个迭代（中风险，需回归测试）
 
-- [ ] 主题系统模块化：新增 `useTheme` composable，集中管理：
+- [X] 主题系统模块化：新增 `useTheme` composable，集中管理：
   - 主题模式（light/dark/auto）
   - 时间段策略
   - `prefers-color-scheme` 系统监听
