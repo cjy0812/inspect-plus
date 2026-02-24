@@ -134,12 +134,18 @@ const renderLabel = (info: {
       {getNodeLabel(info.option)}
       <SvgIcon
         name="ok"
+        class="quickfind-icon"
         style={{
-          width: '12px',
-          height: '12px',
-          color: 'var(--n-success-color)',
-          fill: 'var(--n-success-color)',
+          width: '14px',
+          height: '14px',
+          color: 'var(--n-success-color, #00a240)',
+          fill: 'var(--n-success-color, #00a240)',
           opacity: meta.self ? '1' : '0.4',
+          stroke: 'var(--n-success-color, #00a240)',
+          strokeWidth: '2',
+          display: 'inline-block',
+          verticalAlign: 'middle',
+          marginLeft: '2px',
         }}
       />
     </span>
