@@ -99,7 +99,7 @@ const treeNodeProps = (info: {
 
   // Add opacity only if node has no quick find potential
   if (meta && !meta.has && !newStyle.opacity) {
-    newStyle.opacity = 0.5;
+    newStyle.opacity = 0.8;
   }
 
   return {
