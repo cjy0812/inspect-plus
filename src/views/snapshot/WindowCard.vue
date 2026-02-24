@@ -8,11 +8,13 @@ import {
   getGkdAppInfo,
   getNodeLabel,
   getNodeStyle,
+  getNodeQf,
 } from '@/utils/node';
 import { copy, delay } from '@/utils/others';
 import type { TreeInst } from 'naive-ui';
 import type { HTMLAttributes, ShallowRef } from 'vue';
 import { useSnapshotStore } from './snapshot';
+import SvgIcon from '@/components/SvgIcon.vue';
 
 const router = useRouter();
 
@@ -27,6 +29,21 @@ const selectedKeys = shallowRef<number[]>([]);
 watch([() => focusNode.value, () => focusTime.value], async () => {
   if (!focusNode.value) return;
   const key = focusNode.value.id;
+
+  // Check if focus change was not triggered by tree node click
+  if (!Number.isNaN(lastClickId) && lastClickId !== key) {
+    // Reset lastClickId for next time
+    lastClickId = Number.NaN;
+
+    // Find first quick target in current node's subtree
+    const target = findQuickTarget(focusNode.value);
+    if (target && target.id !== key) {
+      // Update focus to quick target
+      updateFocusNode(target);
+      return; // Exit to avoid duplicate processing
+    }
+  }
+
   nextTick().then(async () => {
     await delay(300);
     if (key === focusNode.value?.id) {
@@ -36,9 +53,18 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
         return;
       }
       selectedKeys.value = [key];
+
+      // Scroll to node using native scrollIntoView for better control
+      const element = document.querySelector(`[data-node-id="${key}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      // Also use treeRef scrollTo for consistency
       treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
     }
   });
+
+  // Expand all ancestor nodes
   let parent = focusNode.value.parent;
   if (!parent) {
     return;
@@ -66,6 +92,16 @@ const treeNodeProps = (info: {
   option: RawNode;
 }): HTMLAttributes & Record<string, unknown> => {
   const style = getNodeStyle(info.option, focusNode.value);
+  const meta = quickFindMeta.value.get(info.option.id);
+
+  // Create new style object with proper type
+  const newStyle: Record<string, string | number | undefined> = { ...style };
+
+  // Add opacity only if node has no quick find potential
+  if (meta && !meta.has && !newStyle.opacity) {
+    newStyle.opacity = 0.5;
+  }
+
   return {
     onClick: () => {
       lastClickId = info.option.id;
@@ -73,7 +109,7 @@ const treeNodeProps = (info: {
     },
     style: {
       '--n-node-text-color': style.color,
-      ...style,
+      ...newStyle,
     },
     class: 'whitespace-nowrap',
     'data-node-id': String(info.option.id),
@@ -85,7 +121,29 @@ const renderLabel = (info: {
   checked: boolean;
   selected: boolean;
 }) => {
-  return getNodeLabel(info.option);
+  const meta = quickFindMeta.value.get(info.option.id);
+
+  // If node has no quick find potential, return original label
+  if (!meta || !meta.has) {
+    return getNodeLabel(info.option);
+  }
+
+  // If node has quick find potential, return label with icon
+  return (
+    <span style="display: inline-flex; align-items: center; gap: 4px;">
+      {getNodeLabel(info.option)}
+      <SvgIcon
+        name="ok"
+        style={{
+          width: '12px',
+          height: '12px',
+          color: 'var(--n-success-color)',
+          fill: 'var(--n-success-color)',
+          opacity: meta.self ? '1' : '0.4',
+        }}
+      />
+    </span>
+  );
 };
 
 const deviceName = computed(() => {
@@ -116,6 +174,55 @@ const gkdVersionName = computed(() => {
   const v = getGkdAppInfo(snapshot.value).versionName;
   return v ? `GKD@${v}` : undefined;
 });
+
+// Quick find metadata interface
+interface QuickFindMeta {
+  self: boolean; // Node itself has quick find
+  has: boolean; // Node or its descendants have quick find
+}
+
+// Compute quick find metadata for the entire tree
+const quickFindMeta = computed(() => {
+  const metaMap = new Map<number, QuickFindMeta>();
+
+  const computeMeta = (node: RawNode): QuickFindMeta => {
+    const self = getNodeQf(node);
+    let has = self;
+
+    for (const child of node.children) {
+      const childMeta = computeMeta(child);
+      if (childMeta.has) {
+        has = true;
+      }
+    }
+
+    const meta = { self, has };
+    metaMap.set(node.id, meta);
+    return meta;
+  };
+
+  if (rootNode.value) {
+    computeMeta(rootNode.value);
+  }
+
+  return metaMap;
+});
+
+// Find first quick target in subtree
+const findQuickTarget = (node: RawNode): RawNode | null => {
+  if (getNodeQf(node)) {
+    return node;
+  }
+
+  for (const child of node.children) {
+    const target = findQuickTarget(child);
+    if (target) {
+      return target;
+    }
+  }
+
+  return null;
+};
 </script>
 
 <template>
