@@ -37,16 +37,22 @@ const appTheme = computed(() => {
   return isInDarkRange(currentMinutes, darkStart, darkEnd) ? darkTheme : null;
 });
 
-watchEffect(() => {
-  document.documentElement.classList.toggle(
-    'low-memory-mode',
-    settingsStore.lowMemoryMode,
-  );
-  document.documentElement.classList.toggle(
-    'dark-mode-active',
-    Boolean(appTheme.value),
-  );
-});
+const isDarkModeActive = computed(() => Boolean(appTheme.value));
+
+watch(
+  [() => settingsStore.lowMemoryMode, () => isDarkModeActive.value],
+  ([lowMemoryMode, darkModeActive]) => {
+    document.documentElement.classList.toggle('low-memory-mode', lowMemoryMode);
+    document.documentElement.classList.toggle(
+      'dark-mode-active',
+      darkModeActive,
+    );
+    document.documentElement.style.colorScheme = darkModeActive
+      ? 'dark'
+      : 'light';
+  },
+  { immediate: true, flush: 'sync' },
+);
 </script>
 <template>
   <NConfigProvider
