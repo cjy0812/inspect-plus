@@ -197,6 +197,7 @@ const getAttrExplain = (name: string) => {
                           attrx.tip.type == 'quickFind' ? '#22c55e' : '#3b82f6',
                       }"
                       class="cursor-help transition-all hover:scale-110"
+                      @click.stop
                     >
                       <SvgIcon v-if="attrx.tip.type == 'info'" name="info" />
                       <SvgIcon

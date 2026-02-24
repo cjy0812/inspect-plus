@@ -102,9 +102,9 @@ html.dark-mode-active .floating-panel {
   border-radius: 6px !important;
 }
 
- .quickfind-icon {
+.quickfind-icon {
   color: #22c55e;
- }
+}
 
 .snapshot-token {
   background-color: #eee;
@@ -164,17 +164,12 @@ html.dark-mode-active .floating-panel {
   color: #1f2937;
 }
 
-html.dark-mode-active .snapshot-floating-panel {
-  background-color: #1b1b22 !important;
-  color: #e8e8ee !important;
-}
-
 html.dark-mode-active .snapshot-floating-panel .n-dialog {
-  background-color: #1b1b22 !important;
+  background-color: #161821 !important;
 }
 
 html.dark-mode-active .n-dialog.snapshot-floating-panel {
-  background-color: #1b1b22 !important;
+  background-color: #161821 !important;
   color: #e8e8ee !important;
 }
 
@@ -315,7 +310,7 @@ html.dark-mode-active .selector-error-arrow {
 .snapshot-window .selector-error-arrow,
 .snapshot-window .TrackCard .gkd_code,
 .snapshot-window .TrackCard code {
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
   letter-spacing: -0.02em;
 }
 

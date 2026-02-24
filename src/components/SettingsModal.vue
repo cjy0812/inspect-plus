@@ -65,13 +65,15 @@ const clearStorage = async (
   const keys = await storage.keys();
   await Promise.all(keys.map((k) => storage.removeItem(k)));
 };
-const clearIndexCache = async () => {
+const clearIndexCache = async (showMessage = true) => {
   clearRecord(snapshotViewedTime);
   clearRecord(snapshotImportTime);
   clearRecord(snapshotImageId);
   clearRecord(snapshotImportId);
   clearRecord(importSnapshotId);
-  message.success('已清理索引缓存');
+  if (showMessage) {
+    message.success('已清理索引缓存');
+  }
 };
 const clearSnapshots = async () => {
   await Promise.all([
@@ -79,7 +81,7 @@ const clearSnapshots = async () => {
     clearStorage(shallowSnapshotStorage),
     clearStorage(screenshotStorage),
   ]);
-  await clearIndexCache();
+  await clearIndexCache(false);
   message.success('已清理快照数据');
 };
 const resetAllLocal = () => {
