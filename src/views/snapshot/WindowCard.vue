@@ -57,12 +57,7 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
     if (key === focusNode.value?.id) {
       selectedKeys.value = [key];
 
-      // Scroll to node using native scrollIntoView for better control
-      const element = document.querySelector(`[data-node-id="${key}"]`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      // Also use treeRef scrollTo for consistency
+      // Scroll using treeRef only to avoid duplicate DOM operations
       treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
     }
   });
