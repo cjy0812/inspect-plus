@@ -74,7 +74,7 @@ export const showTextDLg = ({
               <NSpace align="center" size={8}>
                 <img
                   src={ConnectSvg}
-                  style={{ width: '20px', height: '20px' }}
+                  style={{ width: '30px', height: '30px' }}
                 />
                 <span style={{ fontWeight: '500' }}>{title}</span>
               </NSpace>
