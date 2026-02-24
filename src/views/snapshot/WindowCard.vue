@@ -181,10 +181,12 @@ const gkdVersionName = computed(() => {
   return v ? `GKD@${v}` : undefined;
 });
 
-// Compute quick find metadata for the entire tree
 const quickFindMeta = computed(() => {
+  const root = rootNode.value;
+  if (!root) {
+    return new Map<number, QuickFindMeta>();
+  }
   const metaMap = new Map<number, QuickFindMeta>();
-
   const computeMeta = (node: RawNode): QuickFindMeta => {
     const self = getNodeQf(node);
     let has = self;
@@ -201,10 +203,7 @@ const quickFindMeta = computed(() => {
     return meta;
   };
 
-  if (rootNode.value) {
-    computeMeta(rootNode.value);
-  }
-
+  computeMeta(root);
   return metaMap;
 });
 

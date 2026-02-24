@@ -23,7 +23,7 @@
 - [ ] `src/views/snapshot/WindowCard.vue`：统一滚动策略（二选一）：
   - 仅 `treeRef.scrollTo`
   - 或仅 `scrollIntoView`
-- [ ] `src/views/snapshot/WindowCard.vue`：快查元数据缓存优化（基于根节点 identity/version 的 memo），避免重复全树计算。
+- [X] `src/views/snapshot/WindowCard.vue`：快查元数据缓存优化（基于根节点 identity/version 的 memo），避免重复全树计算。
 
 ## P2 结构优化（较高改动量，分批推进）
 
