@@ -40,6 +40,14 @@ const settingsDlgShow = shallowRef(false);
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
+            <RouterLink to="/device">
+              <NButton text><SvgIcon name="device" /></NButton>
+            </RouterLink>
+          </template>
+          连接设备
+        </NTooltip>
+        <NTooltip placement="right">
+          <template #trigger>
             <NButton text @click="settingsDlgShow = true"
               ><SvgIcon name="settings"
             /></NButton>
@@ -113,7 +121,7 @@ const settingsDlgShow = shallowRef(false);
     <FullScreenDialog v-model:show="trackShow" @closed="trackData = undefined">
       <TrackCard
         v-if="trackData"
-        class="snapshot-floating-panel"
+        class="snapshot-floating-panel snapshot-window window-anim"
         v-bind="trackData"
         @close="trackShow = false"
       />

@@ -42,6 +42,68 @@ html.dark-mode-active [class*='border-#efeff5'] {
 .snapshot-floating-panel {
   background-color: #fff;
   color: inherit;
+  border: 1px solid rgba(128, 128, 128, 0.15) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  background-clip: padding-box;
+  opacity: 0.95;
+  transition: opacity 0.2s ease;
+}
+.snapshot-floating-panel:hover {
+  opacity: 1;
+}
+html.dark-mode-active .snapshot-floating-panel,
+html.dark-mode-active .snapshot-floating-panel--passthrough {
+  background-color: #161821 !important;
+  color: #e8e8ee !important;
+  border-color: rgba(226, 232, 240, 0.16) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+html.dark-mode-active .snapshot-floating-panel .n-input,
+html.dark-mode-active .snapshot-floating-panel .n-input__input-el,
+html.dark-mode-active .snapshot-floating-panel .n-input__textarea-el {
+  background-color: #1b1f2a !important;
+  color: #e8e8ee !important;
+}
+html.dark-mode-active .snapshot-floating-panel .n-input__border {
+  border-color: rgba(226, 232, 240, 0.2) !important;
+}
+html.dark-mode-active .snapshot-floating-panel .n-button--tertiary-type {
+  color: #d9dee7 !important;
+}
+html.dark-mode-active .snapshot-floating-panel .n-button--success-type {
+  color: #13c67b !important;
+}
+html.dark-mode-active .snapshot-floating-panel .n-text {
+  color: #d9dee7 !important;
+}
+
+.floating-panel {
+  border-radius: 12px !important;
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  overflow: hidden;
+}
+html.dark-mode-active .floating-panel {
+  background-color: #161821 !important;
+  border-color: rgba(226, 232, 240, 0.16) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.floating-panel .n-button,
+.floating-panel .n-input,
+.floating-panel .n-textarea,
+.floating-panel .n-select,
+.floating-panel .n-checkbox,
+.floating-panel .n-radio,
+.floating-panel .n-switch,
+.floating-panel .n-input__inner {
+  border-radius: 6px !important;
+}
+
+.quickfind-icon {
+  color: #22c55e;
 }
 
 .snapshot-token {
@@ -102,17 +164,12 @@ html.dark-mode-active [class*='border-#efeff5'] {
   color: #1f2937;
 }
 
-html.dark-mode-active .snapshot-floating-panel {
-  background-color: #1b1b22 !important;
-  color: #e8e8ee !important;
-}
-
 html.dark-mode-active .snapshot-floating-panel .n-dialog {
-  background-color: #1b1b22 !important;
+  background-color: #161821 !important;
 }
 
 html.dark-mode-active .n-dialog.snapshot-floating-panel {
-  background-color: #1b1b22 !important;
+  background-color: #161821 !important;
   color: #e8e8ee !important;
 }
 
@@ -200,4 +257,123 @@ html.dark-mode-active .selector-error-arrow {
 .home-topbar-icons .SvgIcon {
   width: var(--app-icon-size) !important;
   height: var(--app-icon-size) !important;
+}
+
+.snapshot-page .n-card,
+.snapshot-page .n-modal,
+.snapshot-page .n-dialog,
+.snapshot-page .TrackCard,
+.snapshot-page .snapshot-floating-panel,
+.snapshot-window,
+.snapshot-window .n-card,
+.snapshot-window .n-modal,
+.snapshot-window .n-dialog,
+.snapshot-window .TrackCard,
+.snapshot-window .snapshot-floating-panel {
+  border-radius: 12px;
+}
+
+.snapshot-page .n-button,
+.snapshot-page .n-input,
+.snapshot-page .n-textarea,
+.snapshot-page .n-select,
+.snapshot-page .n-checkbox,
+.snapshot-page .n-radio,
+.snapshot-page .n-switch,
+.snapshot-page .n-input__inner,
+.snapshot-window .n-button,
+.snapshot-window .n-input,
+.snapshot-window .n-textarea,
+.snapshot-window .n-select,
+.snapshot-window .n-checkbox,
+.snapshot-window .n-radio,
+.snapshot-window .n-switch,
+.snapshot-window .n-input__inner {
+  border-radius: 6px !important;
+}
+
+.snapshot-page .gkd_code,
+.snapshot-page code,
+.snapshot-page a,
+.snapshot-page .snapshot-token,
+.snapshot-page .selector-ast-view,
+.snapshot-page .selector-error-box,
+.snapshot-page .selector-error-arrow,
+.snapshot-page .TrackCard .gkd_code,
+.snapshot-page .TrackCard code,
+.snapshot-window .gkd_code,
+.snapshot-window code,
+.snapshot-window a,
+.snapshot-window .snapshot-token,
+.snapshot-window .selector-ast-view,
+.snapshot-window .selector-error-box,
+.snapshot-window .selector-error-arrow,
+.snapshot-window .TrackCard .gkd_code,
+.snapshot-window .TrackCard code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  letter-spacing: -0.02em;
+}
+
+.snapshot-page .n-tree {
+  --n-line-width: 1px;
+  --n-line-color: rgba(60, 60, 60, 0.5);
+}
+html.dark-mode-active .snapshot-page .n-tree {
+  --n-line-color: rgba(232, 232, 238, 0.25);
+}
+
+.snapshot-window .n-card {
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  opacity: 0.95;
+  transition: opacity 0.2s ease;
+}
+.snapshot-window .n-card:hover {
+  opacity: 1;
+}
+
+.window-anim {
+  animation: window-pop 180ms ease-out;
+}
+@keyframes window-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.settings-modal .settings-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.settings-modal .n-dialog {
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+.settings-modal .settings-section {
+  padding: 12px;
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+.settings-modal .settings-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.settings-modal .settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.settings-modal .settings-debug {
+  justify-content: space-between;
+}
+html.dark-mode-active .settings-modal .settings-section {
+  background: rgba(23, 25, 32, 0.9);
+  border-color: rgba(226, 232, 240, 0.16);
 }

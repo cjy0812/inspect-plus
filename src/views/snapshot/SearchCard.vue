@@ -290,7 +290,7 @@ const shareResult = (result: SearchResult) => {
     }"
     :minWidth="300"
     sizeDraggable
-    class="box-shadow-dim"
+    class="box-shadow-dim snapshot-window window-anim"
     :show="show"
   >
     <div
@@ -298,7 +298,7 @@ const shareResult = (result: SearchResult) => {
       b-1px
       b-solid
       b-gray-200
-      rounded-4px
+      rounded-12px
       p-8px
     >
       <div flex m-b-4px pr-4px>

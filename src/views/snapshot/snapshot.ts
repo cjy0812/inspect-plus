@@ -26,13 +26,59 @@ const getRemoteImportId = async (id: number): Promise<number> => {
 export const useSnapshotStore = createSharedComposable(() => {
   const route = useRoute();
   const router = useRouter();
-  const { snapshotViewedTime } = useStorageStore();
+  const {
+    snapshotViewedTime,
+    snapshotImportId,
+    snapshotImageId,
+    importSnapshotId,
+    settingsStore,
+  } = useStorageStore();
+  const randomizeFocusColor = () => {
+    const hue = Math.floor(Math.random() * 360);
+    const saturation = 58;
+    const lightness = 52;
+    const c = (1 - Math.abs(2 * (lightness / 100) - 1)) * (saturation / 100);
+    const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+    const m = lightness / 100 - c / 2;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    if (hue < 60) {
+      r = c;
+      g = x;
+    } else if (hue < 120) {
+      r = x;
+      g = c;
+    } else if (hue < 180) {
+      g = c;
+      b = x;
+    } else if (hue < 240) {
+      g = x;
+      b = c;
+    } else if (hue < 300) {
+      r = x;
+      b = c;
+    } else {
+      r = c;
+      b = x;
+    }
+    const to255 = (v: number) => Math.round((v + m) * 255);
+    settingsStore.focusNodeColor = `rgb(${to255(r)}, ${to255(g)}, ${to255(b)})`;
+  };
 
   const snapshotId = shallowRef<number>();
   watchImmediate(
     () => route.params.snapshotId,
     (v) => {
       snapshotId.value = toInteger(v);
+    },
+  );
+  watchImmediate(
+    () => snapshotId.value,
+    (v) => {
+      if (v && settingsStore.randomFocusNodeColorOnOpen) {
+        randomizeFocusColor();
+      }
     },
   );
   const importId = computed(() => {

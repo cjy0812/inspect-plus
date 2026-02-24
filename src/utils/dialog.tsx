@@ -60,8 +60,6 @@ export const showTextDLg = ({
         size="small"
         style={{
           width: quickPick ? '520px' : '500px',
-          borderRadius: '10px',
-          boxShadow: '0 10px 28px rgba(15, 23, 42, 0.14)',
           overflow: 'hidden',
         }}
       >

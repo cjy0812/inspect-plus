@@ -55,7 +55,7 @@ const subsPlaceholder = `
       <NButton
         text
         :style="{ '--n-icon-size': props.iconSize, '--svg-h': props.iconSize }"
-        @click="showSubsModel = true"
+        @click="showSubsModel = !showSubsModel"
       >
         <template #icon>
           <SvgIcon name="CacheSub" class="dark:fill-[#ffffff]" />
@@ -69,7 +69,7 @@ const subsPlaceholder = `
       <NButton
         text
         :style="{ '--n-icon-size': props.iconSize, '--svg-h': props.iconSize }"
-        @click="showSelectorModel = true"
+        @click="showSelectorModel = !showSelectorModel"
       >
         <template #icon>
           <SvgIcon name="Exe-Sel" class="dark:fill-[#ffffff]" />
@@ -82,13 +82,15 @@ const subsPlaceholder = `
   <DraggableCard
     v-slot="{ onRef }"
     :initialValue="{ top: 84, left: 120 }"
-    class="box-shadow-dim"
+    class="box-shadow-dim window-anim"
     :show="showSubsModel"
   >
     <NCard
       size="small"
       closable
-      style="width: 90vw; max-width: 800px"
+      class="floating-panel"
+      style="width: min(720px, 90vw)"
+      :content-style="{ maxHeight: '70vh', overflow: 'auto' }"
       @close="showSubsModel = false"
     >
       <template #header>
@@ -123,13 +125,15 @@ const subsPlaceholder = `
   <DraggableCard
     v-slot="{ onRef }"
     :initialValue="{ top: 120, left: 180 }"
-    class="box-shadow-dim"
+    class="box-shadow-dim window-anim"
     :show="showSelectorModel"
   >
     <NCard
       size="small"
       closable
-      style="width: 90vw; max-width: 800px"
+      class="floating-panel"
+      style="width: min(720px, 90vw)"
+      :content-style="{ maxHeight: '70vh', overflow: 'auto' }"
       @close="showSelectorModel = false"
     >
       <template #header>

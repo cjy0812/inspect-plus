@@ -163,6 +163,7 @@ interface SettingsStore {
   debugMode?: boolean;
   showDebugTools?: boolean;
   focusNodeColor?: string;
+  randomFocusNodeColorOnOpen: boolean;
 }
 
 interface GlobalStore {
