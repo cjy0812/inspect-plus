@@ -1,3 +1,5 @@
+import { settingsStore } from '@/store/storage';
+
 // 获取元素id最后一个.后面的内容
 const getShortName = (fullName: string): string => {
   let lstIndex = fullName.lastIndexOf('.');
@@ -277,14 +279,12 @@ export const isRawNode = (node: any): node is RawNode => {
   return false;
 };
 
-import { settingsStore } from '@/store/storage';
-
 export const getNodeStyle = (node: RawNode, focusNode?: RawNode) => {
   const qf = Boolean(node.idQf || node.textQf || node.quickFind);
   const fontWeight = qf ? 'bold' : undefined;
   const color =
     node.id === focusNode?.id
-      ? settingsStore.focusNodeColor || 'rgb(0, 220, 255)'
+      ? settingsStore.focusNodeColor || 'var(--focus-node-color)'
       : undefined;
   return {
     fontWeight,

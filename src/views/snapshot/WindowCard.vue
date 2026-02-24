@@ -11,10 +11,15 @@ import {
   getNodeQf,
 } from '@/utils/node';
 import { copy, delay } from '@/utils/others';
-import type { TreeInst } from 'naive-ui';
-import type { HTMLAttributes, ShallowRef } from 'vue';
+import type { TreeInst, TreeOption, TreeProps } from 'naive-ui';
+import type { ShallowRef } from 'vue';
 import { useSnapshotStore } from './snapshot';
 import SvgIcon from '@/components/SvgIcon.vue';
+
+interface QuickFindMeta {
+  self: boolean;
+  has: boolean;
+}
 
 const router = useRouter();
 
@@ -82,15 +87,18 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
 });
 
 const treeRef = shallowRef<TreeInst>();
+const treeData = computed<TreeOption[]>(() => {
+  return rootNode.value ? [rootNode.value as unknown as TreeOption] : [];
+});
 
-const treeFilter = (pattern: string, node: RawNode) => {
-  return node.id === focusNode.value?.id;
+const treeFilter: NonNullable<TreeProps['filter']> = (_pattern, node) => {
+  const rawNode = node as unknown as RawNode;
+  return rawNode.id === focusNode.value?.id;
 };
-const treeNodeProps = (info: {
-  option: RawNode;
-}): HTMLAttributes & Record<string, unknown> => {
-  const style = getNodeStyle(info.option, focusNode.value);
-  const meta = quickFindMeta.value.get(info.option.id);
+const treeNodeProps: NonNullable<TreeProps['nodeProps']> = (info) => {
+  const option = info.option as unknown as RawNode;
+  const style = getNodeStyle(option, focusNode.value);
+  const meta = quickFindMeta.value.get(option.id);
 
   // Create new style object with proper type
   const newStyle: Record<string, string | number | undefined> = { ...style };
@@ -102,26 +110,23 @@ const treeNodeProps = (info: {
 
   return {
     onClick: () => {
-      lastClickId = info.option.id;
-      updateFocusNode(info.option);
+      lastClickId = option.id;
+      updateFocusNode(option);
     },
     style: {
       '--n-node-text-color': style.color,
       ...newStyle,
     },
     class: 'whitespace-nowrap',
-    'data-node-id': String(info.option.id),
+    'data-node-id': String(option.id),
   };
 };
 
-const renderLabel = (info: {
-  option: RawNode;
-  checked: boolean;
-  selected: boolean;
-}) => {
+const renderLabel: NonNullable<TreeProps['renderLabel']> = (info) => {
+  const option = info.option as unknown as RawNode;
   // Compute node label once and reuse
-  const label = getNodeLabel(info.option);
-  const meta = quickFindMeta.value.get(info.option.id);
+  const label = getNodeLabel(option);
+  const meta = quickFindMeta.value.get(option.id);
 
   // If node has no quick find potential, return original label
   if (!meta || !meta.has) {
@@ -180,12 +185,6 @@ const gkdVersionName = computed(() => {
   const v = getGkdAppInfo(snapshot.value).versionName;
   return v ? `GKD@${v}` : undefined;
 });
-
-// Quick find metadata interface
-interface QuickFindMeta {
-  self: boolean; // Node itself has quick find
-  has: boolean; // Node or its descendants have quick find
-}
 
 // Compute quick find metadata for the entire tree
 const quickFindMeta = computed(() => {
@@ -346,10 +345,10 @@ const findQuickTarget = (node: RawNode): RawNode | null => {
         showLine
         blockLine
         keyField="id"
-        :data="[rootNode as any]"
-        :filter="(treeFilter as any)"
-        :nodeProps="(treeNodeProps as any)"
-        :renderLabel="(renderLabel as any)"
+        :data="treeData"
+        :filter="treeFilter"
+        :nodeProps="treeNodeProps"
+        :renderLabel="renderLabel"
       />
     </div>
   </div>
