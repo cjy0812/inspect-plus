@@ -169,44 +169,61 @@ const getAttrExplain = (name: string) => {
         <NTbody>
           <NTr v-for="attrx in attrs" :key="attrx.name">
             <NTd @click="copy(`${attrx.name}=${attrx.desc}`)">
-              <NTooltip :delay="500" placement="top-start">
-                <template #trigger>
-                  <div v-if="attrx.tip" flex justify-between items-center>
-                    <div>
-                      {{ attrx.name }}
-                    </div>
-                    <NTooltip
-                      trigger="click"
-                      placement="top"
-                      :show-arrow="false"
-                    >
-                      <template #trigger>
-                        <NIcon
-                          size="16"
-                          :style="{
-                            color:
-                              attrx.tip.type == 'quickFind' ? '#22c55e' : '',
-                          }"
-                        >
-                          <SvgIcon
-                            v-if="attrx.tip.type == 'info'"
-                            name="info"
-                          />
-                          <SvgIcon
-                            v-else-if="attrx.tip.type == 'quickFind'"
-                            name="ok"
-                            class="quickfind-icon"
-                          />
-                        </NIcon>
-                      </template>
-                      {{ attrx.tip.desc }}
-                    </NTooltip>
-                  </div>
-                  <template v-else>
-                    {{ attrx.name }}
+              <div v-if="attrx.tip" flex justify-between items-center gap-4px>
+                <NTooltip
+                  :delay="300"
+                  placement="top-start"
+                  :show-arrow="true"
+                  :keep-alive-on-hover="true"
+                >
+                  <template #trigger>
+                    <span>{{ attrx.name }}</span>
                   </template>
+                  <div class="p-2px">
+                    <div>{{ getAttrExplain(attrx.name) }}</div>
+                  </div>
+                </NTooltip>
+                <NTooltip
+                  :delay="300"
+                  placement="top-start"
+                  :show-arrow="true"
+                  :keep-alive-on-hover="true"
+                >
+                  <template #trigger>
+                    <NIcon
+                      size="14"
+                      :style="{
+                        color:
+                          attrx.tip.type == 'quickFind' ? '#22c55e' : '#3b82f6',
+                      }"
+                      class="cursor-help transition-all hover:scale-110"
+                    >
+                      <SvgIcon v-if="attrx.tip.type == 'info'" name="info" />
+                      <SvgIcon
+                        v-else-if="attrx.tip.type == 'quickFind'"
+                        name="ok"
+                        class="quickfind-icon"
+                      />
+                    </NIcon>
+                  </template>
+                  <div class="p-2px">
+                    <div>{{ attrx.tip.desc }}</div>
+                  </div>
+                </NTooltip>
+              </div>
+              <NTooltip
+                v-else
+                :delay="300"
+                placement="top-start"
+                :show-arrow="true"
+                :keep-alive-on-hover="true"
+              >
+                <template #trigger>
+                  <span>{{ attrx.name }}</span>
                 </template>
-                {{ getAttrExplain(attrx.name) }}
+                <div class="p-2px">
+                  <div>{{ getAttrExplain(attrx.name) }}</div>
+                </div>
               </NTooltip>
             </NTd>
             <NTd>
