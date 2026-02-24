@@ -24,17 +24,29 @@ defineProps({
 </script>
 
 <template>
-  <NTooltip
-    :delay="300"
-    placement="top-start"
-    :show-arrow="true"
-    :keep-alive-on-hover="true"
-  >
-    <template #trigger>
-      <div flex justify-between items-center gap-4px>
+  <div flex justify-between items-center gap-4px>
+    <NTooltip
+      :delay="300"
+      placement="top-start"
+      :show-arrow="true"
+      :keep-alive-on-hover="true"
+    >
+      <template #trigger>
         <span>{{ name }}</span>
+      </template>
+      <div class="p-2px">
+        <div>{{ explain }}</div>
+      </div>
+    </NTooltip>
+    <NTooltip
+      v-if="tip"
+      :delay="300"
+      placement="top-start"
+      :show-arrow="true"
+      :keep-alive-on-hover="true"
+    >
+      <template #trigger>
         <NIcon
-          v-if="tip"
           size="14"
           :style="{
             color:
@@ -52,13 +64,10 @@ defineProps({
             class="quickfind-icon"
           />
         </NIcon>
+      </template>
+      <div class="p-2px">
+        <div>{{ tip.desc }}</div>
       </div>
-    </template>
-    <div class="p-2px">
-      <div>{{ explain }}</div>
-      <div v-if="tip" class="mt-4px">
-        {{ tip.desc }}
-      </div>
-    </div>
-  </NTooltip>
+    </NTooltip>
+  </div>
 </template>
