@@ -297,7 +297,7 @@ watchEffect(() => {
               :loading="captureSnapshot.loading"
               @click="captureSnapshot.invoke"
             >
-              <SvgIcon name="Snapshot" class="dark:fill-[#ffffff]" />
+              <SvgIcon name="Snapshot" />
             </NButton>
           </template>
           捕获快照
@@ -383,7 +383,7 @@ watchEffect(() => {
                   :class="[
                     snapshotViewedTime[item.id]
                       ? 'snapshot-row-viewed'
-                      : 'border-#efeff5 bg-white',
+                      : 'surface-card',
                   ]"
                 >
                   <div flex items-start gap-10px flex-wrap>

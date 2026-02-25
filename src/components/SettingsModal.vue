@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { showTextDLg } from '@/utils/dialog';
-import { formatClock, normalizeClock } from '@/utils/clock';
 import { normalizeOriginText } from '@/utils/url';
 import { message } from '@/utils/discrete';
 import {
@@ -26,18 +25,6 @@ const {
   importSnapshotId,
 } = useStorageStore();
 const showDebugMenu = ref(false);
-
-const updateDarkModeStart = () => {
-  settingsStore.darkModeStart = formatClock(
-    normalizeClock(settingsStore.darkModeStart) ?? 18 * 60,
-  );
-};
-
-const updateDarkModeEnd = () => {
-  settingsStore.darkModeEnd = formatClock(
-    normalizeClock(settingsStore.darkModeEnd) ?? 6 * 60,
-  );
-};
 
 const updateCustomDomain = () => {
   settingsStore.shareCustomImportDomain = normalizeOriginText(
@@ -107,7 +94,11 @@ const resetAllLocal = () => {
   >
     <template #header>
       <div flex items-center>
-        <SvgIcon name="settings" class="mr-6px" style="color: #22c55e" />
+        <SvgIcon
+          name="settings"
+          class="mr-6px"
+          style="color: var(--accent-success-color)"
+        />
         <span>设置</span>
         <div flex-1 />
       </div>
@@ -169,31 +160,17 @@ const resetAllLocal = () => {
             <NRadio value="dark">强制夜间</NRadio>
           </NSpace>
         </NRadioGroup>
-        <div class="settings-row">
-          <div class="w-100px">开始时间</div>
-          <NInput
-            v-model:value="settingsStore.darkModeStart"
-            placeholder="18:00"
-            class="w-120px"
-            @blur="updateDarkModeStart"
-          />
-        </div>
-        <div class="settings-row">
-          <div class="w-100px">结束时间</div>
-          <NInput
-            v-model:value="settingsStore.darkModeEnd"
-            placeholder="06:00"
-            class="w-120px"
-            @blur="updateDarkModeEnd"
-          />
-        </div>
       </div>
 
       <div class="settings-section">
         <div class="settings-row settings-debug">
           <div
             class="text-12px"
-            :style="{ color: settingsStore.debugMode ? '#d03050' : '#999' }"
+            :style="{
+              color: settingsStore.debugMode
+                ? 'var(--accent-danger-color)'
+                : 'var(--text-muted-color)',
+            }"
           >
             调试模式
           </div>
@@ -234,7 +211,11 @@ const resetAllLocal = () => {
                 />
               </div>
               <div flex gap-8px flex-wrap>
-                <NButton size="small" secondary @click="clearIndexCache">
+                <NButton
+                  size="small"
+                  secondary
+                  @click="() => clearIndexCache()"
+                >
                   清理索引缓存
                 </NButton>
                 <NButton

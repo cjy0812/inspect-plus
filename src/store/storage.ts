@@ -64,10 +64,19 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
     locale: 'zh',
     debugMode: false,
     showDebugTools: false,
-    focusNodeColor: 'rgb(0, 220, 255)',
+    focusNodeColor: undefined,
     randomFocusNodeColorOnOpen: false,
   }),
 );
+
+if (settingsStore.focusNodeColor === 'rgb(0, 220, 255)') {
+  settingsStore.focusNodeColor = undefined;
+}
+
+// 类型规范化：确保focusNodeColor是字符串类型
+if (typeof settingsStore.focusNodeColor !== 'string') {
+  settingsStore.focusNodeColor = undefined;
+}
 
 if (!settingsStore.darkModeStart) settingsStore.darkModeStart = '18:00';
 if (!settingsStore.darkModeEnd) settingsStore.darkModeEnd = '06:00';
@@ -79,8 +88,7 @@ if (typeof settingsStore.debugMode != 'boolean')
   settingsStore.debugMode = false;
 if (typeof settingsStore.showDebugTools != 'boolean')
   settingsStore.showDebugTools = false;
-if (typeof settingsStore.focusNodeColor != 'string')
-  settingsStore.focusNodeColor = 'rgb(0, 220, 255)';
+
 if (typeof settingsStore.randomFocusNodeColorOnOpen != 'boolean')
   settingsStore.randomFocusNodeColorOnOpen = false;
 

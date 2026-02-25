@@ -549,7 +549,7 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
                     :class="[
                       snapshotViewedTime[item.id]
                         ? 'snapshot-row-viewed'
-                        : 'bg-white border-#efeff5',
+                        : 'surface-card',
                     ]"
                   >
                     <div flex items-start gap-10px flex-wrap>

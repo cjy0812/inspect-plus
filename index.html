@@ -10,6 +10,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="referrer" content="no-referrer" />
     <title>GKD</title>
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('settings');
+          var mode = raw ? JSON.parse(raw).themeMode : 'auto';
+          var prefersDark = window.matchMedia(
+            '(prefers-color-scheme: dark)',
+          ).matches;
+          var isDark = mode === 'dark' || (mode !== 'light' && prefersDark);
+          var root = document.documentElement;
+          root.classList.toggle('dark-mode-active', isDark);
+          root.dataset.theme = isDark ? 'dark' : 'light';
+          root.style.colorScheme = isDark ? 'dark' : 'light';
+        } catch (e) {
+          // ignore
+        }
+      })();
+    </script>
   </head>
   <body>
     <script type="module" src="/src/main.ts"></script>

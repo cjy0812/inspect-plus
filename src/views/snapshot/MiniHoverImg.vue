@@ -22,6 +22,7 @@ const {
       :style="{
         left: imgBounding.right.value + 4 + 'px',
         top: imgBounding.top.value + 'px',
+        borderColor: 'var(--mini-hover-border-color)',
       }"
       pointer-events-none
       fixed
@@ -30,7 +31,6 @@ const {
       h-200px
       w-200px
       border-1px
-      border-indigo-600
       border-dashed
     >
       <img
@@ -108,8 +108,8 @@ const {
             to left,
             transparent 0%,
             transparent 50%,
-            #fff 50%,
-            #fff 100%
+            var(--mini-hover-cross-color) 50%,
+            var(--mini-hover-cross-color) 100%
           );
           background-position-x: 1.5px;
         "
@@ -127,8 +127,8 @@ const {
             to top,
             transparent 0%,
             transparent 50%,
-            #fff 50%,
-            #fff 100%
+            var(--mini-hover-cross-color) 50%,
+            var(--mini-hover-cross-color) 100%
           );
           background-position-y: 1.5px;
         "

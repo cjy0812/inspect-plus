@@ -1,3 +1,5 @@
+import { settingsStore } from '@/store/storage';
+
 // 获取元素id最后一个.后面的内容
 const getShortName = (fullName: string): string => {
   let lstIndex = fullName.lastIndexOf('.');
@@ -158,32 +160,6 @@ const getNodeArea = (node: RawNode) => {
   return w * h;
 };
 
-export function* traverseNode(node: RawNode, skipKeys: number[] = []) {
-  const stack: RawNode[] = [];
-  stack.push(node);
-  while (stack.length > 0) {
-    const top = stack.pop()!;
-    if (skipKeys.includes(top.id)) {
-      continue;
-    }
-    yield top;
-    stack.push(...[...top.children].reverse());
-  }
-}
-
-export const getImageSize = async (src: string) => {
-  return new Promise<SizeExt>((res, rej) => {
-    const img = new Image();
-    img.onload = () => {
-      res({
-        height: img.naturalHeight,
-        width: img.naturalWidth,
-      });
-    };
-    img.onerror = rej;
-    img.src = src;
-  });
-};
 const getSafeName = (node: RawNode) => {
   const c = node.attr.childCount;
   return (node.attr.name || `🐔` + (c > 1 ? `` : ` [${c}]`)).split('.').at(-1)!;
@@ -277,14 +253,12 @@ export const isRawNode = (node: any): node is RawNode => {
   return false;
 };
 
-import { settingsStore } from '@/store/storage';
-
 export const getNodeStyle = (node: RawNode, focusNode?: RawNode) => {
   const qf = Boolean(node.idQf || node.textQf || node.quickFind);
   const fontWeight = qf ? 'bold' : undefined;
   const color =
     node.id === focusNode?.id
-      ? settingsStore.focusNodeColor || 'rgb(0, 220, 255)'
+      ? settingsStore.focusNodeColor || 'var(--focus-node-color)'
       : undefined;
   return {
     fontWeight,

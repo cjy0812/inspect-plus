@@ -1,4 +1,4 @@
-<script setup lang="tsx">
+<script setup lang="ts">
 import ActionCard from '@/components/ActionCard.vue';
 import GapList from '@/components/GapList';
 import { message } from '@/utils/discrete';
@@ -11,10 +11,15 @@ import {
   getNodeQf,
 } from '@/utils/node';
 import { copy, delay } from '@/utils/others';
-import type { TreeInst } from 'naive-ui';
-import type { HTMLAttributes, ShallowRef } from 'vue';
+import type { TreeInst, TreeOption, TreeProps } from 'naive-ui';
+import { h, type ShallowRef } from 'vue';
 import { useSnapshotStore } from './snapshot';
 import SvgIcon from '@/components/SvgIcon.vue';
+
+interface QuickFindMeta {
+  self: boolean;
+  has: boolean;
+}
 
 const router = useRouter();
 
@@ -52,12 +57,7 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
     if (key === focusNode.value?.id) {
       selectedKeys.value = [key];
 
-      // Scroll to node using native scrollIntoView for better control
-      const element = document.querySelector(`[data-node-id="${key}"]`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      // Also use treeRef scrollTo for consistency
+      // Scroll using treeRef only to avoid duplicate DOM operations
       treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
     }
   });
@@ -82,15 +82,18 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
 });
 
 const treeRef = shallowRef<TreeInst>();
+const treeData = computed<TreeOption[]>(() => {
+  return rootNode.value ? [rootNode.value as unknown as TreeOption] : [];
+});
 
-const treeFilter = (pattern: string, node: RawNode) => {
-  return node.id === focusNode.value?.id;
+const treeFilter: NonNullable<TreeProps['filter']> = (_pattern, node) => {
+  const rawNode = node as unknown as RawNode;
+  return rawNode.id === focusNode.value?.id;
 };
-const treeNodeProps = (info: {
-  option: RawNode;
-}): HTMLAttributes & Record<string, unknown> => {
-  const style = getNodeStyle(info.option, focusNode.value);
-  const meta = quickFindMeta.value.get(info.option.id);
+const treeNodeProps: NonNullable<TreeProps['nodeProps']> = (info) => {
+  const option = info.option as unknown as RawNode;
+  const style = getNodeStyle(option, focusNode.value);
+  const meta = quickFindMeta.value.get(option.id);
 
   // Create new style object with proper type
   const newStyle: Record<string, string | number | undefined> = { ...style };
@@ -102,26 +105,23 @@ const treeNodeProps = (info: {
 
   return {
     onClick: () => {
-      lastClickId = info.option.id;
-      updateFocusNode(info.option);
+      lastClickId = option.id;
+      updateFocusNode(option);
     },
     style: {
       '--n-node-text-color': style.color,
       ...newStyle,
     },
     class: 'whitespace-nowrap',
-    'data-node-id': String(info.option.id),
+    'data-node-id': String(option.id),
   };
 };
 
-const renderLabel = (info: {
-  option: RawNode;
-  checked: boolean;
-  selected: boolean;
-}) => {
+const renderLabel: NonNullable<TreeProps['renderLabel']> = (info) => {
+  const option = info.option as unknown as RawNode;
   // Compute node label once and reuse
-  const label = getNodeLabel(info.option);
-  const meta = quickFindMeta.value.get(info.option.id);
+  const label = getNodeLabel(option);
+  const meta = quickFindMeta.value.get(option.id);
 
   // If node has no quick find potential, return original label
   if (!meta || !meta.has) {
@@ -129,26 +129,34 @@ const renderLabel = (info: {
   }
 
   // If node has quick find potential, return label with icon
-  return (
-    <span style="display: inline-flex; align-items: center; gap: 4px;">
-      {label}
-      <SvgIcon
-        name="ok"
-        class="quickfind-icon"
-        style={{
+  return h(
+    'span',
+    {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+      },
+    },
+    [
+      label,
+      h(SvgIcon, {
+        name: 'ok',
+        class: 'quickfind-icon',
+        style: {
           width: '14px',
           height: '14px',
-          color: 'var(--n-success-color, #00a240)',
-          fill: 'var(--n-success-color, #00a240)',
+          color: 'var(--n-success-color, var(--accent-success-color))',
+          fill: 'var(--n-success-color, var(--accent-success-color))',
           opacity: meta.self ? '1' : '0.4',
-          stroke: 'var(--n-success-color, #00a240)',
+          stroke: 'var(--n-success-color, var(--accent-success-color))',
           strokeWidth: '2',
           display: 'inline-block',
           verticalAlign: 'middle',
           marginLeft: '2px',
-        }}
-      />
-    </span>
+        },
+      }),
+    ],
   );
 };
 
@@ -181,16 +189,12 @@ const gkdVersionName = computed(() => {
   return v ? `GKD@${v}` : undefined;
 });
 
-// Quick find metadata interface
-interface QuickFindMeta {
-  self: boolean; // Node itself has quick find
-  has: boolean; // Node or its descendants have quick find
-}
-
-// Compute quick find metadata for the entire tree
 const quickFindMeta = computed(() => {
+  const root = rootNode.value;
+  if (!root) {
+    return new Map<number, QuickFindMeta>();
+  }
   const metaMap = new Map<number, QuickFindMeta>();
-
   const computeMeta = (node: RawNode): QuickFindMeta => {
     const self = getNodeQf(node);
     let has = self;
@@ -207,10 +211,7 @@ const quickFindMeta = computed(() => {
     return meta;
   };
 
-  if (rootNode.value) {
-    computeMeta(rootNode.value);
-  }
-
+  computeMeta(root);
   return metaMap;
 });
 
@@ -335,7 +336,7 @@ const findQuickTarget = (node: RawNode): RawNode | null => {
         @delete="onDelete"
       />
     </div>
-    <div h-1px mt-4px bg="#efeff5" />
+    <div h-1px mt-4px style="background-color: var(--divider-color)" />
     <div flex-1 min-h-0>
       <NTree
         ref="treeRef"
@@ -346,10 +347,10 @@ const findQuickTarget = (node: RawNode): RawNode | null => {
         showLine
         blockLine
         keyField="id"
-        :data="[rootNode as any]"
-        :filter="(treeFilter as any)"
-        :nodeProps="(treeNodeProps as any)"
-        :renderLabel="(renderLabel as any)"
+        :data="treeData"
+        :filter="treeFilter"
+        :nodeProps="treeNodeProps"
+        :renderLabel="renderLabel"
       />
     </div>
   </div>

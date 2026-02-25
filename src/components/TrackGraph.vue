@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { getNodeQf, getTrackTreeContext } from '@/utils/node';
-import { colorList } from '@/utils/others';
 import { transform } from '@/utils/selector';
 import type { EdgeData, TreeData } from '@antv/g6';
 import { Graph, treeToGraphData } from '@antv/g6';
 import { QueryPath, QueryResult } from '@gkd-kit/selector';
 import { uniqBy } from 'lodash-es';
 import { AntQuadratic } from '@/utils/g6';
+import { useTheme } from '@/composables/useTheme';
 
 const props = withDefaults(
   defineProps<{
@@ -108,7 +108,13 @@ const edgeCtx = computed<EdgeContext>(() => {
     const i = props.showUnitResults.indexOf(
       groupList[getGroupIndex(edge)].result,
     );
-    return colorList[i % colorList.length];
+    const palette = themeTokens.value.palette.length
+      ? themeTokens.value.palette
+      : [themeTokens.value.graphEdgeFallbackStroke];
+    if (!palette.length || !palette[0]) {
+      return '#888'; // 绝对回退
+    }
+    return palette[i % palette.length];
   };
   return {
     groupList,
@@ -148,31 +154,15 @@ const getEdgeDistance = (g: Graph, d: EdgeData): number => {
 const numReg = /\d+/;
 
 const graphRef = shallowRef<Graph>();
-const darkMode = shallowRef(
-  document.documentElement.classList.contains('dark-mode-active'),
-);
-const updateDarkMode = () => {
-  darkMode.value =
-    document.documentElement.classList.contains('dark-mode-active');
-};
-const themeObserver = new MutationObserver(() => {
-  updateDarkMode();
-});
-onMounted(() => {
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-  });
-});
+const { themeTokens } = useTheme();
 const redrawGraph = async () => {
   if (!graphRef.value) return;
   await graphRef.value.draw();
 };
-watch(darkMode, () => {
+watch(themeTokens, () => {
   redrawGraph();
 });
 onUnmounted(() => {
-  themeObserver.disconnect();
   if (graphRef.value) {
     graphRef.value.destroy();
   }
@@ -200,20 +190,20 @@ watch(el, async () => {
         return {
           size: hasChildren(node) ? 4 : 1,
           direction: hasChildren(node) ? 'down' : undefined,
-          fill: hasChildren(node) ? '#767C82' : '#E3E3E3',
+          fill: hasChildren(node)
+            ? themeTokens.value.graphNodeFill
+            : themeTokens.value.graphLeafFill,
           pointerEvents: 'none',
           labelPlacement: 'right',
           labelText: treeCtx.value.getLabel(node),
-          labelFill: darkMode.value ? '#e8e8ee' : '#1b1f24',
+          labelFill: themeTokens.value.graphLabelColor,
           labelOffsetX: 2,
           labelFontWeight: qf && !placeholdered ? 'bold' : undefined,
           labelOpacity: placeholdered ? 0.5 : undefined,
           labelPointerEvents: 'none',
           // 核心修改：如果是目标则按模式选色，否则不描边
           labelStroke: isTarget
-            ? darkMode.value
-              ? '#337dff'
-              : '#0FF'
+            ? themeTokens.value.graphTargetLabelStroke
             : undefined,
         };
       },
@@ -229,17 +219,17 @@ watch(el, async () => {
           const hasNum = labelText.match(numReg);
           return {
             curveOffset: 30 * (Number(d.source) > Number(d.target) ? 1 : -1),
-            stroke: edgeCtx.value.getColor(d) || '#FF7FFF',
+            stroke: edgeCtx.value.getColor(d),
             zIndex: 1 + edgeCtx.value.getGroupIndex(d),
             pointerEvents: 'none',
             endArrow: true,
             endArrowOpacity: 0.5,
             endArrowPointerEvents: 'none',
             labelText,
-            labelFill: '#F00',
+            labelFill: themeTokens.value.graphEdgeLabelColor,
             labelFontSize: hasNum ? (distance < 50 ? 8 : 12) : 12,
             labelBackground: true,
-            labelBackgroundStroke: '#FF00FF',
+            labelBackgroundStroke: themeTokens.value.graphEdgeLabelBgStroke,
             labelPadding: hasNum ? [0, 1, -2, 0] : [0, 0, -1, 0],
             labelBackgroundLineWidth: 1,
             labelBackgroundRadius: 2,
@@ -253,7 +243,7 @@ watch(el, async () => {
           router: {
             type: 'orth',
           },
-          stroke: '#E3E3E3',
+          stroke: themeTokens.value.graphEdgeStroke,
           pointerEvents: 'none',
         };
       },
