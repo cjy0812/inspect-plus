@@ -206,7 +206,15 @@ const ShareDialogContent = defineComponent({
   },
 });
 
-export const showTextDLg = (params: any) => {
+export const showTextDLg = (
+  params: {
+    content?: string;
+    extraContent?: string;
+    title?: string;
+    extraTitle?: string;
+    quickPick?: boolean;
+  } = {},
+) => {
   const { content = '', extraContent = '' } = params;
   const importId = getImportId(content) || getImportId(extraContent);
   const officialUrl = importId ? `https://i.gkd.li/i/${importId}` : content;

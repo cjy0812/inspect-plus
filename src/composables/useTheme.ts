@@ -31,7 +31,6 @@ export const useTheme = createSharedComposable(() => {
   watch(
     appTheme,
     () => {
-      console.log('[ThemeSync] Current discrete theme:', appTheme.value?.name);
       discreteAppTheme.value = appTheme.value;
     },
     { immediate: true },
