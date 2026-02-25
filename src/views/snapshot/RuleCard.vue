@@ -385,15 +385,6 @@ function validateAndNormalizeRuleCandidate(
       if (!arr) continue;
       for (let i = 0; i < arr.length; i++) {
         const s = arr[i];
-        if (typeof s !== 'string') {
-          return {
-            success: false,
-            error: `非法字段: ${f}[${i}] 必须为字符串`,
-            stage: 'structure',
-            field: f,
-            index: i,
-          };
-        }
         try {
           parseSelector(s);
         } catch (e) {
