@@ -63,10 +63,19 @@ const ShareDialogContent = defineComponent({
                 style={{ width: '100%', cursor: 'move' }}
               >
                 <NSpace align="center" size={8}>
-                  <img
-                    src={ConnectSvg}
-                    style={{ width: '30px', height: '30px' }}
-                  />
+                  <div
+                    style={{
+                      width: '30px',
+                      height: '30px',
+                      filter: isDark.value ? 'invert(100%)' : 'none',
+                      transition: 'filter 0.3s ease',
+                    }}
+                  >
+                    <img
+                      src={ConnectSvg}
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  </div>
                   <span
                     style={{
                       fontWeight: '500',
