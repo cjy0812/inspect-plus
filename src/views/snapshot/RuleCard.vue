@@ -23,11 +23,11 @@ const { rootNode, focusNode } = snapshotStore;
 const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
 
 const text = shallowRef('');
-// 使用防抖，项目里若没有 refDebounced 请替换为合适的 debounce 工具
+// 项目里若存在 refDebounced，请确保已引入；否则替换为你项目的防抖实现
 const lazyText = refDebounced(text, 500);
 
 /* -------------------------
-   类型定义
+   类型定义 / 常量
    ------------------------- */
 
 interface ResolvedData {
@@ -35,10 +35,9 @@ interface ResolvedData {
   anyMatches?: string[];
   excludeMatches?: string[];
   excludeAllMatches?: string[];
-  activityIds?: string[]; // already normalized
+  activityIds?: string[];
   snapshotUrls?: string[];
   excludeSnapshotUrls?: string[];
-  // 其他允许的 RawAppRule 字段（非必须）
   [k: string]: any;
 }
 
@@ -69,6 +68,9 @@ type RuleCheckResultFailure = {
 
 type RuleCheckResult = RuleCheckResultSuccess | RuleCheckResultFailure;
 
+const PRE_CHARS_BEFORE = 120;
+const PRE_CHARS_AFTER = 120;
+
 /* -------------------------
    容错 JSON5 解析：尽量从杂乱文本中提取第一个 JSON 块
    ------------------------- */
@@ -80,7 +82,7 @@ function tryParseJSON5Tolerant(rawText: string): {
   const text = String(rawText ?? '').trim();
   if (!text) return { error: new Error('空输入') };
 
-  // 1) 先直接解析
+  // 1) 直接解析
   try {
     return { value: JSON5.parse(text) };
   } catch {
@@ -107,6 +109,7 @@ function tryParseJSON5Tolerant(rawText: string): {
 
       for (let i = startIndex; i < text.length; i++) {
         const ch = text[i];
+
         if (inStr) {
           if (escaped) escaped = false;
           else if (ch === '\\') escaped = true;
@@ -140,7 +143,7 @@ function tryParseJSON5Tolerant(rawText: string): {
         try {
           return { value: JSON5.parse(candidate) };
         } catch {
-          // continue to next candidate
+          // try next candidate
         }
       }
     }
@@ -155,7 +158,7 @@ function tryParseJSON5Tolerant(rawText: string): {
 }
 
 /* -------------------------
-   基本工具函数
+   工具函数
    ------------------------- */
 
 const toArray = (v: any): string[] | undefined => {
@@ -169,9 +172,35 @@ const isObj = (v: any): v is Record<string, any> => {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 };
 
+function indexToLineCol(
+  text: string,
+  index: number,
+): { line: number; column: number } {
+  if (index < 0) index = 0;
+  const upto = text.slice(0, index);
+  const lines = upto.split(/\r\n|\r|\n/);
+  const line = lines.length;
+  const column = lines[lines.length - 1].length + 1;
+  return { line, column };
+}
+
+function findFirstOccurrence(rawText: string, needle: string): number {
+  if (!needle) return -1;
+  let idx = rawText.indexOf(needle);
+  if (idx >= 0) return idx;
+  const withDouble = `"${needle}"`;
+  idx = rawText.indexOf(withDouble);
+  if (idx >= 0) return idx + 1;
+  const withSingle = `'${needle}'`;
+  idx = rawText.indexOf(withSingle);
+  if (idx >= 0) return idx + 1;
+  const esc = needle.replace(/"/g, '\\"');
+  idx = rawText.indexOf(esc);
+  return idx;
+}
+
 /* -------------------------
-   normalize & validate（严格按 API，但对单 string 做兼容）
-   返回 { ok: true, rule: ResolvedData } 或 { ok: false, error... }
+   normalize & validate（严格按 API，兼容单 string）
    ------------------------- */
 
 function expandActivityIds(
@@ -190,14 +219,12 @@ function validateAndNormalizeRuleCandidate(
     return { ok: false, error: '非法格式: 规则不是对象' };
   }
 
-  // Helper to normalize allowed string|array fields into string[]
   const normalizeStringOrArrayField = (
     fieldName: string,
   ): string[] | undefined => {
     if (!(fieldName in obj)) return undefined;
     const arr = toArray(obj[fieldName]);
     if (arr === undefined) {
-      // Not a string or string[] -> error
       throw new Error(`非法字段: ${fieldName} 必须为字符串或字符串数组`);
     }
     return arr;
@@ -206,14 +233,12 @@ function validateAndNormalizeRuleCandidate(
   try {
     const result: ResolvedData = {};
 
-    // fastQuery (optional boolean)
     if ('fastQuery' in obj) {
       if (typeof obj.fastQuery !== 'boolean')
         return { ok: false, error: '非法字段: fastQuery 必须为 boolean' };
       result.fastQuery = obj.fastQuery;
     }
 
-    // resetMatch
     if ('resetMatch' in obj) {
       const v = obj.resetMatch;
       if (!(v === 'activity' || v === 'match' || v === 'app')) {
@@ -225,7 +250,6 @@ function validateAndNormalizeRuleCandidate(
       result.resetMatch = v;
     }
 
-    // actionMaximum
     if ('actionMaximum' in obj) {
       const v = obj.actionMaximum;
       if (!(Number.isInteger(v) && v >= 0))
@@ -233,7 +257,6 @@ function validateAndNormalizeRuleCandidate(
       result.actionMaximum = v;
     }
 
-    // preKeys (optional integer array)
     if ('preKeys' in obj) {
       if (
         !Array.isArray(obj.preKeys) ||
@@ -244,7 +267,6 @@ function validateAndNormalizeRuleCandidate(
       result.preKeys = obj.preKeys.slice();
     }
 
-    // activityIds (accept string or string[])
     try {
       const act = normalizeStringOrArrayField('activityIds');
       if (act !== undefined) result.activityIds = act;
@@ -252,7 +274,6 @@ function validateAndNormalizeRuleCandidate(
       return { ok: false, error: e.message };
     }
 
-    // url-like fields
     const urlFields = ['snapshotUrls', 'excludeSnapshotUrls', 'exampleUrls'];
     for (const f of urlFields) {
       try {
@@ -263,7 +284,6 @@ function validateAndNormalizeRuleCandidate(
       }
     }
 
-    // selector fields: matches / anyMatches / excludeMatches / excludeAllMatches
     const selectorFields = [
       'matches',
       'anyMatches',
@@ -290,7 +310,7 @@ function validateAndNormalizeRuleCandidate(
       };
     }
 
-    // Selector syntax check (parseSelector) — just syntax, no execution
+    // Selector syntax check
     for (const f of selectorFields) {
       const arr: string[] | undefined = (result as any)[f];
       if (!arr) continue;
@@ -299,7 +319,7 @@ function validateAndNormalizeRuleCandidate(
         if (typeof s !== 'string')
           return { ok: false, error: `非法字段: ${f}[${i}] 必须为字符串` };
         try {
-          parseSelector(s); // if error, will throw
+          parseSelector(s);
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
           return {
@@ -318,8 +338,6 @@ function validateAndNormalizeRuleCandidate(
 
 /* -------------------------
    checkRule：执行匹配（纯函数）
-   - obj 已由 validateAndNormalizeRuleCandidate 保证 selector 语法正确
-   - 支持 preKeys 模拟参数（可传入数组）
    ------------------------- */
 
 function checkRule(
@@ -340,7 +358,6 @@ function checkRule(
   const simulatedPreKeys = options?.simulatedPreKeys ?? [];
   const ignoreActivityCheck = options?.ignoreActivityCheck ?? false;
 
-  // 1) activityIds check (if provided)
   const normalizedActivityIds = obj.activityIds ?? [];
   const expanded = expandActivityIds(normalizedActivityIds, appId);
   if (!ignoreActivityCheck && expanded.length > 0 && currentActivityId) {
@@ -355,7 +372,6 @@ function checkRule(
     }
   }
 
-  // 2) preKeys check (if provided)
   if (Array.isArray(obj.preKeys) && obj.preKeys.length) {
     const unmet = obj.preKeys.some(
       (k: number) => !simulatedPreKeys.includes(k),
@@ -370,14 +386,12 @@ function checkRule(
     }
   }
 
-  // Helper: resolve selectors to nodes
   const resolveSelectorsToNodes = (selectors?: string[]) => {
     if (!selectors || !selectors.length) return [] as RawNode[][];
     const resolved: ResolvedSelector[] = selectors.map((s) => parseSelector(s));
     return resolved.map((r) => r.querySelfOrSelectorAll(root));
   };
 
-  // excludeMatches check (任一匹配 -> 失败)
   const excludeArr = obj.excludeMatches ?? [];
   if (excludeArr.length) {
     const excludeResults = resolveSelectorsToNodes(excludeArr);
@@ -395,7 +409,6 @@ function checkRule(
     }
   }
 
-  // excludeAllMatches check (如果所有 selector 都匹配 -> 失败)
   const excludeAllArr = obj.excludeAllMatches ?? [];
   if (excludeAllArr.length) {
     const excludeAllResults = resolveSelectorsToNodes(excludeAllArr);
@@ -414,7 +427,6 @@ function checkRule(
     }
   }
 
-  // matches: 所有 selector 都必须匹配，target = 最后一个 selector 的第一个匹配项
   const matchesArr = obj.matches ?? [];
   const matchesResults = resolveSelectorsToNodes(matchesArr);
   if (matchesArr.length) {
@@ -445,7 +457,6 @@ function checkRule(
     };
   }
 
-  // anyMatches: 任一 selector 匹配即可（matches 为空时）
   const anyArr = obj.anyMatches ?? [];
   const anyResults = resolveSelectorsToNodes(anyArr);
   if (anyArr.length) {
@@ -459,7 +470,6 @@ function checkRule(
         field: 'anyMatches',
       };
     }
-    // find first non-empty
     for (let i = 0; i < anyResults.length; i++) {
       const nodes = anyResults[i];
       if (Array.isArray(nodes) && nodes.length > 0) {
@@ -476,19 +486,128 @@ function checkRule(
     }
   }
 
-  // 如果既没有 matches 又没有 anyMatches，理论上 validate 阶段会阻止到这一步
   return { success: false, error: '规则无有效匹配选择器', stage: 'execute' };
 }
 
 /* -------------------------
-   dataRef：从输入文本 -> 解析 -> validate -> 执行 checkRule
-   返回 RuleCheckResult 或 ''（空）
+   diagnostics：计算用于 UI 高亮的错误位置与片段
+   ------------------------- */
+
+const diagnostics = computed(() => {
+  const raw = lazyText.value ?? '';
+  if (!raw) return null;
+
+  const parsedAttempt = tryParseJSON5Tolerant(raw);
+  if (parsedAttempt.error) {
+    const msg = parsedAttempt.error.message ?? String(parsedAttempt.error);
+    let idx: number | undefined;
+    const posMatch =
+      /position\s+(\d+)/i.exec(msg) || /at position\s+(\d+)/i.exec(msg);
+    if (posMatch) {
+      idx = parseInt(posMatch[1], 10);
+    } else {
+      const lcMatch =
+        /line\s+(\d+)[,:\s]+column\s+(\d+)/i.exec(msg) ||
+        /line\s+(\d+)\s+column\s+(\d+)/i.exec(msg);
+      if (lcMatch) {
+        const line = parseInt(lcMatch[1], 10);
+        const column = parseInt(lcMatch[2], 10);
+        const lines = raw.split(/\r\n|\r|\n/);
+        let acc = 0;
+        const L = Math.max(1, Math.min(line, lines.length));
+        for (let i = 0; i < L - 1; i++) acc += lines[i].length + 1;
+        idx = acc + Math.max(0, column - 1);
+      }
+    }
+
+    if (idx === undefined || Number.isNaN(idx)) idx = 0;
+    const { line, column } = indexToLineCol(raw, idx);
+    const start = Math.max(0, idx);
+    const end = Math.min(raw.length, idx + 1);
+    return { message: msg, stage: 'json' as const, start, end, line, column };
+  }
+
+  const parsed = parsedAttempt.value;
+  const candidate = Array.isArray(parsed) && parsed.length ? parsed[0] : parsed;
+  const validated = validateAndNormalizeRuleCandidate(candidate);
+  if (!validated.ok) {
+    const msg = validated.error ?? '结构校验失败';
+    const selMatch = /^非法选择器:\s*(\w+)\[(\d+)\]\s*错误:\s*(.*)$/u.exec(msg);
+    if (selMatch) {
+      const field = selMatch[1];
+      const idxNum = parseInt(selMatch[2], 10);
+      try {
+        const fieldValue = (candidate as any)[field];
+        let selectorString: string | undefined;
+        if (Array.isArray(fieldValue) && fieldValue.length > idxNum)
+          selectorString = fieldValue[idxNum];
+        else if (typeof fieldValue === 'string' && idxNum === 0)
+          selectorString = fieldValue;
+        if (selectorString) {
+          const pos = findFirstOccurrence(raw, selectorString);
+          const start = pos >= 0 ? pos : 0;
+          const end =
+            pos >= 0
+              ? pos + selectorString.length
+              : Math.min(raw.length, start + 10);
+          const { line, column } = indexToLineCol(raw, start);
+          return {
+            message: msg,
+            stage: 'selector' as const,
+            field,
+            index: idxNum,
+            start,
+            end,
+            line,
+            column,
+          };
+        }
+      } catch {
+        // fallback
+      }
+    }
+
+    const fieldNameMatch = /^非法字段:\s*([\w]+)\b/u.exec(msg);
+    if (fieldNameMatch) {
+      const fname = fieldNameMatch[1];
+      const pos = findFirstOccurrence(raw, fname);
+      const start = pos >= 0 ? Math.max(0, pos - 10) : 0;
+      const end =
+        pos >= 0
+          ? Math.min(raw.length, pos + fname.length + 10)
+          : Math.min(raw.length, start + 20);
+      const { line, column } = indexToLineCol(raw, start);
+      return {
+        message: msg,
+        stage: 'structure' as const,
+        field: fname,
+        start,
+        end,
+        line,
+        column,
+      };
+    }
+
+    return {
+      message: msg,
+      stage: 'structure' as const,
+      start: 0,
+      end: Math.min(200, raw.length),
+      line: 1,
+      column: 1,
+    };
+  }
+
+  return null;
+});
+
+/* -------------------------
+   dataRef：解析 -> validate -> 执行
    ------------------------- */
 
 const dataRef = computed<RuleCheckResult | ''>(() => {
   if (!lazyText.value) return '';
 
-  // 解析容错
   const parsedAttempt = tryParseJSON5Tolerant(lazyText.value);
   if (parsedAttempt.error) {
     return {
@@ -499,20 +618,17 @@ const dataRef = computed<RuleCheckResult | ''>(() => {
   }
 
   const parsed = parsedAttempt.value;
-  // 如果解析结果为数组，取第一个元素作为候选（兼容粘多段的情形）
   const candidate = Array.isArray(parsed) && parsed.length ? parsed[0] : parsed;
 
-  // validate & normalize
   const validated = validateAndNormalizeRuleCandidate(candidate);
   if (!validated.ok) {
     return { success: false, error: validated.error, stage: 'structure' };
   }
 
-  // 执行匹配
   const execResult = checkRule(validated.rule, rootNode.value, {
     appId: snapshot.value?.appId,
     currentActivityId: snapshot.value?.activityId,
-    simulatedPreKeys: [], // UI 可扩展传入模拟 preKeys
+    simulatedPreKeys: [],
     ignoreActivityCheck: false,
   });
 
@@ -520,7 +636,7 @@ const dataRef = computed<RuleCheckResult | ''>(() => {
 });
 
 /* -------------------------
-   视图层状态
+   视图辅助：error text / target node / errorPreview
    ------------------------- */
 
 const errorText = computed(() => {
@@ -535,6 +651,30 @@ const targetNode = computed(() => {
     return dataRef.value.node;
   }
   return null;
+});
+
+const errorPreview = computed(() => {
+  const d = diagnostics.value;
+  if (!d) return null;
+  const raw = lazyText.value ?? '';
+  const start = Math.max(0, d.start ?? 0);
+  const end = Math.min(raw.length, d.end ?? start);
+  const preStart = Math.max(0, start - PRE_CHARS_BEFORE);
+  const postEnd = Math.min(raw.length, end + PRE_CHARS_AFTER);
+  let head = raw.slice(preStart, start);
+  let err = raw.slice(start, end) || ' ';
+  let tail = raw.slice(end, postEnd);
+  if (preStart > 0) head = '...' + head;
+  if (postEnd < raw.length) tail = tail + '...';
+  return {
+    head,
+    err,
+    tail,
+    line: d.line,
+    column: d.column,
+    message: d.message,
+    stage: d.stage,
+  };
 });
 </script>
 
@@ -568,9 +708,7 @@ const targetNode = computed(() => {
         <div>测试规则</div>
         <div :ref="onRef" flex-1 cursor-move />
         <NButton text title="最小化" @click="onUpdateShow(!show)">
-          <template #icon>
-            <SvgIcon name="minus" />
-          </template>
+          <template #icon><SvgIcon name="minus" /></template>
         </NButton>
       </div>
 
@@ -580,16 +718,58 @@ const targetNode = computed(() => {
         placeholder="请输入单个规则测试（支持 JSON5，允许 string 或 string[]，会自动 normalize）"
         size="small"
         class="gkd_code m-b-4px"
-        :autosize="{
-          minRows: 10,
-          maxRows: 20,
-        }"
+        :autosize="{ minRows: 10, maxRows: 20 }"
       />
 
-      <div min-h-24px>
-        <div v-if="errorText" color-red whitespace-pre>
-          {{ errorText }}
+      <!-- 错误预览（与 SearchCard.vue 风格对齐） -->
+      <div
+        v-if="errorPreview"
+        mt-6px
+        mb-8px
+        p-4px
+        gkd_code
+        transition-colors
+        class="selector-ast-view selector-ast-view-error"
+      >
+        <span whitespace-pre-wrap>
+          <span v-if="errorPreview.head">{{ errorPreview.head }}</span>
+
+          <span bg-red relative>
+            <span v-if="errorPreview.err">{{ errorPreview.err }}</span>
+            <span v-else pl-20px />
+            <div
+              absolute
+              left-0
+              right-0
+              top--12px
+              flex
+              flex-col
+              items-center
+              animate-bounce
+              pointer-events-none
+            >
+              <SvgIcon name="arrow" class="selector-error-arrow" />
+            </div>
+          </span>
+
+          <span v-if="errorPreview.tail">{{ errorPreview.tail }}</span>
+        </span>
+
+        <div mt-6px text-12px class="selector-error-meta">
+          <div text-red font-500>
+            {{ errorPreview.message }}
+          </div>
+          <div text-11px opacity-70 mt-2px>
+            行 {{ errorPreview.line }} ｜ 列 {{ errorPreview.column }}
+            <span v-if="diagnostics?.stage"
+              >｜ 阶段: {{ diagnostics.stage }}</span
+            >
+          </div>
         </div>
+      </div>
+
+      <div min-h-24px>
+        <div v-if="errorText" color-red whitespace-pre>{{ errorText }}</div>
 
         <NButton
           v-else-if="targetNode"
@@ -603,3 +783,49 @@ const targetNode = computed(() => {
     </div>
   </DraggableCard>
 </template>
+
+<style scoped>
+/* 使用项目已有主题变量（与 SearchCard.vue 风格对齐） */
+.selector-ast-view {
+  max-height: 160px;
+  overflow: auto;
+  border-radius: 6px;
+  color: var(--text-primary, inherit);
+}
+
+/* 错误态背景使用项目变量（建议全局主题定义 --selector-ast-error-bg-color2） */
+.selector-ast-view-error {
+  background: var(--selector-ast-error-bg-color2, rgba(255, 240, 240, 0.9));
+  border: 1px solid rgba(255, 80, 80, 0.12);
+}
+
+/* 箭头样式，使用项目错误色变量 */
+.selector-error-arrow {
+  color: var(--accent-error-color, #ff6666);
+}
+
+/* 元信息 */
+.selector-error-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--neutral-500, #6b6b6b);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* 错误高亮段样式（简洁） */
+.selector-ast-view .rc-error,
+.selector-ast-view-error .rc-error {
+  background: rgba(255, 90, 90, 0.12);
+  border-bottom: 2px solid rgba(255, 60, 60, 0.9);
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+/* 兼容 html.dark-mode-active（项目使用该类作为夜间模式标识） */
+html.dark-mode-active .selector-ast-view-error {
+  background: var(--selector-ast-error-bg-color2, rgba(40, 40, 40, 0.6));
+  border: 1px solid rgba(255, 80, 80, 0.16);
+}
+</style>
