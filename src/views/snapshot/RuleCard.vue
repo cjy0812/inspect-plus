@@ -86,8 +86,8 @@ function tryParseJSON5Tolerant(rawText: string): {
   value?: any;
   error?: Error;
 } {
-  const text = String(rawText ?? '').trim();
-  if (!text) return { error: new Error('空输入') };
+  const text = String(rawText ?? '');
+  if (!text.trim()) return { error: new Error('空输入') };
 
   try {
     return { value: JSON5.parse(text) };
