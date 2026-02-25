@@ -152,12 +152,12 @@ const getEdgeDistance = (g: Graph, d: EdgeData): number => {
 const numReg = /\d+/;
 
 const graphRef = shallowRef<Graph>();
-const { isDarkModeActive, themeTokens } = useTheme();
+const { themeTokens } = useTheme();
 const redrawGraph = async () => {
   if (!graphRef.value) return;
   await graphRef.value.draw();
 };
-watch(isDarkModeActive, () => {
+watch(themeTokens, () => {
   redrawGraph();
 });
 onUnmounted(() => {

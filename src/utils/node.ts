@@ -256,15 +256,10 @@ export const isRawNode = (node: any): node is RawNode => {
 export const getNodeStyle = (node: RawNode, focusNode?: RawNode) => {
   const qf = Boolean(node.idQf || node.textQf || node.quickFind);
   const fontWeight = qf ? 'bold' : undefined;
-  const color = (() => {
-    if (node.id !== focusNode?.id) return;
-    const selectedColor =
-      settingsStore.focusNodeColor &&
-      settingsStore.focusNodeColor !== 'rgb(0, 220, 255)'
-        ? settingsStore.focusNodeColor
-        : 'var(--focus-node-color)';
-    return selectedColor;
-  })();
+  const color =
+    node.id === focusNode?.id
+      ? settingsStore.focusNodeColor || 'var(--focus-node-color)'
+      : undefined;
   return {
     fontWeight,
     color,
