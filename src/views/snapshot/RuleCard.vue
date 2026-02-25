@@ -20,10 +20,9 @@ withDefaults(
 
 const snapshotStore = useSnapshotStore();
 const { rootNode, focusNode } = snapshotStore;
-const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
+const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot | undefined>;
 
 const text = shallowRef('');
-// 项目里若存在 refDebounced，请确保已引入；否则替换为你项目的防抖实现
 const lazyText = refDebounced(text, 500);
 
 /* -------------------------
@@ -38,6 +37,10 @@ interface ResolvedData {
   activityIds?: string[];
   snapshotUrls?: string[];
   excludeSnapshotUrls?: string[];
+  fastQuery?: boolean;
+  resetMatch?: 'activity' | 'match' | 'app';
+  actionMaximum?: number;
+  preKeys?: number[];
   [k: string]: any;
 }
 
@@ -64,6 +67,10 @@ type RuleCheckResultFailure = {
   stage: ValidateStage;
   field?: string;
   index?: number;
+  start?: number;
+  end?: number;
+  line?: number;
+  column?: number;
 };
 
 type RuleCheckResult = RuleCheckResultSuccess | RuleCheckResultFailure;
@@ -72,7 +79,7 @@ const PRE_CHARS_BEFORE = 120;
 const PRE_CHARS_AFTER = 120;
 
 /* -------------------------
-   容错 JSON5 解析：尽量从杂乱文本中提取第一个 JSON 块
+   容错 JSON5 解析
    ------------------------- */
 
 function tryParseJSON5Tolerant(rawText: string): {
@@ -82,19 +89,18 @@ function tryParseJSON5Tolerant(rawText: string): {
   const text = String(rawText ?? '').trim();
   if (!text) return { error: new Error('空输入') };
 
-  // 1) 直接解析
   try {
     return { value: JSON5.parse(text) };
   } catch {
     // 继续容错
   }
 
-  // 2) 尝试提取第一个 { ... } 或 [ ... ] 块
   const firstBrace = text.indexOf('{');
   const firstBracket = text.indexOf('[');
   const starts: { i: number; c: '{' | '[' }[] = [];
   if (firstBrace !== -1) starts.push({ i: firstBrace, c: '{' });
   if (firstBracket !== -1) starts.push({ i: firstBracket, c: '[' });
+
   if (starts.length) {
     starts.sort((a, b) => a.i - b.i);
     for (const s of starts) {
@@ -104,11 +110,29 @@ function tryParseJSON5Tolerant(rawText: string): {
       let inStr = false;
       let strChar = '';
       let escaped = false;
+      let inLineComment = false;
+      let inBlockComment = false;
       let startIndex = s.i;
       let endIndex = -1;
 
       for (let i = startIndex; i < text.length; i++) {
         const ch = text[i];
+        const nextCh = text[i + 1] || '';
+
+        if (inBlockComment) {
+          if (ch === '*' && nextCh === '/') {
+            inBlockComment = false;
+            i++;
+          }
+          continue;
+        }
+
+        if (inLineComment) {
+          if (ch === '\n') {
+            inLineComment = false;
+          }
+          continue;
+        }
 
         if (inStr) {
           if (escaped) escaped = false;
@@ -118,22 +142,31 @@ function tryParseJSON5Tolerant(rawText: string): {
             strChar = '';
           }
           continue;
-        } else {
-          if (ch === '"' || ch === "'") {
-            inStr = true;
-            strChar = ch;
-            continue;
-          }
         }
 
-        if (!inStr) {
-          if (ch === open) depth++;
-          else if (ch === close) {
-            depth--;
-            if (depth === 0) {
-              endIndex = i;
-              break;
-            }
+        if (ch === '/' && nextCh === '/') {
+          inLineComment = true;
+          i++;
+          continue;
+        }
+        if (ch === '/' && nextCh === '*') {
+          inBlockComment = true;
+          i++;
+          continue;
+        }
+
+        if (ch === '"' || ch === "'") {
+          inStr = true;
+          strChar = ch;
+          continue;
+        }
+
+        if (ch === open) depth++;
+        else if (ch === close) {
+          depth--;
+          if (depth === 0) {
+            endIndex = i;
+            break;
           }
         }
       }
@@ -143,13 +176,12 @@ function tryParseJSON5Tolerant(rawText: string): {
         try {
           return { value: JSON5.parse(candidate) };
         } catch {
-          // try next candidate
+          // try next
         }
       }
     }
   }
 
-  // 3) 尝试把全文当成多项顶层值，用数组包裹解析
   try {
     return { value: JSON5.parse(`[${text}]`) };
   } catch (e) {
@@ -178,7 +210,7 @@ function indexToLineCol(
 ): { line: number; column: number } {
   if (index < 0) index = 0;
   const upto = text.slice(0, index);
-  const lines = upto.split(/\r\n|\r|\n/);
+  const lines = upto.split('\n');
   const line = lines.length;
   const column = lines[lines.length - 1].length + 1;
   return { line, column };
@@ -199,10 +231,6 @@ function findFirstOccurrence(rawText: string, needle: string): number {
   return idx;
 }
 
-/* -------------------------
-   normalize & validate（严格按 API，兼容单 string）
-   ------------------------- */
-
 function expandActivityIds(
   arr: string[] | undefined,
   appId?: string,
@@ -212,11 +240,19 @@ function expandActivityIds(
   return arr.map((id) => (id.startsWith('.') ? `${appId}${id}` : id));
 }
 
+/* -------------------------
+   normalize & validate
+   ------------------------- */
+
 function validateAndNormalizeRuleCandidate(
   obj: any,
-): { ok: true; rule: ResolvedData } | { ok: false; error: string } {
+): { success: true; rule: ResolvedData } | RuleCheckResultFailure {
   if (!isObj(obj)) {
-    return { ok: false, error: '非法格式: 规则不是对象' };
+    return {
+      success: false,
+      error: '非法格式: 规则不是对象',
+      stage: 'structure',
+    };
   }
 
   const normalizeStringOrArrayField = (
@@ -235,7 +271,12 @@ function validateAndNormalizeRuleCandidate(
 
     if ('fastQuery' in obj) {
       if (typeof obj.fastQuery !== 'boolean')
-        return { ok: false, error: '非法字段: fastQuery 必须为 boolean' };
+        return {
+          success: false,
+          error: '非法字段: fastQuery 必须为 boolean',
+          stage: 'structure',
+          field: 'fastQuery',
+        };
       result.fastQuery = obj.fastQuery;
     }
 
@@ -243,8 +284,10 @@ function validateAndNormalizeRuleCandidate(
       const v = obj.resetMatch;
       if (!(v === 'activity' || v === 'match' || v === 'app')) {
         return {
-          ok: false,
+          success: false,
           error: "非法字段: resetMatch 必须为 'activity' | 'match' | 'app'",
+          stage: 'structure',
+          field: 'resetMatch',
         };
       }
       result.resetMatch = v;
@@ -253,7 +296,12 @@ function validateAndNormalizeRuleCandidate(
     if ('actionMaximum' in obj) {
       const v = obj.actionMaximum;
       if (!(Number.isInteger(v) && v >= 0))
-        return { ok: false, error: '非法字段: actionMaximum 必须为非负整数' };
+        return {
+          success: false,
+          error: '非法字段: actionMaximum 必须为非负整数',
+          stage: 'structure',
+          field: 'actionMaximum',
+        };
       result.actionMaximum = v;
     }
 
@@ -262,7 +310,12 @@ function validateAndNormalizeRuleCandidate(
         !Array.isArray(obj.preKeys) ||
         !obj.preKeys.every((n: any) => Number.isInteger(n))
       ) {
-        return { ok: false, error: '非法字段: preKeys 必须为整数数组' };
+        return {
+          success: false,
+          error: '非法字段: preKeys 必须为整数数组',
+          stage: 'structure',
+          field: 'preKeys',
+        };
       }
       result.preKeys = obj.preKeys.slice();
     }
@@ -271,16 +324,26 @@ function validateAndNormalizeRuleCandidate(
       const act = normalizeStringOrArrayField('activityIds');
       if (act !== undefined) result.activityIds = act;
     } catch (e: any) {
-      return { ok: false, error: e.message };
+      return {
+        success: false,
+        error: e.message,
+        stage: 'structure',
+        field: 'activityIds',
+      };
     }
 
     const urlFields = ['snapshotUrls', 'excludeSnapshotUrls', 'exampleUrls'];
     for (const f of urlFields) {
       try {
         const arr = normalizeStringOrArrayField(f);
-        if (arr !== undefined) (result as any)[f] = arr;
+        if (arr !== undefined) result[f] = arr;
       } catch (e: any) {
-        return { ok: false, error: e.message };
+        return {
+          success: false,
+          error: e.message,
+          stage: 'structure',
+          field: f,
+        };
       }
     }
 
@@ -290,54 +353,74 @@ function validateAndNormalizeRuleCandidate(
       'excludeMatches',
       'excludeAllMatches',
     ];
-    let hasSelector = false;
     for (const f of selectorFields) {
       try {
         const arr = normalizeStringOrArrayField(f);
         if (arr !== undefined) {
-          (result as any)[f] = arr;
-          if (Array.isArray(arr) && arr.length > 0) hasSelector = true;
+          result[f] = arr;
         }
       } catch (e: any) {
-        return { ok: false, error: e.message };
+        return {
+          success: false,
+          error: e.message,
+          stage: 'structure',
+          field: f,
+        };
       }
     }
 
-    if (!hasSelector) {
+    const hasMatches = (result.matches?.length ?? 0) > 0;
+    const hasAnyMatches = (result.anyMatches?.length ?? 0) > 0;
+
+    if (!hasMatches && !hasAnyMatches) {
       return {
-        ok: false,
+        success: false,
         error: '非法规则: matches 和 anyMatches 至少存在一个',
+        stage: 'structure',
       };
     }
 
-    // Selector syntax check
     for (const f of selectorFields) {
-      const arr: string[] | undefined = (result as any)[f];
+      const arr: string[] | undefined = result[f];
       if (!arr) continue;
       for (let i = 0; i < arr.length; i++) {
         const s = arr[i];
-        if (typeof s !== 'string')
-          return { ok: false, error: `非法字段: ${f}[${i}] 必须为字符串` };
+        if (typeof s !== 'string') {
+          return {
+            success: false,
+            error: `非法字段: ${f}[${i}] 必须为字符串`,
+            stage: 'structure',
+            field: f,
+            index: i,
+          };
+        }
         try {
           parseSelector(s);
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
           return {
-            ok: false,
+            success: false,
             error: `非法选择器: ${f}[${i}] 错误: ${message}`,
+            stage: 'selector',
+            field: f,
+            index: i,
           };
         }
       }
     }
 
-    return { ok: true, rule: result };
+    return { success: true, rule: result };
   } catch (e: any) {
-    return { ok: false, error: e.message ?? String(e) };
+    return {
+      success: false,
+      error: e.message ?? String(e),
+      stage: 'structure',
+    };
   }
 }
 
 /* -------------------------
-   checkRule：执行匹配（纯函数）
+   checkRule：执行匹配
    ------------------------- */
 
 function checkRule(
@@ -490,14 +573,14 @@ function checkRule(
 }
 
 /* -------------------------
-   diagnostics：计算用于 UI 高亮的错误位置与片段
+   单一解析流与计算
    ------------------------- */
 
-const diagnostics = computed(() => {
-  const raw = lazyText.value ?? '';
-  if (!raw) return null;
+const parsedRuleResult = computed<RuleCheckResult | null>(() => {
+  if (!lazyText.value) return null;
+  const rawNormalized = lazyText.value.replace(/\r\n/g, '\n');
 
-  const parsedAttempt = tryParseJSON5Tolerant(raw);
+  const parsedAttempt = tryParseJSON5Tolerant(rawNormalized);
   if (parsedAttempt.error) {
     const msg = parsedAttempt.error.message ?? String(parsedAttempt.error);
     let idx: number | undefined;
@@ -512,7 +595,7 @@ const diagnostics = computed(() => {
       if (lcMatch) {
         const line = parseInt(lcMatch[1], 10);
         const column = parseInt(lcMatch[2], 10);
-        const lines = raw.split(/\r\n|\r|\n/);
+        const lines = rawNormalized.split('\n');
         let acc = 0;
         const L = Math.max(1, Math.min(line, lines.length));
         for (let i = 0; i < L - 1; i++) acc += lines[i].length + 1;
@@ -521,133 +604,111 @@ const diagnostics = computed(() => {
     }
 
     if (idx === undefined || Number.isNaN(idx)) idx = 0;
-    const { line, column } = indexToLineCol(raw, idx);
+    const { line, column } = indexToLineCol(rawNormalized, idx);
     const start = Math.max(0, idx);
-    const end = Math.min(raw.length, idx + 1);
-    return { message: msg, stage: 'json' as const, start, end, line, column };
-  }
+    const end = Math.min(rawNormalized.length, idx + 1);
 
-  const parsed = parsedAttempt.value;
-  const candidate = Array.isArray(parsed) && parsed.length ? parsed[0] : parsed;
-  const validated = validateAndNormalizeRuleCandidate(candidate);
-  if (!validated.ok) {
-    const msg = validated.error ?? '结构校验失败';
-    const selMatch = /^非法选择器:\s*(\w+)\[(\d+)\]\s*错误:\s*(.*)$/u.exec(msg);
-    if (selMatch) {
-      const field = selMatch[1];
-      const idxNum = parseInt(selMatch[2], 10);
-      try {
-        const fieldValue = (candidate as any)[field];
-        let selectorString: string | undefined;
-        if (Array.isArray(fieldValue) && fieldValue.length > idxNum)
-          selectorString = fieldValue[idxNum];
-        else if (typeof fieldValue === 'string' && idxNum === 0)
-          selectorString = fieldValue;
-        if (selectorString) {
-          const pos = findFirstOccurrence(raw, selectorString);
-          const start = pos >= 0 ? pos : 0;
-          const end =
-            pos >= 0
-              ? pos + selectorString.length
-              : Math.min(raw.length, start + 10);
-          const { line, column } = indexToLineCol(raw, start);
-          return {
-            message: msg,
-            stage: 'selector' as const,
-            field,
-            index: idxNum,
-            start,
-            end,
-            line,
-            column,
-          };
-        }
-      } catch {
-        // fallback
-      }
-    }
-
-    const fieldNameMatch = /^非法字段:\s*([\w]+)\b/u.exec(msg);
-    if (fieldNameMatch) {
-      const fname = fieldNameMatch[1];
-      const pos = findFirstOccurrence(raw, fname);
-      const start = pos >= 0 ? Math.max(0, pos - 10) : 0;
-      const end =
-        pos >= 0
-          ? Math.min(raw.length, pos + fname.length + 10)
-          : Math.min(raw.length, start + 20);
-      const { line, column } = indexToLineCol(raw, start);
-      return {
-        message: msg,
-        stage: 'structure' as const,
-        field: fname,
-        start,
-        end,
-        line,
-        column,
-      };
-    }
-
-    return {
-      message: msg,
-      stage: 'structure' as const,
-      start: 0,
-      end: Math.min(200, raw.length),
-      line: 1,
-      column: 1,
-    };
-  }
-
-  return null;
-});
-
-/* -------------------------
-   dataRef：解析 -> validate -> 执行
-   ------------------------- */
-
-const dataRef = computed<RuleCheckResult | ''>(() => {
-  if (!lazyText.value) return '';
-
-  const parsedAttempt = tryParseJSON5Tolerant(lazyText.value);
-  if (parsedAttempt.error) {
     return {
       success: false,
-      error: `非法格式: ${parsedAttempt.error.message}`,
+      error: `解析失败: ${msg}`,
       stage: 'json',
+      start,
+      end,
+      line,
+      column,
     };
   }
 
   const parsed = parsedAttempt.value;
   const candidate = Array.isArray(parsed) && parsed.length ? parsed[0] : parsed;
-
   const validated = validateAndNormalizeRuleCandidate(candidate);
-  if (!validated.ok) {
-    return { success: false, error: validated.error, stage: 'structure' };
+
+  if (!validated.success) {
+    const errorObj = validated;
+    let start = 0;
+    let end = Math.min(200, rawNormalized.length);
+    let line = 1;
+    let column = 1;
+
+    if (
+      errorObj.stage === 'selector' &&
+      errorObj.field &&
+      errorObj.index !== undefined
+    ) {
+      try {
+        const fieldValue = (candidate as any)[errorObj.field];
+        let selectorString: string | undefined;
+        if (Array.isArray(fieldValue) && fieldValue.length > errorObj.index) {
+          selectorString = fieldValue[errorObj.index];
+        } else if (typeof fieldValue === 'string' && errorObj.index === 0) {
+          selectorString = fieldValue;
+        }
+        if (selectorString) {
+          const pos = findFirstOccurrence(rawNormalized, selectorString);
+          start = pos >= 0 ? pos : 0;
+          end =
+            pos >= 0
+              ? pos + selectorString.length
+              : Math.min(rawNormalized.length, start + 10);
+          const lc = indexToLineCol(rawNormalized, start);
+          line = lc.line;
+          column = lc.column;
+        }
+      } catch {
+        /* fallback */
+      }
+    } else if (errorObj.stage === 'structure' && errorObj.field) {
+      const pos = findFirstOccurrence(rawNormalized, errorObj.field);
+      start = pos >= 0 ? Math.max(0, pos - 10) : 0;
+      end =
+        pos >= 0
+          ? Math.min(rawNormalized.length, pos + errorObj.field.length + 10)
+          : Math.min(rawNormalized.length, start + 20);
+      const lc = indexToLineCol(rawNormalized, start);
+      line = lc.line;
+      column = lc.column;
+    }
+
+    return { ...errorObj, start, end, line, column };
   }
 
-  const execResult = checkRule(validated.rule, rootNode.value, {
+  return checkRule(validated.rule, rootNode.value, {
     appId: snapshot.value?.appId,
     currentActivityId: snapshot.value?.activityId,
     simulatedPreKeys: [],
     ignoreActivityCheck: false,
   });
-
-  return execResult;
 });
 
 /* -------------------------
-   视图辅助：error text / target node / errorPreview
+   视图辅助
    ------------------------- */
 
+const dataRef = computed<RuleCheckResult | null>(() => parsedRuleResult.value);
+
+const diagnostics = computed<RuleCheckResultFailure | null>(() => {
+  const result = parsedRuleResult.value;
+  if (
+    result &&
+    !result.success &&
+    (result.stage === 'json' ||
+      result.stage === 'structure' ||
+      result.stage === 'selector')
+  ) {
+    return result as RuleCheckResultFailure;
+  }
+  return null;
+});
+
 const errorText = computed(() => {
-  if (typeof dataRef.value === 'object' && !dataRef.value.success) {
+  if (dataRef.value && !dataRef.value.success) {
     return dataRef.value.error ?? '';
   }
   return '';
 });
 
 const targetNode = computed(() => {
-  if (typeof dataRef.value === 'object' && dataRef.value.success) {
+  if (dataRef.value && dataRef.value.success) {
     return dataRef.value.node;
   }
   return null;
@@ -656,25 +717,20 @@ const targetNode = computed(() => {
 const errorPreview = computed(() => {
   const d = diagnostics.value;
   if (!d) return null;
-  const raw = lazyText.value ?? '';
+  const raw = lazyText.value ? lazyText.value.replace(/\r\n/g, '\n') : '';
   const start = Math.max(0, d.start ?? 0);
   const end = Math.min(raw.length, d.end ?? start);
   const preStart = Math.max(0, start - PRE_CHARS_BEFORE);
   const postEnd = Math.min(raw.length, end + PRE_CHARS_AFTER);
+
   let head = raw.slice(preStart, start);
   let err = raw.slice(start, end) || ' ';
   let tail = raw.slice(end, postEnd);
+
   if (preStart > 0) head = '...' + head;
   if (postEnd < raw.length) tail = tail + '...';
-  return {
-    head,
-    err,
-    tail,
-    line: d.line,
-    column: d.column,
-    message: d.message,
-    stage: d.stage,
-  };
+
+  return { head, err, tail };
 });
 </script>
 
@@ -721,7 +777,6 @@ const errorPreview = computed(() => {
         :autosize="{ minRows: 10, maxRows: 20 }"
       />
 
-      <!-- 错误预览（与 SearchCard.vue 风格对齐） -->
       <div
         v-if="errorPreview"
         mt-6px
@@ -733,10 +788,11 @@ const errorPreview = computed(() => {
       >
         <span whitespace-pre-wrap>
           <span v-if="errorPreview.head">{{ errorPreview.head }}</span>
-
           <span bg-red relative>
-            <span v-if="errorPreview.err">{{ errorPreview.err }}</span>
-            <span v-else pl-20px />
+            <span v-if="errorPreview.err" class="rc-error">{{
+              errorPreview.err
+            }}</span>
+            <span v-else pl-20px class="rc-error" />
             <div
               absolute
               left-0
@@ -751,25 +807,21 @@ const errorPreview = computed(() => {
               <SvgIcon name="arrow" class="selector-error-arrow" />
             </div>
           </span>
-
           <span v-if="errorPreview.tail">{{ errorPreview.tail }}</span>
         </span>
-
-        <div mt-6px text-12px class="selector-error-meta">
-          <div text-red font-500>
-            {{ errorPreview.message }}
-          </div>
-          <div text-11px opacity-70 mt-2px>
-            行 {{ errorPreview.line }} ｜ 列 {{ errorPreview.column }}
-            <span v-if="diagnostics?.stage"
-              >｜ 阶段: {{ diagnostics.stage }}</span
-            >
-          </div>
-        </div>
       </div>
 
-      <div min-h-24px>
-        <div v-if="errorText" color-red whitespace-pre>{{ errorText }}</div>
+      <div min-h-24px mt-4px>
+        <div v-if="errorText" color-red whitespace-pre>
+          {{ errorText }}
+          <template v-if="diagnostics">
+            <br />
+            <span text-11px opacity-70>
+              行 {{ diagnostics.line }} ｜ 列 {{ diagnostics.column }} ｜ 阶段:
+              {{ diagnostics.stage }}
+            </span>
+          </template>
+        </div>
 
         <NButton
           v-else-if="targetNode"
@@ -785,7 +837,6 @@ const errorPreview = computed(() => {
 </template>
 
 <style scoped>
-/* 使用项目已有主题变量（与 SearchCard.vue 风格对齐） */
 .selector-ast-view {
   max-height: 160px;
   overflow: auto;
@@ -793,28 +844,15 @@ const errorPreview = computed(() => {
   color: var(--text-primary, inherit);
 }
 
-/* 错误态背景使用项目变量（建议全局主题定义 --selector-ast-error-bg-color2） */
 .selector-ast-view-error {
   background: var(--selector-ast-error-bg-color2, rgba(255, 240, 240, 0.9));
   border: 1px solid rgba(255, 80, 80, 0.12);
 }
 
-/* 箭头样式，使用项目错误色变量 */
 .selector-error-arrow {
   color: var(--accent-error-color, #ff6666);
 }
 
-/* 元信息 */
-.selector-error-meta {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--neutral-500, #6b6b6b);
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-/* 错误高亮段样式（简洁） */
 .selector-ast-view .rc-error,
 .selector-ast-view-error .rc-error {
   background: rgba(255, 90, 90, 0.12);
@@ -823,8 +861,7 @@ const errorPreview = computed(() => {
   border-radius: 3px;
 }
 
-/* 兼容 html.dark-mode-active（项目使用该类作为夜间模式标识） */
-html.dark-mode-active .selector-ast-view-error {
+:global(html.dark-mode-active .selector-ast-view-error) {
   background: var(--selector-ast-error-bg-color2, rgba(40, 40, 40, 0.6));
   border: 1px solid rgba(255, 80, 80, 0.16);
 }
