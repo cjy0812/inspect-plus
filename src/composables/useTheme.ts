@@ -1,14 +1,28 @@
-import { createSharedComposable } from '@vueuse/core';
+import { createSharedComposable, useNow } from '@vueuse/core';
 import { darkTheme } from 'naive-ui';
+import dayjs from 'dayjs';
 
 export const useTheme = createSharedComposable(() => {
   const { settingsStore } = useStorageStore();
   const prefersDark = usePreferredDark();
+  const now = useNow({ interval: 1000 * 60 }); // 每一分钟更新一次
+
+  const isInDarkModeWindow = computed(() => {
+    const start = dayjs(settingsStore.darkModeStart, 'HH:mm');
+    const end = dayjs(settingsStore.darkModeEnd, 'HH:mm');
+    const nowDayjs = dayjs(now.value);
+    if (start.isAfter(end)) {
+      // 跨天了
+      return nowDayjs.isAfter(start) || nowDayjs.isBefore(end);
+    } else {
+      return nowDayjs.isAfter(start) && nowDayjs.isBefore(end);
+    }
+  });
 
   const isDarkModeActive = computed(() => {
     if (settingsStore.themeMode === 'dark') return true;
     if (settingsStore.themeMode === 'light') return false;
-    return prefersDark.value;
+    return isInDarkModeWindow.value || prefersDark.value;
   });
 
   const appTheme = computed(() => (isDarkModeActive.value ? darkTheme : null));

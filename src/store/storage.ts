@@ -69,6 +69,10 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
   }),
 );
 
+if (settingsStore.focusNodeColor === 'rgb(0, 220, 255)') {
+  settingsStore.focusNodeColor = undefined;
+}
+
 if (!settingsStore.darkModeStart) settingsStore.darkModeStart = '18:00';
 if (!settingsStore.darkModeEnd) settingsStore.darkModeEnd = '06:00';
 if (typeof settingsStore.shareUseOfficialImportDomain != 'boolean')

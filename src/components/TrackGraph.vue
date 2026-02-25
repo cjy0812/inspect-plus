@@ -108,9 +108,11 @@ const edgeCtx = computed<EdgeContext>(() => {
     const i = props.showUnitResults.indexOf(
       groupList[getGroupIndex(edge)].result,
     );
-    const palette = themeTokens.value.palette;
-    if (!palette.length) {
-      return themeTokens.value.graphEdgeFallbackStroke;
+    const palette = themeTokens.value.palette.length
+      ? themeTokens.value.palette
+      : [themeTokens.value.graphEdgeFallbackStroke];
+    if (!palette.length || !palette[0]) {
+      return '#888'; // 绝对回退
     }
     return palette[i % palette.length];
   };
@@ -217,9 +219,7 @@ watch(el, async () => {
           const hasNum = labelText.match(numReg);
           return {
             curveOffset: 30 * (Number(d.source) > Number(d.target) ? 1 : -1),
-            stroke:
-              edgeCtx.value.getColor(d) ??
-              themeTokens.value.graphEdgeFallbackStroke,
+            stroke: edgeCtx.value.getColor(d),
             zIndex: 1 + edgeCtx.value.getGroupIndex(d),
             pointerEvents: 'none',
             endArrow: true,
