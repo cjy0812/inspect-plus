@@ -582,7 +582,7 @@ function checkRule(
 
 const parsedRuleResult = computed<RuleCheckResult | null>(() => {
   if (!lazyText.value) return null;
-  const rawNormalized = lazyText.value.replace(/\r\n/g, '\n');
+  const rawNormalized = lazyText.value.replace(/\r\n?/g, '\n');
 
   const parsedAttempt = tryParseJSON5Tolerant(rawNormalized);
   if (parsedAttempt.error) {
@@ -719,7 +719,7 @@ const targetNode = computed(() => {
 const errorPreview = computed(() => {
   const d = diagnostics.value;
   if (!d) return null;
-  const raw = lazyText.value ? lazyText.value.replace(/\r\n/g, '\n') : '';
+  const raw = lazyText.value ? lazyText.value.replace(/\r\n?/g, '\n') : '';
   const start = Math.max(0, d.start ?? 0);
   const end = Math.min(raw.length, d.end ?? start);
   const preStart = Math.max(0, start - PRE_CHARS_BEFORE);
