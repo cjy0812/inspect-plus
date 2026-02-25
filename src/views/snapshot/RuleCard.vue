@@ -726,7 +726,7 @@ const errorPreview = computed(() => {
   const postEnd = Math.min(raw.length, end + PRE_CHARS_AFTER);
 
   let head = raw.slice(preStart, start);
-  let err = raw.slice(start, end) || ' ';
+  const err = raw.slice(start, end) || ' ';
   let tail = raw.slice(end, postEnd);
 
   if (preStart > 0) head = '...' + head;
