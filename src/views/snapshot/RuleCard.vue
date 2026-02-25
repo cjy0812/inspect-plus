@@ -332,20 +332,18 @@ function validateAndNormalizeRuleCandidate(
       };
     }
 
-    const urlFields = ['snapshotUrls', 'excludeSnapshotUrls', 'exampleUrls'];
-    for (const f of urlFields) {
-      try {
-        const arr = normalizeStringOrArrayField(f);
-        if (arr !== undefined) result[f] = arr;
-      } catch (e: any) {
-        return {
-          success: false,
-          error: e.message,
-          stage: 'structure',
-          field: f,
-        };
-      }
-    }
+interface ResolvedData {
+  matches?: string[];
+  anyMatches?: string[];
+  excludeMatches?: string[];
+  excludeAllMatches?: string[];
+  activityIds?: string[];
+  snapshotUrls?: string[];
+  excludeSnapshotUrls?: string[];
+  exampleUrls?: string[];
+  fastQuery?: boolean;
+  // ... rest of interface
+}
 
     const selectorFields = [
       'matches',
