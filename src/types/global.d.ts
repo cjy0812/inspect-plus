@@ -1,174 +1,163 @@
-type PrimitiveType = boolean | string | number | null | undefined;
+import '@gkd-kit/selector';
 
-interface RpcError {
-  message: string;
-  code: number;
-  __error: true;
+declare module '@gkd-kit/selector' {
+  export interface QueryPath<T> {
+    source: T;
+    target: T;
+    formatConnectOffset: string; // 必须保持为 string，与原定义一致
+    operator?: {
+      key: string;
+    };
+  }
 }
 
-interface DeviceInfo {
-  device: string;
-  model: string;
-  manufacturer: string;
-  brand: string;
-  sdkInt: number;
-  release: string;
+declare global {
+  interface RawNode {
+    id: number;
+    pid: number;
+    quickFind?: boolean;
+    attr: RawAttr;
+    parent?: RawNode;
+    children: RawNode[];
+  }
 
-  /**
-   * @deprecated use gkdAppInfo instead
-   */
-  gkdVersionCode?: number;
-  /**
-   * @deprecated use gkdAppInfo instead
-   */
-  gkdVersionName?: string;
+  interface DeviceInfo {
+    device: string;
+    model: string;
+    manufacturer: string;
+    brand: string;
+    sdkInt: number;
+    release: string;
+    gkdVersionCode?: number;
+    gkdVersionName?: string;
+  }
+
+  interface ServerInfo {
+    device: DeviceInfo;
+    gkdAppInfo: AppInfo;
+  }
+
+  interface RawNode {
+    id: number;
+    pid: number;
+    quickFind?: boolean;
+    idQf?: boolean;
+    textQf?: boolean;
+    attr: RawAttr;
+    parent?: RawNode;
+    children: RawNode[];
+  }
+
+  interface RawAttr {
+    id?: string;
+    name: string;
+    text?: string;
+    isClickable: boolean;
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+  }
+
+  interface Overview {
+    id: number;
+    appId: string;
+    activityId: string;
+    screenWidth: number;
+    screenHeight: number;
+    isLandscape: boolean;
+    appInfo: AppInfo;
+    gkdAppInfo: AppInfo;
+    appName?: string;
+    appVersionName?: string;
+    appVersionCode?: number;
+  }
+
+  interface Snapshot extends Overview {
+    device: DeviceInfo;
+    nodes: RawNode[];
+  }
+
+  interface AppInfo {
+    id: string;
+    name: string;
+    versionCode: number;
+    versionName?: string;
+    isSystem: boolean;
+    mtime: number;
+    hidden: boolean;
+  }
+
+  interface RectX {
+    bottom: number;
+    left: number;
+    right: number;
+    top: number;
+  }
+
+  interface SizeExt {
+    height: number;
+    width: number;
+  }
+
+  interface Position {
+    x: number;
+    y: number;
+  }
+
+  interface TrackCardProps {
+    nodes: RawNode[];
+    queryResult: import('@gkd-kit/selector').QueryResult<RawNode>;
+    selector: import('@/utils/selector').ResolvedSelector;
+  }
+
+  interface SelectorSearchResult {
+    gkd: true;
+    key: number;
+    selector: import('@/utils/selector').ResolvedSelector;
+    nodes: RawNode[];
+    // 修复这里的泛型参数
+    results: import('@gkd-kit/selector').QueryResult<RawNode>;
+  }
+
+  interface StringSearchResult {
+    gkd: false;
+    key: number;
+    selector: string;
+    nodes: RawNode[];
+  }
+
+  type SearchResult = SelectorSearchResult | StringSearchResult;
+
+  interface SettingsStore {
+    autoUploadImport: boolean;
+    ignoreUploadWarn: boolean;
+    ignoreWasmWarn: boolean;
+    maxShowNodeSize: number;
+    lowMemoryMode: boolean;
+    themeMode: 'auto' | 'light' | 'dark';
+    darkModeStart: string;
+    darkModeEnd: string;
+    autoExpandSnapshots: boolean;
+    groupRemarks: Record<string, string>;
+    shareUseOfficialImportDomain: boolean;
+    shareCustomImportDomain: string;
+    locale: 'zh' | 'en';
+    debugMode?: boolean;
+    showDebugTools?: boolean;
+    focusNodeColor?: string;
+    randomFocusNodeColorOnOpen: boolean;
+  }
+
+  interface GlobalStore {
+    networkErrorDlgVisible: boolean;
+    githubErrorDlgVisible: boolean;
+    wasmErrorDlgVisible: boolean;
+    wasmSupported?: boolean;
+  }
 }
 
-interface ServerInfo {
-  device: DeviceInfo;
-  gkdAppInfo: AppInfo;
-}
-
-interface RawNode {
-  id: number;
-  pid: number;
-  quickFind?: boolean;
-  idQf?: boolean;
-  textQf?: boolean;
-  attr: RawAttr;
-
-  // list to tree
-  parent?: RawNode;
-  children: RawNode[];
-}
-
-interface RawAttr {
-  id?: string;
-  vid?: string;
-  name: string;
-  text?: string;
-  textLen?: number;
-  desc?: string;
-  descLen?: number;
-  isClickable: boolean;
-  childCount: number;
-  index: number;
-  depth: number;
-
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-  width: number;
-  height: number;
-  _id?: number;
-  _pid?: number;
-}
-
-interface Overview {
-  id: number;
-
-  appId: string;
-  activityId: string;
-
-  screenWidth: number;
-  screenHeight: number;
-  isLandscape: boolean;
-
-  appInfo: AppInfo;
-  gkdAppInfo: AppInfo;
-
-  /**
-   * @deprecated use appInfo instead
-   */
-  appName?: string;
-  /**
-   * @deprecated use appInfo instead
-   */
-  appVersionName?: string;
-  /**
-   * @deprecated use appInfo instead
-   */
-  appVersionCode?: number;
-}
-
-interface Snapshot extends Overview {
-  device: DeviceInfo;
-  nodes: RawNode[];
-}
-
-interface AppInfo {
-  id: string;
-  name: string;
-  versionCode: number;
-  versionName?: string;
-  isSystem: boolean;
-  mtime: number;
-  hidden: boolean;
-}
-
-interface RectX {
-  bottom: number;
-  left: number;
-  right: number;
-  top: number;
-}
-
-interface SizeExt {
-  height: number;
-  width: number;
-}
-
-interface Position {
-  x: number;
-  y: number;
-}
-
-interface TrackCardProps {
-  nodes: RawNode[];
-  queryResult: import('@gkd-kit/selector').QueryResult<RawNode>;
-  selector: import('@/utils/selector').ResolvedSelector;
-}
-
-interface SelectorSearchResult {
-  gkd: true;
-  key: number;
-  selector: import('@/utils/selector').ResolvedSelector;
-  nodes: RawNode[];
-  results: import('@gkd-kit/selector').QueryResult<RawNode>[];
-}
-interface StringSearchResult {
-  gkd: false;
-  key: number;
-  selector: string;
-  nodes: RawNode[];
-}
-
-type SearchResult = SelectorSearchResult | StringSearchResult;
-
-interface SettingsStore {
-  autoUploadImport: boolean;
-  ignoreUploadWarn: boolean;
-  ignoreWasmWarn: boolean;
-  maxShowNodeSize: number;
-  lowMemoryMode: boolean;
-  themeMode: 'auto' | 'light' | 'dark';
-  darkModeStart: string;
-  darkModeEnd: string;
-  autoExpandSnapshots: boolean;
-  groupRemarks: Record<string, string>;
-  shareUseOfficialImportDomain: boolean;
-  shareCustomImportDomain: string;
-  locale: 'zh' | 'en';
-  debugMode?: boolean;
-  showDebugTools?: boolean;
-  focusNodeColor?: string;
-  randomFocusNodeColorOnOpen: boolean;
-}
-
-interface GlobalStore {
-  networkErrorDlgVisible: boolean;
-  githubErrorDlgVisible: boolean;
-  wasmErrorDlgVisible: boolean;
-  wasmSupported?: boolean;
-}
+// 必须导出空对象，使文件成为模块以支持 declare module 和 declare global
+export {};

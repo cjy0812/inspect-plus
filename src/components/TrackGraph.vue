@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { getNodeQf, getTrackTreeContext } from '@/utils/node';
-import { transform } from '@/utils/selector';
+import { transform, connectOperatorIcons } from '@/utils/selector';
 import type { EdgeData, TreeData } from '@antv/g6';
 import { Graph, treeToGraphData } from '@antv/g6';
-import { QueryPath, QueryResult } from '@gkd-kit/selector';
+import type { QueryPath } from '@gkd-kit/selector';
+import { QueryResult } from '@gkd-kit/selector';
 import { uniqBy } from 'lodash-es';
-import { AntQuadratic } from '@/utils/g6';
+import { AntQuadratic, OperatorEdge } from '@/utils/g6';
 import { useTheme } from '@/composables/useTheme';
+import { ref, computed, shallowRef, watch, onUnmounted } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -62,66 +64,98 @@ interface EdgeContext {
   getLabel: (edge: EdgeData) => string;
   getColor: (edge: EdgeData) => string;
   getGroupIndex: (edge: EdgeData) => number;
+  getOperatorIcon: (edge: EdgeData) => string;
+  getOperatorKey: (edge: EdgeData) => string;
 }
 
 const edgeCtx = computed<EdgeContext>(() => {
   const countMap: Record<string, number> = {};
-  const edgePathMap: Record<string, QueryPath<RawNode>> = {};
+  // 这里不再存储 QueryPath，而是存储提取出来的纯字符串数据
+  const edgeSafeDataMap: Record<
+    string,
+    { label: string; operatorKey: string }
+  > = {};
+
   const getNodeEdge = (path: QueryPath<RawNode>): EdgeData => {
     const key = `#${path.source.id}-${path.target.id}`;
     const count = countMap[key] || 0;
     countMap[key] = count + 1;
     const id = key + (count > 0 ? `-${count}` : '');
-    edgePathMap[id] = path;
+
+    // --- 核心修复：立即提取数据，不要把 path 对象传出去 ---
+    let operatorKey = '';
+    let label = '';
+    try {
+      // 访问属性时立刻捕获可能抛出的 Failed requirement
+      operatorKey = path.operator?.key || '';
+      label = path.formatConnectOffset || '';
+    } catch {
+      console.warn(`无法从路径 ${id} 提取 GKD 数据`);
+    }
+
+    edgeSafeDataMap[id] = { label, operatorKey };
+
     return {
       id,
       source: String(path.source.id),
       target: String(path.target.id),
+      data: {
+        operatorKey, // 给自定义边用的
+      },
     };
   };
-  const resultAndPathList = props.showUnitResults.map((result) => {
-    return {
-      result,
-      pathList: result
+
+  const groupList = props.showUnitResults.map((result) => {
+    let edgeGroup: EdgeData[] = [];
+    try {
+      // 核心修复点：连 pathList 的生成也保护起来
+      const paths = result
         .getNodeConnectPath(transform)
-        .asJsReadonlyArrayView()
-        .concat(),
-    };
+        .asJsReadonlyArrayView();
+      edgeGroup = paths.map((v) => getNodeEdge(v));
+    } catch {
+      console.error('GKD 路径生成失败，已拦截崩溃');
+    }
+    return { result, edgeGroup };
   });
-  const groupList = resultAndPathList.map(({ result, pathList }) => {
-    const edgeGroup = pathList.map((v) => getNodeEdge(v));
-    return {
-      result,
-      edgeGroup,
-    };
-  });
+
   const edgeList = groupList.flatMap((v) => v.edgeGroup);
+
+  // --- 这里的函数现在只操作普通 JS 对象，不再触发 GKD 引擎 ---
   const getLabel = (edge: EdgeData): string => {
-    return edgePathMap[edge.id!].formatConnectOffset;
+    return edgeSafeDataMap[edge.id!]?.label || '';
   };
+
+  const getOperatorKey = (edge: EdgeData): string => {
+    return edgeSafeDataMap[edge.id!]?.operatorKey || '';
+  };
+
   const getGroupIndex = (edge: EdgeData): number => {
     return groupList.findIndex((v) =>
       v.edgeGroup.some((e) => e.id === edge.id),
     );
   };
+
   const getColor = (edge: EdgeData): string => {
-    const i = props.showUnitResults.indexOf(
-      groupList[getGroupIndex(edge)].result,
+    const group = groupList[getGroupIndex(edge)];
+    if (!group) return '#888';
+    const i = props.showUnitResults.indexOf(group.result);
+    const palette = themeTokens.value.palette || [];
+    return (
+      palette[i % palette.length] ||
+      themeTokens.value.graphEdgeFallbackStroke ||
+      '#888'
     );
-    const palette = themeTokens.value.palette.length
-      ? themeTokens.value.palette
-      : [themeTokens.value.graphEdgeFallbackStroke];
-    if (!palette.length || !palette[0]) {
-      return '#888'; // 绝对回退
-    }
-    return palette[i % palette.length];
   };
+
   return {
     groupList,
     edgeList,
     getLabel,
     getColor,
     getGroupIndex,
+    getOperatorIcon: (edge) => connectOperatorIcons[getOperatorKey(edge)] || '', // 简化
+    getOperatorKey,
   };
 });
 
@@ -140,33 +174,47 @@ const getDistance = (
   );
 };
 
+// 核心修复点 3：防止 G6 初始渲染时找不到节点导致崩溃
 const getEdgeDistance = (g: Graph, d: EdgeData): number => {
-  const n1 = g.getNodeData(d.source);
-  const n2 = g.getNodeData(d.target);
-  return getDistance(
-    n1.style?.x || 0,
-    n1.style?.y || 0,
-    n2.style?.x || 0,
-    n2.style?.y || 0,
-  );
+  try {
+    const n1 = g.getNodeData(d.source as string);
+    const n2 = g.getNodeData(d.target as string);
+    if (!n1?.style || !n2?.style) return 50; // 安全回退距离
+    return getDistance(
+      Number(n1.style.x) || 0,
+      Number(n1.style.y) || 0,
+      Number(n2.style.x) || 0,
+      Number(n2.style.y) || 0,
+    );
+  } catch {
+    return 50;
+  }
 };
 
 const numReg = /\d+/;
 
 const graphRef = shallowRef<Graph>();
 const { themeTokens } = useTheme();
+
 const redrawGraph = async () => {
   if (!graphRef.value) return;
-  await graphRef.value.draw();
+  try {
+    await graphRef.value.draw();
+  } catch (e) {
+    console.warn('图表重绘失败:', e);
+  }
 };
+
 watch(themeTokens, () => {
   redrawGraph();
 });
+
 onUnmounted(() => {
   if (graphRef.value) {
     graphRef.value.destroy();
   }
 });
+
 watch(el, async () => {
   if (!el.value) {
     return;
@@ -201,7 +249,6 @@ watch(el, async () => {
           labelFontWeight: qf && !placeholdered ? 'bold' : undefined,
           labelOpacity: placeholdered ? 0.5 : undefined,
           labelPointerEvents: 'none',
-          // 核心修改：如果是目标则按模式选色，否则不描边
           labelStroke: isTarget
             ? themeTokens.value.graphTargetLabelStroke
             : undefined,
@@ -210,12 +257,12 @@ watch(el, async () => {
     },
     edge: {
       type(d) {
-        return isCurveEdge(d) ? AntQuadratic.tyoe : 'polyline';
+        return isCurveEdge(d) ? OperatorEdge.type : 'polyline';
       },
       style(d) {
         if (isCurveEdge(d)) {
           const distance = getEdgeDistance(graph, d);
-          const labelText = edgeCtx.value.getLabel(d);
+          const labelText = edgeCtx.value.getLabel(d) || '';
           const hasNum = labelText.match(numReg);
           return {
             curveOffset: 30 * (Number(d.source) > Number(d.target) ? 1 : -1),
@@ -236,6 +283,8 @@ watch(el, async () => {
             labelBackgroundPointerEvents: 'none',
             labelOffsetX: distance < 50 ? -5 : 0,
             labelPointerEvents: 'none',
+            // 确保透传 operatorKey
+            operatorKey: edgeCtx.value.getOperatorKey(d),
             lineDash: [AntQuadratic.lineDashGap, AntQuadratic.lineDashGap],
           };
         }
@@ -256,8 +305,13 @@ watch(el, async () => {
     },
     behaviors: ['drag-canvas', 'zoom-canvas'],
   });
-  await graph.render();
-  graphRef.value = graph;
+
+  try {
+    await graph.render();
+    graphRef.value = graph;
+  } catch (e) {
+    console.error('G6 渲染初始化失败:', e);
+  }
 });
 
 const showEdgeList = computed(() => {
@@ -274,26 +328,31 @@ watch(
   [graphRef, showEdgeList],
   async ([graph, newEdgeList], [_, oldEdgeList]) => {
     if (!graph) return;
-    if (newEdgeList !== oldEdgeList) {
-      const removeEdgeList = oldEdgeList.filter(
-        (v) => !newEdgeList.some((e) => e.id === v.id),
-      );
-      const addEdgeList = newEdgeList.filter(
-        (v) => !oldEdgeList.some((e) => e.id === v.id),
-      );
-      if (!removeEdgeList.length && !addEdgeList.length) {
-        return;
+    try {
+      if (newEdgeList !== oldEdgeList) {
+        const removeEdgeList = oldEdgeList.filter(
+          (v) => !newEdgeList.some((e) => e.id === v.id),
+        );
+        const addEdgeList = newEdgeList.filter(
+          (v) => !oldEdgeList.some((e) => e.id === v.id),
+        );
+        if (!removeEdgeList.length && !addEdgeList.length) {
+          return;
+        }
+        graph.removeEdgeData(removeEdgeList.map((v) => v.id!));
+        await graph.draw();
+        graph.addEdgeData(addEdgeList);
+      } else {
+        graph.addEdgeData(newEdgeList);
       }
-      graph.removeEdgeData(removeEdgeList.map((v) => v.id!));
       await graph.draw();
-      graph.addEdgeData(addEdgeList);
-    } else {
-      graph.addEdgeData(newEdgeList);
+    } catch (e) {
+      console.warn('更新图表边数据时出错:', e);
     }
-    await graph.draw();
   },
 );
 </script>
+
 <template>
   <div ref="el" class="TrackGraph" />
 </template>
