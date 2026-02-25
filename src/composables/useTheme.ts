@@ -1,6 +1,7 @@
 import { createSharedComposable, useNow } from '@vueuse/core';
 import { darkTheme } from 'naive-ui';
 import dayjs from 'dayjs';
+import { discreteAppTheme } from '@/theme';
 
 export const useTheme = createSharedComposable(() => {
   const { settingsStore } = useStorageStore();
@@ -26,6 +27,15 @@ export const useTheme = createSharedComposable(() => {
   });
 
   const appTheme = computed(() => (isDarkModeActive.value ? darkTheme : null));
+
+  watch(
+    appTheme,
+    () => {
+      console.log('[ThemeSync] Current discrete theme:', appTheme.value?.name);
+      discreteAppTheme.value = appTheme.value;
+    },
+    { immediate: true },
+  );
 
   const themeTokens = shallowRef({
     graphNodeFill: '',
