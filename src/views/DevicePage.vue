@@ -297,7 +297,7 @@ watchEffect(() => {
               :loading="captureSnapshot.loading"
               @click="captureSnapshot.invoke"
             >
-              <SvgIcon name="Snapshot" style="color: var(--icon-contrast-color)" />
+              <SvgIcon name="Snapshot" />
             </NButton>
           </template>
           捕获快照

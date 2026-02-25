@@ -39,5 +39,6 @@ watchEffect(() => {
   height: var(--svg-h, var(--n-icon-size, var(--app-icon-size, 1em)));
   width: var(--svg-w, var(--n-icon-size, var(--app-icon-size, 1em)));
   fill: currentColor;
+  stroke-width: var(--svg-stroke-width);
 }
 </style>

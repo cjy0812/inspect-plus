@@ -1,12 +1,13 @@
+import { createSharedComposable } from '@vueuse/core';
 import { darkTheme } from 'naive-ui';
 
-export const useTheme = () => {
+export const useTheme = createSharedComposable(() => {
   const { settingsStore } = useStorageStore();
   const prefersDark = usePreferredDark();
 
   const isDarkModeActive = computed(() => {
-    if (settingsStore.themeMode == 'dark') return true;
-    if (settingsStore.themeMode == 'light') return false;
+    if (settingsStore.themeMode === 'dark') return true;
+    if (settingsStore.themeMode === 'light') return false;
     return prefersDark.value;
   });
 
@@ -58,11 +59,11 @@ export const useTheme = () => {
     },
     { immediate: true, flush: 'sync' },
   );
-  watch(isDarkModeActive, readThemeTokens, { immediate: true, flush: 'sync' });
+  watch(isDarkModeActive, readThemeTokens, { immediate: true, flush: 'post' });
 
   return {
     appTheme,
     isDarkModeActive,
     themeTokens,
   };
-};
+});

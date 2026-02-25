@@ -218,7 +218,7 @@ watch(el, async () => {
           return {
             curveOffset: 30 * (Number(d.source) > Number(d.target) ? 1 : -1),
             stroke:
-              edgeCtx.value.getColor(d) ||
+              edgeCtx.value.getColor(d) ??
               themeTokens.value.graphEdgeFallbackStroke,
             zIndex: 1 + edgeCtx.value.getGroupIndex(d),
             pointerEvents: 'none',

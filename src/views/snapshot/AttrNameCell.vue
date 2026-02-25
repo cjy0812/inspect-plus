@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { PropType } from 'vue';
 import SvgIcon from '@/components/SvgIcon.vue';
 
 type AttrTip = {
@@ -7,20 +6,11 @@ type AttrTip = {
   type: 'info' | 'quickFind';
 };
 
-defineProps({
-  name: {
-    type: String,
-    required: true,
-  },
-  explain: {
-    type: String,
-    required: true,
-  },
-  tip: {
-    type: Object as PropType<AttrTip | undefined>,
-    default: undefined,
-  },
-});
+defineProps<{
+  name: string;
+  explain: string;
+  tip?: AttrTip;
+}>();
 </script>
 
 <template>
@@ -50,16 +40,16 @@ defineProps({
           size="14"
           :style="{
             color:
-              tip.type == 'quickFind'
+              tip.type === 'quickFind'
                 ? 'var(--quickfind-color)'
                 : 'var(--info-color)',
           }"
           class="cursor-help transition-all hover:scale-110"
           @click.stop
         >
-          <SvgIcon v-if="tip.type == 'info'" name="info" />
+          <SvgIcon v-if="tip.type === 'info'" name="info" />
           <SvgIcon
-            v-else-if="tip.type == 'quickFind'"
+            v-else-if="tip.type === 'quickFind'"
             name="ok"
             class="quickfind-icon"
           />

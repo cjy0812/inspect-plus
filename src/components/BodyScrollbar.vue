@@ -127,7 +127,7 @@ const bodyHoverd = useElementHover(document.body);
         :style="yStyle"
         :class="{
           'is-dragging': yDragging,
-          'is-hidden': !bodyHoverd,
+          'is-hidden': !bodyHoverd && !yDragging,
         }"
         @click.stop
       />
@@ -153,7 +153,7 @@ const bodyHoverd = useElementHover(document.body);
         :style="xStyle"
         :class="{
           'is-dragging': xDragging,
-          'is-hidden': !bodyHoverd,
+          'is-hidden': !bodyHoverd && !xDragging,
         }"
         @click.stop
       />

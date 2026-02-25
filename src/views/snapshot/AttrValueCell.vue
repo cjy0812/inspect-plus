@@ -1,9 +1,20 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   name: string;
-  desc: string;
+  desc?: string | null;
   isNull: boolean;
 }>();
+
+const displayDesc = computed(() => {
+  if (
+    props.desc === null ||
+    props.desc === undefined ||
+    props.desc === 'undefined'
+  ) {
+    return '--';
+  }
+  return props.desc;
+});
 </script>
 
 <template>
@@ -14,6 +25,6 @@ defineProps<{
       'opacity-50': isNull,
     }"
   >
-    {{ desc }}
+    {{ displayDesc }}
   </NEllipsis>
 </template>

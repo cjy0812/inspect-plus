@@ -75,6 +75,8 @@ export const showTextDLg = ({
                 <img
                   src={ConnectSvg}
                   style={{ width: '30px', height: '30px' }}
+                  alt=""
+                  aria-hidden="true"
                 />
                 <span style={{ fontWeight: '500' }}>{title}</span>
               </NSpace>
@@ -86,7 +88,12 @@ export const showTextDLg = ({
           default: () => (
             <NSpace vertical size={10}>
               <div class="flex flex-col gap-1">
-                <div class="text-11px opacity-40 ml-1">官方域 (i.gkd.li)</div>
+                <div
+                  class="text-11px opacity-40 ml-1"
+                  style={{ color: 'var(--n-text-color)' }}
+                >
+                  官方域 (i.gkd.li)
+                </div>
                 <NInput
                   type="textarea"
                   autosize={{ minRows: 2, maxRows: 3 }}
@@ -101,7 +108,12 @@ export const showTextDLg = ({
                 />
               </div>
               <div class="flex flex-col gap-1">
-                <div class="text-11px opacity-40 ml-1">{extraTitle}</div>
+                <div
+                  class="text-11px opacity-40 ml-1"
+                  style={{ color: 'var(--n-text-color)' }}
+                >
+                  {extraTitle}
+                </div>
                 <NInput
                   type="textarea"
                   autosize={{ minRows: 2, maxRows: 3 }}
