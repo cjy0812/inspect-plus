@@ -455,7 +455,11 @@ function checkRule(
     }
   }
 
-  if (Array.isArray(obj.preKeys) && obj.preKeys.length) {
+  if (
+    Array.isArray(obj.preKeys) &&
+    obj.preKeys.length &&
+    simulatedPreKeys.length > 0
+  ) {
     const unmet = obj.preKeys.some(
       (k: number) => !simulatedPreKeys.includes(k),
     );
