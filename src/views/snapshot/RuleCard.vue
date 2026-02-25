@@ -688,8 +688,6 @@ const parsedRuleResult = computed<RuleCheckResult | null>(() => {
    视图辅助
    ------------------------- */
 
-const dataRef = computed<RuleCheckResult | null>(() => parsedRuleResult.value);
-
 const diagnostics = computed<RuleCheckResultFailure | null>(() => {
   const result = parsedRuleResult.value;
   if (
@@ -705,15 +703,15 @@ const diagnostics = computed<RuleCheckResultFailure | null>(() => {
 });
 
 const errorText = computed(() => {
-  if (dataRef.value && !dataRef.value.success) {
-    return dataRef.value.error ?? '';
+  if (parsedRuleResult.value && !parsedRuleResult.value.success) {
+    return parsedRuleResult.value.error ?? '';
   }
   return '';
 });
 
 const targetNode = computed(() => {
-  if (dataRef.value && dataRef.value.success) {
-    return dataRef.value.node;
+  if (parsedRuleResult.value && parsedRuleResult.value.success) {
+    return parsedRuleResult.value.node;
   }
   return null;
 });
