@@ -30,7 +30,7 @@
 
 ### 选择器实时语法检查
 
-![选择器实时语法检查](./images/05_Selector-Check.webp)
+![选择器实时语法检查](./images/05_Selector-check.webp)
 
 
 ### 属性面板参数用途提示
