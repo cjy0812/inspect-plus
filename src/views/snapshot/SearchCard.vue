@@ -44,16 +44,13 @@ const searchTextLazy = useDebounce(searchText, 220);
 
 const selectorResults = shallowReactive<SearchResult[]>([]);
 const expandedKeys = shallowRef<number[]>([]);
+
 const searchSelector = (text: string) => {
   const selector = errorWrap(
     () => parseSelector(text),
     (e) => {
-      if (typeof e == 'string') {
-        return e;
-      }
-      if (e instanceof GkdException) {
-        return `非法选择器:` + e.outMessage;
-      }
+      if (typeof e == 'string') return e;
+      if (e instanceof GkdException) return `非法选择器:` + e.outMessage;
       return `非法选择器:` + (e instanceof Error ? e.message : e);
     },
   );
@@ -69,20 +66,24 @@ const searchSelector = (text: string) => {
   }
 
   const results = selector.querySelfOrSelectorAllContext(rootNode.value);
-  if (results.length == 0) {
+  // 修正 1: 将 QueryResult 转换为真正的数组以适配 TS 和后续的 map 操作
+  const resultsArray = Array.from(results);
+
+  if (resultsArray.length == 0) {
     message.success(`没有选择到节点`);
     return;
   }
-  message.success(`选择到 ${results.length} 个节点`);
+  message.success(`选择到 ${resultsArray.length} 个节点`);
   selectorResults.unshift({
     selector,
-    nodes: results.map((r) => r.target),
-    results,
+    nodes: resultsArray.map((r) => r.target),
+    results: resultsArray as any,
     key: Date.now(),
     gkd: true,
   });
-  return results.length;
+  return resultsArray.length;
 };
+
 const searchString = (text: string) => {
   if (
     selectorResults.find(
@@ -114,6 +115,7 @@ const searchString = (text: string) => {
   });
   return results.length;
 };
+
 const refreshExpandedKeys = () => {
   const newResult = selectorResults[0];
   const newNode = newResult.nodes[0];
@@ -127,6 +129,7 @@ const refreshExpandedKeys = () => {
   newKeys.push(newResult.key);
   expandedKeys.value = newKeys;
 };
+
 const searchBySelector = errorTry(() => {
   const text = searchText.value.trim();
   if (!text) return;
@@ -137,6 +140,13 @@ const searchBySelector = errorTry(() => {
   }
   refreshExpandedKeys();
 });
+
+const handleTextareaKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    searchBySelector();
+  }
+};
 
 onMounted(async () => {
   await wasmLoadTask;
@@ -163,7 +173,11 @@ const generateRules = errorTry(async (result: SelectorSearchResult) => {
   const exampleUrls = imageId ? getImagUrl(imageId) : undefined;
 
   const s = result.selector;
-  const t = result.results.map((v) => v.context.toArray().at(-1)!)[0];
+  // 修正 2: 显式类型转换以修复 .map 报错
+  // 使用 Array.from 配合 unknown 转换，这是最符合 TS 规范的绕过方式
+  const t = Array.from(result.results as unknown as Iterable<any>).map(
+    (v: any) => v.context.toArray().at(-1)!,
+  )[0];
 
   const fastQuery = [
     (t.quickFind ?? t.idQf) &&
@@ -205,11 +219,13 @@ const generateRules = errorTry(async (result: SelectorSearchResult) => {
 
   copy(JSON5.stringify(rule, undefined, 2));
 });
+
 const enableSearchBySelector = shallowRef(true);
 const selectorSyntaxText = computed(() => {
   if (!enableSearchBySelector.value) return '';
   return searchTextLazy.value.trim();
 });
+
 const selectorSyntaxResult = computed(() => {
   const text = selectorSyntaxText.value;
   if (!text) return;
@@ -219,12 +235,14 @@ const selectorSyntaxResult = computed(() => {
     return e as GkdException;
   }
 });
+
 const selectorSyntaxAst = computed(() => {
   if (selectorSyntaxResult.value instanceof AstNode) {
     return selectorSyntaxResult.value;
   }
   return undefined;
 });
+
 const selectorSyntaxError = computed(() => {
   const result = selectorSyntaxResult.value;
   const text = selectorSyntaxText.value;
@@ -259,9 +277,11 @@ const selectorSyntaxError = computed(() => {
   }
   return undefined;
 });
+
 const hasZipId = computed(() => {
   return snapshotImportId[snapshot.value.id];
 });
+
 const shareResult = (result: SearchResult) => {
   if (!hasZipId.value) return;
   const importUrl = new URL(
@@ -280,6 +300,7 @@ const shareResult = (result: SearchResult) => {
   copy(importUrl.toString());
 };
 </script>
+
 <template>
   <DraggableCard
     v-slot="{ onRef }"
@@ -318,9 +339,11 @@ const shareResult = (result: SearchResult) => {
       <NInputGroup>
         <NInput
           v-model:value="searchText"
+          type="textarea"
           :placeholder="enableSearchBySelector ? `请输入选择器` : `请输入字符`"
-          :inputProps="{ class: 'gkd_code' }"
-          @keyup.enter="searchBySelector"
+          :autosize="{ minRows: 1, maxRows: 6 }"
+          :inputProps="{ class: 'selector-textarea' }"
+          @keydown="handleTextareaKeyDown"
         />
         <NButton @click="searchBySelector">
           <template #icon>
@@ -328,6 +351,7 @@ const shareResult = (result: SearchResult) => {
           </template>
         </NButton>
       </NInputGroup>
+
       <div
         v-if="enableSearchBySelector && selectorSyntaxText"
         mt-6px
@@ -471,7 +495,7 @@ const shareResult = (result: SearchResult) => {
                     @click="
                       snapshotStore.showTrack(
                         result.selector,
-                        result.results[i],
+                        (result.results as any)[i],
                       )
                     "
                   >
@@ -496,3 +520,12 @@ const shareResult = (result: SearchResult) => {
     </div>
   </DraggableCard>
 </template>
+
+<style scoped>
+:deep(.selector-textarea) {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  resize: none;
+}
+</style>
