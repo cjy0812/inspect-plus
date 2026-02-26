@@ -134,6 +134,25 @@ const getAttrExplain = (name: string) => {
     attrExplainMap[name] || '该属性用于描述节点特征，可结合其他字段一起定位。'
   );
 };
+
+// 提取类名简写，例如从 "android.view.View" 中提取 "View"
+const getClassNameShort = (fullClassName: string): string => {
+  if (!fullClassName) return fullClassName;
+  const parts = fullClassName.split('.');
+  return parts[parts.length - 1] || fullClassName;
+};
+
+// 处理属性点击事件
+const handleAttrClick = (attr: any) => {
+  if (attr.name === 'name' && typeof attr.value === 'string') {
+    // 对于 name 属性，只复制类名简写本身
+    const shortClassName = getClassNameShort(attr.value);
+    copy(shortClassName);
+  } else {
+    // 其他属性保持原有逻辑
+    copy(`${attr.name}=${attr.desc}`);
+  }
+};
 </script>
 
 <template>
@@ -170,7 +189,7 @@ const getAttrExplain = (name: string) => {
         </thead>
         <NTbody>
           <NTr v-for="attrx in attrs" :key="attrx.name">
-            <NTd @click="copy(`${attrx.name}=${attrx.desc}`)">
+            <NTd @click="handleAttrClick(attrx)">
               <AttrNameCell
                 :name="attrx.name"
                 :explain="getAttrExplain(attrx.name)"
