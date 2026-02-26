@@ -149,6 +149,11 @@ const resetAllLocal = () => {
             关闭浏览器版本正则表达式 WASM(GC) 提醒
           </NCheckbox>
         </div>
+        <div class="settings-row">
+          <NCheckbox v-model:checked="settingsStore.filterRandomVidQf">
+            过滤由三个随机字符组成的伪快查节点（如 [vid="k4p"]）
+          </NCheckbox>
+        </div>
       </div>
 
       <div class="settings-section">

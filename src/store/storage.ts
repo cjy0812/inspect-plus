@@ -66,6 +66,7 @@ export const settingsStore = useReactiveStorage<SettingsStore>(
     showDebugTools: false,
     focusNodeColor: undefined,
     randomFocusNodeColorOnOpen: false,
+    filterRandomVidQf: true,
   }),
 );
 
@@ -91,6 +92,9 @@ if (typeof settingsStore.showDebugTools != 'boolean')
 
 if (typeof settingsStore.randomFocusNodeColorOnOpen != 'boolean')
   settingsStore.randomFocusNodeColorOnOpen = false;
+
+if (typeof settingsStore.filterRandomVidQf != 'boolean')
+  settingsStore.filterRandomVidQf = true;
 
 // snapshot id -> last viewed time
 export const snapshotViewedTime = await useReactiveIndexedDB<

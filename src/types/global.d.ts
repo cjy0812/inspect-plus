@@ -161,6 +161,7 @@ declare global {
     showDebugTools?: boolean;
     focusNodeColor?: string;
     randomFocusNodeColorOnOpen: boolean;
+    filterRandomVidQf: boolean;
   }
 
   interface GlobalStore {

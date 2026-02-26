@@ -40,16 +40,17 @@ export const getNodeSelectorText = (
       );
     }
   }
+  const index = curNode.attr.index ?? 0;
   if (isFirst) {
     return [
       '@' + getShortName(curNode.attr.name),
-      getNodeSelectorText(curNode.parent, false, curNode.attr.index + 1),
+      getNodeSelectorText(curNode.parent, false, index + 1),
     ].join(' ');
   }
   return [
     getConnectOperator('<', lastIndex),
     getShortName(curNode.attr.name),
-    getNodeSelectorText(curNode.parent, false, curNode.attr.index + 1),
+    getNodeSelectorText(curNode.parent, false, index + 1),
   ].join(' ');
 };
 
@@ -68,8 +69,8 @@ export const listToTree = (nodes: RawNode[]) => {
       },
     });
     node.attr.depth = (node.parent?.attr?.depth ?? -1) + 1;
-    node.attr._id ??= node.id;
-    node.attr._pid ??= node.pid;
+    (node.attr as any)._id ??= node.id;
+    (node.attr as any)._pid ??= node.pid;
   });
   return nodes[0];
 };
@@ -161,7 +162,7 @@ const getNodeArea = (node: RawNode) => {
 };
 
 const getSafeName = (node: RawNode) => {
-  const c = node.attr.childCount;
+  const c = node.attr.childCount ?? 0;
   return (node.attr.name || `🐔` + (c > 1 ? `` : ` [${c}]`)).split('.').at(-1)!;
 };
 const getLabelSuffix = (node: RawNode) => {
@@ -254,7 +255,7 @@ export const isRawNode = (node: any): node is RawNode => {
 };
 
 export const getNodeStyle = (node: RawNode, focusNode?: RawNode) => {
-  const qf = Boolean(node.idQf || node.textQf || node.quickFind);
+  const qf = getNodeQf(node);
   const fontWeight = qf ? 'bold' : undefined;
   const color =
     node.id === focusNode?.id
@@ -395,6 +396,19 @@ export const getTrackTreeContext = (
   };
 };
 
+// 检查是否为随机生成的三个字符的 vid
+const isRandomVid = (vid: string): boolean => {
+  // 匹配由三个随机字符组成的 vid（字母和数字的组合）
+  return /^[a-zA-Z0-9]{3}$/.test(vid);
+};
+
 export const getNodeQf = (node: RawNode): boolean => {
+  // 检查是否启用了过滤随机 vid 的功能
+  if (settingsStore.filterRandomVidQf) {
+    // 如果是 idQf 且 vid 是随机生成的三个字符，则不认为是快查节点
+    if (node.idQf && node.attr.vid && isRandomVid(node.attr.vid)) {
+      return false;
+    }
+  }
   return Boolean(node.idQf || node.textQf || node.quickFind);
 };
