@@ -50,9 +50,21 @@ declare global {
 
   interface RawAttr {
     id?: string;
+    vid?: string;
     name: string;
     text?: string;
+    desc?: string;
     isClickable: boolean;
+    clickable?: boolean;
+    focusable?: boolean;
+    checkable?: boolean;
+    checked?: boolean;
+    editable?: boolean;
+    longClickable?: boolean;
+    visibleToUser?: boolean;
+    childCount?: number;
+    index?: number;
+    depth?: number;
     left: number;
     top: number;
     right: number;
