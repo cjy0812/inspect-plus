@@ -1,5 +1,5 @@
 # GKD快照审查工具Plus
-#### 基于原版进行重构并增加一些功能与优化
+#### 基于原版进行重构并增加一些功能与优化，以改善体验为主为目的，使用ai进行改造的项目，可能会有~~些许bug~~,欢迎指正~
 
 ## 功能演示
 
@@ -71,19 +71,13 @@
 
 ## 使用方法
 
-### 目前需要使用脚本把官方域名重定向至本项目的域名，否则无法无感实现这些功能与优化，脚本源代码在本项目的[userscripts](./userscripts/url-redirect.user.js)目录下。
+### 需要使用重定向域名脚本把官方域名重定向至本项目的域名，否则无法实现无感切换，脚本源代码在本项目的[userscripts](./userscripts/url-redirect.user.js)目录下。
 
 1. 安装[油猴脚本管理器](https://www.tampermonkey.net/index.php?browser=chrome&locale=zh)扩展。
 2. 点击[这里](https://github.com/cjy0812/inspect-plus/raw/refs/heads/main/userscripts/url-redirect.user.js)打开脚本安装页面，点击安装。
 3. 刷新GKD快照审查工具页面，即可重定向生效。
 
-### 如果你还使用了miku增强脚本，你需要自行编辑增强脚本，把本项目域名添加到生效域名中，否则增强脚本的功能将无法正常使用。
-
-```.js
-// @match              https://li.chenge.eu.org/*
-```
-
-![添加本项目域名至生效域名](./images/11_Domain-add.png)
+#### 目前MIKU增强脚本已添加本项目作用域可直接使用
 
 ## 快照示例
 
@@ -139,6 +133,8 @@
 - [CodeX](https://chatgpt.com/codex) AI高阶构思项目
 - [Trae](https:///www.trae.ai) AI重复性劳动
 - [Gemini](https://gemini.google.com/) AI辅助指导
+- [deepSeek](https://chat.deepseek.com/) 提供代码解释帮助
+- [Doubao-Seed-Code] 自动化指令操作执行
 
 ## 📈Star History
 
