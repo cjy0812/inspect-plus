@@ -8,7 +8,6 @@ import { QueryResult } from '@gkd-kit/selector';
 import { uniqBy } from 'lodash-es';
 import { AntQuadratic, OperatorEdge } from '@/utils/g6';
 import { useTheme } from '@/composables/useTheme';
-import { ref, computed, shallowRef, watch, onUnmounted } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -20,7 +19,7 @@ const props = withDefaults(
   {},
 );
 
-const el = ref<HTMLElement>();
+const el = shallowRef<HTMLElement>();
 
 const getNode = (id: string | number): RawNode => {
   return props.nodes[id as number];
@@ -66,6 +65,7 @@ interface EdgeContext {
   getGroupIndex: (edge: EdgeData) => number;
   getOperatorIcon: (edge: EdgeData) => string;
   getOperatorKey: (edge: EdgeData) => string;
+  getCurveOffset: (edge: EdgeData) => number;
 }
 
 const edgeCtx = computed<EdgeContext>(() => {
@@ -148,6 +148,18 @@ const edgeCtx = computed<EdgeContext>(() => {
     );
   };
 
+  const curveCountCache = new Map<string, number>();
+  const getCurveOffset = (d: EdgeData): number => {
+    const key = [d.source, d.target].sort().join('-');
+    if (!curveCountCache.has(key)) {
+      curveCountCache.set(key, 1);
+    } else {
+      curveCountCache.set(key, curveCountCache.get(key)! + 1);
+    }
+    const count = curveCountCache.get(key)!;
+    const direction = Number(d.source) > Number(d.target) ? 1 : -1;
+    return 30 * direction * Math.sqrt(count);
+  };
   return {
     groupList,
     edgeList,
@@ -156,6 +168,7 @@ const edgeCtx = computed<EdgeContext>(() => {
     getGroupIndex,
     getOperatorIcon: (edge) => connectOperatorIcons[getOperatorKey(edge)] || '', // 简化
     getOperatorKey,
+    getCurveOffset,
   };
 });
 
@@ -265,7 +278,7 @@ watch(el, async () => {
           const labelText = edgeCtx.value.getLabel(d) || '';
           const hasNum = labelText.match(numReg);
           return {
-            curveOffset: 30 * (Number(d.source) > Number(d.target) ? 1 : -1),
+            curveOffset: edgeCtx.value.getCurveOffset(d),
             stroke: edgeCtx.value.getColor(d),
             zIndex: 1 + edgeCtx.value.getGroupIndex(d),
             pointerEvents: 'none',
