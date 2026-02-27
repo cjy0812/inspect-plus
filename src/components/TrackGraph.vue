@@ -26,9 +26,9 @@ const getNode = (id: string | number): RawNode => {
 
 const subNodes = computed(() => {
   return uniqBy(
-    props.queryResult.unitResults
-      .asJsReadonlyArrayView()
-      .flatMap((v) => v.context.toArray()),
+    Array.from(props.queryResult.unitResults.asJsReadonlyArrayView()).flatMap(
+      (v) => v.context.toArray(),
+    ),
     (n) => n.id,
   );
 });
@@ -78,15 +78,18 @@ const edgeCtx = computed<EdgeContext>(() => {
       id,
       source: String(path.source.id),
       target: String(path.target.id),
+      _similarId: [path.source.id, path.target.id].sort().join('-'),
     };
+  };
+  const getSimilarId = (edge: EdgeData): string => {
+    return Reflect.get(edge, '_similarId') as string;
   };
   const resultAndPathList = props.showUnitResults.map((result) => {
     return {
       result,
-      pathList: result
-        .getNodeConnectPath(transform)
-        .asJsReadonlyArrayView()
-        .concat(),
+      pathList: Array.from(
+        result.getNodeConnectPath(transform).asJsReadonlyArrayView(),
+      ),
     };
   });
   const groupList = resultAndPathList.map(({ result, pathList }) => {
@@ -111,16 +114,19 @@ const edgeCtx = computed<EdgeContext>(() => {
     );
     return colorList[i % colorList.length];
   };
-  const curveCountCache = new Map<string, number>();
-  const getCurveOffset = (d: EdgeData): number => {
-    const key = [d.source, d.target].sort().join('-');
-    if (!curveCountCache.has(key)) {
-      curveCountCache.set(key, 1);
-    } else {
-      curveCountCache.set(key, curveCountCache.get(key)! + 1);
-    }
-    const count = curveCountCache.get(key)!;
-    const direction = Number(d.source) > Number(d.target) ? 1 : -1;
+  const getCurveOffset = (edge: EdgeData): number => {
+    const direction = Number(edge.source) > Number(edge.target) ? 1 : -1;
+    const fistSimilarIndex = edgeList.findIndex(
+      (e) => getSimilarId(e) === getSimilarId(edge),
+    );
+    const count =
+      edgeList
+        .filter((e, i) => {
+          return (
+            i >= fistSimilarIndex && getSimilarId(e) === getSimilarId(edge)
+          );
+        })
+        .findIndex((e) => e.id === edge.id) + 1;
     return 30 * direction * Math.sqrt(count);
   };
   return {
