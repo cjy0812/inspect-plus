@@ -34,6 +34,99 @@
 
 在浏览器中打开 `http://localhost:8444` 即可查看项目运行效果。
 
+## 在线部署指南
+
+### - 部署到 Cloudflare Pages
+1. 获取认证凭据 (Secrets)
+
+因为你是通过 GitHub Actions 远程“推”文件给 Cloudflare，而不是让 Cloudflare 来“拉”代码，所以必须给 Actions 授权。
+
+  * 获取**CLOUDFLARE_ACCOUNT_ID**:
+
+  * 登录 Cloudflare 控制台，点击左侧的**Computer**-> **Workers & Pages**  。
+
+  * 在右侧栏可以看到 **Account ID**，复制它备用。
+
+  ![image-20260228055225745](./images/01_CF-AccountID.webp)
+
+---
+
+  * 获取**CLOUDFLARE_API_TOKEN**:
+  * 点击左上角快速搜索 -> 输入**api** -> **回车**，出现 **账户API令牌**-> **创建令牌**
+<div style="display:flex; gap:10px;">
+  <img src="./images/02_CF-API-Tokensearch.webp" alt="image-20260228055053315" style="zoom:46%;" />
+  <img src="./images/03_CF-API-Tokenadd.webp" alt="image-20260228055937967" style="zoom: 38%;" />
+</div>
+
+  * 使用**自定义令牌**-> **开始使用**
+
+  <img src="./images/04_CF-API-Tokenadd-02.webp" alt="image-20260228061105050" style="zoom:80%;" />
+
+  * 确保权限包含 `Cloudflare Pages: Edit`！
+
+  <img src="./images/05_CF-API-Tokenedit.webp" alt="image-20260228061622372" style="zoom: 80%;" />
+
+  * 点击**创建令牌**后**复制字符串**
+<div style="display:flex; gap:10px;">
+  <img src="./images/06_CF-API-Tokenadd-03.webp" alt="image-20260228061932995" style="zoom:67%;" />
+  <img src="./images/07_CF-API-Tokencopy-02.webp" alt="image-20260228062213438" style="zoom:80%;" />
+</div>
+
+---
+
+2. **配置到 GitHub**:
+
+  * 到你的Github仓库点击**设置** -> **机密和变量**下拉菜单 -> **操作** -> 点击`新建操作变量`
+    ![image-20260228065533714](./images/08_Github-settings.webp)
+  
+  * 将`CLOUDFLARE_ACCOUNT_ID`与`CLOUDFLARE_API_TOKEN`分别填进去
+
+  ![image-20260228070118137](./images/09_Github-add.webp)
+
+### - 部署到 GitHub Pages
+
+把 GitHub Pages 的部署方式改为 YAML（Actions）分发后，**必须**在 GitHub 仓库设置里进行一次“接头认证”，否则 Actions 跑完后页面也不会更新。
+
+具体操作只有以下 **3 步**：
+
+### 1. 切换部署源 (最关键)
+
+GitHub 默认会去寻找 `gh-pages` 分支，现在我们要告诉它“等 Actions 的信号”。
+
+1. 进入你的 GitHub 仓库页面。
+
+2. 点击右上角的 **Settings** (设置)。
+
+3. 在左侧菜单栏找到 **Pages**。
+
+4. 在中间的 **Build and deployment** > **Source** 下拉菜单中，将 `Deploy from a branch` 切换为 **`GitHub Actions`**。
+
+   ![image-20260228071928239](./images/10_GitHub-pages.webp)
+
+---
+
+### 2. 检查仓库权限
+
+由于你的 YAML 中定义了 `permissions`，通常不需要额外操作。但如果部署报错 `403`，请检查：
+
+1. **Settings** -> **Actions** -> **General**。
+
+2. 滚动到底部的 **Workflow permissions**。
+
+3. 确保勾选了 **Read and write permissions**（虽然 YAML 里的声明优先级更高，但这里是全局总开关）。
+
+   ![image-20260228072140913](./images/11_GitHub-pages-write.webp)
+
+---
+
+### 3. (可选) 配置自定义域名
+
+如果你之前在 GitHub Pages 绑定了自定义域名（如 `docs.example.com`）：
+
+* 在使用 Actions 部署时，构建产物 `dist` 目录里**必须包含一个名为 `CNAME` 的文件**，内容是你的域名。
+* 或者在部署成功后，去 **Settings** -> **Pages** 重新填一遍自定义域名，GitHub 会自动帮你处理。
+
+
 ## 项目目录结构
 
 ```bash

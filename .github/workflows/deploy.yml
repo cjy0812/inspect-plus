@@ -7,55 +7,47 @@ on:
     paths-ignore:
       - 'README.md'
 
-jobs:
-  deploy-github-pages:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
-        with:
-          node-version: latest
-          cache: pnpm
-      - uses: actions/configure-pages@v5
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec tsx ./scripts/updateVersion.ts
-      - name: Build for GitHub Pages (repo base path)
-        run: |
-          REPO_NAME="${GITHUB_REPOSITORY#*/}"
-          BASE_URL="/${REPO_NAME}/" pnpm run build
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist
-      - id: deployment
-        uses: actions/deploy-pages@v4
+permissions:
+  contents: write
+  pages: write # GitHub Pages 部署权限
+  id-token: write # 身份验证权限
 
-  deploy-cloudflare-pages:
+jobs:
+  deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      HAS_CF_SECRETS: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: latest
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: 24
+
+      - uses: pnpm/action-setup@v4
+
+      - run: pnpm install
+
       - run: pnpm exec tsx ./scripts/updateVersion.ts
-      - run: pnpm run build:cf
-      - uses: cloudflare/wrangler-action@v3
-        if: ${{ env.HAS_CF_SECRETS == 'true' }}
+      - run: pnpm run build:mirror
+
+      - name: Publish package
+        run: |
+          pnpm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
+          pnpm publish --no-git-checks
+
+      # 1. Cloudflare Pages 部署
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=gkd-inspect
+
+      # 2. GitHub Pages 部署 (分两步：上传产物 -> 正式发布)
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist # 指定构建后的静态文件目录
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
