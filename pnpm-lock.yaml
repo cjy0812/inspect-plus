@@ -18,8 +18,8 @@ importers:
         specifier: 0.8.0
         version: 0.8.0
       '@gkd-kit/selector':
-        specifier: 0.5.22
-        version: 0.5.22
+        specifier: 0.5.23
+        version: 0.5.23
       '@gkd-kit/wasm_matches':
         specifier: 0.0.1
         version: 0.0.1
@@ -994,8 +994,8 @@ packages:
   '@gkd-kit/api@0.8.0':
     resolution: {integrity: sha512-UIVjDQoUWVhPwxfiaQ9aMm1M/vY1G00iO7JZ8yqWlmXoOFwoA5UDSfsY7XB+RPvQTtwdd4F0dC4K5d/5Q+aJSw==}
 
-  '@gkd-kit/selector@0.5.22':
-    resolution: {integrity: sha512-M9By+FSFQFnaXffhFrSl6YGh4+gGRlwkaElhGDZAPujcwXntyZ2Dh2jOqktQm+g7S4rG/9zpUz7FGD3GiXd6Uw==}
+  '@gkd-kit/selector@0.5.23':
+    resolution: {integrity: sha512-HTegxwogKIxopvGup5wTEGzxW9ko7iS9mXEEpZi6SvbVUEumjGptJtIXd4ixNKJ2RyOWX3wfoyArbrDOUiTFYw==}
 
   '@gkd-kit/wasm_matches@0.0.1':
     resolution: {integrity: sha512-PUYa98MXyumiIVuYHozbYThhPnYwrdvEwyL+tBmneonIq1Vm2CmeUfk3FbJXxaMQE2/3JBa7utfk0HAu/03xDQ==}
@@ -1785,9 +1785,6 @@ packages:
     resolution: {integrity: sha512-YCS/JNFAUyr5vAuhk1DWm1CBxRHW9LbJ2ozWeemrIqpbsqKjHVxYPyi5GC0rjZIT5JxJ3virVTS8wk4i/Z+krw==}
     peerDependencies:
       ajv: ^8.8.2
-
-  ajv@6.12.6:
-    resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
 
   ajv@6.14.0:
     resolution: {integrity: sha512-IWrosm/yrn43eiKqkfkHis7QioDleaXQHdDVPKg0FSwwd/DuvyX79TZnFOnYpB7dcsFAMmtFztZuXPDvSePkFw==}
@@ -4630,7 +4627,7 @@ snapshots:
 
   '@gkd-kit/api@0.8.0': {}
 
-  '@gkd-kit/selector@0.5.22': {}
+  '@gkd-kit/selector@0.5.23': {}
 
   '@gkd-kit/wasm_matches@0.0.1': {}
 
@@ -5503,21 +5500,14 @@ snapshots:
     optionalDependencies:
       ajv: 8.17.1
 
-  ajv-keywords@3.5.2(ajv@6.12.6):
+  ajv-keywords@3.5.2(ajv@6.14.0):
     dependencies:
-      ajv: 6.12.6
+      ajv: 6.14.0
 
   ajv-keywords@5.1.0(ajv@8.17.1):
     dependencies:
       ajv: 8.17.1
       fast-deep-equal: 3.1.3
-
-  ajv@6.12.6:
-    dependencies:
-      fast-deep-equal: 3.1.3
-      fast-json-stable-stringify: 2.1.0
-      json-schema-traverse: 0.4.1
-      uri-js: 4.4.1
 
   ajv@6.14.0:
     dependencies:
@@ -6787,8 +6777,8 @@ snapshots:
   schema-utils@3.3.0:
     dependencies:
       '@types/json-schema': 7.0.15
-      ajv: 6.12.6
-      ajv-keywords: 3.5.2(ajv@6.12.6)
+      ajv: 6.14.0
+      ajv-keywords: 3.5.2(ajv@6.14.0)
 
   schema-utils@4.3.3:
     dependencies:
@@ -6925,7 +6915,7 @@ snapshots:
   terser@5.46.0:
     dependencies:
       '@jridgewell/source-map': 0.3.11
-      acorn: 8.15.0
+      acorn: 8.16.0
       commander: 2.20.3
       source-map-support: 0.5.21
 
@@ -7252,7 +7242,7 @@ snapshots:
       '@webassemblyjs/ast': 1.14.1
       '@webassemblyjs/wasm-edit': 1.14.1
       '@webassemblyjs/wasm-parser': 1.14.1
-      acorn: 8.15.0
+      acorn: 8.16.0
       browserslist: 4.28.1
       chrome-trace-event: 1.0.4
       enhanced-resolve: 5.18.4
