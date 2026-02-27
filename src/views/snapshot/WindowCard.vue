@@ -24,6 +24,7 @@ const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
 let lastClickId = Number.NaN;
 const expandedKeys = shallowRef<number[]>([]);
 const selectedKeys = shallowRef<number[]>([]);
+const treeContainer = useTemplateRef('treeContainerRef');
 watch([() => focusNode.value, () => focusTime.value], async () => {
   if (!focusNode.value) return;
   const key = focusNode.value.id;
@@ -36,7 +37,19 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
         return;
       }
       selectedKeys.value = [key];
-      treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
+      if (!treeContainer.value) return;
+      const nodeRef = treeContainer.value.querySelector(
+        `[data-node-id="${key}"]`,
+      );
+      if (nodeRef) {
+        nodeRef.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      } else {
+        await delay(300);
+        treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
+      }
     }
   });
   let parent = focusNode.value.parent;
@@ -214,7 +227,7 @@ const gkdVersionName = computed(() => {
       />
     </div>
     <div h-1px mt-4px bg="#efeff5" />
-    <div flex-1 min-h-0>
+    <div ref="treeContainerRef" flex-1 min-h-0>
       <NTree
         ref="treeRef"
         v-model:expandedKeys="expandedKeys"
