@@ -83,9 +83,9 @@
     "vue-router": "5.0.3"
   },
   "volta": {
-    "node": "24.14.0",
-    "pnpm": "10.30.3"
+    "node": "24.14.0"
   },
+  "packageManager": "pnpm@10.30.3",
   "simple-git-hooks": {
     "pre-commit": "pnpm exec lint-staged"
   },
