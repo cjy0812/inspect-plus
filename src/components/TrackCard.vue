@@ -1,19 +1,21 @@
-<script lang="ts">
-const TrackGraphLoader = () => import('@/components/TrackGraph.vue');
-const TrackGraph = defineAsyncComponent({
-  loader: TrackGraphLoader,
-  delay: 0,
-});
-setTimeout(TrackGraphLoader, 3000);
-</script>
 <script setup lang="ts">
+import { computed, shallowRef, defineAsyncComponent } from 'vue';
 import SelectorText from '@/components/SelectorText.vue';
+import SvgIcon from '@/components/SvgIcon.vue';
+import { NButton, NScrollbar } from 'naive-ui';
 import { buildEmptyFn } from '@/utils/others';
 import { type ResolvedSelector } from '@/utils/selector';
 import type { AstNode, QueryResult } from '@gkd-kit/selector';
 import { UnitSelectorExpression } from '@gkd-kit/selector';
 import type { StyleValue } from 'vue';
 import { useTheme } from '@/composables/useTheme';
+
+const TrackGraphLoader = () => import('@/components/TrackGraph.vue');
+const TrackGraph = defineAsyncComponent({
+  loader: TrackGraphLoader,
+  delay: 0,
+});
+setTimeout(TrackGraphLoader, 3000);
 
 const props = withDefaults(
   defineProps<{
@@ -44,6 +46,7 @@ const filterUnitResults = shallowRef<QueryResult.UnitResult<RawNode>[]>([]);
 watchEffect(() => {
   filterUnitResults.value = showUnitResults.value;
 });
+
 const switchUnitResult = (unitResult: QueryResult.UnitResult<RawNode>) => {
   if (filterUnitResults.value.includes(unitResult)) {
     filterUnitResults.value = filterUnitResults.value.filter(
@@ -69,12 +72,23 @@ const getNodeStyle = (node: AstNode<any>): StyleValue => {
 };
 
 const { themeTokens } = useTheme();
+
 const palette = computed(() => {
   return themeTokens.value.palette.length
     ? themeTokens.value.palette
     : [themeTokens.value.graphEdgeFallbackStroke];
 });
+
+const themeColors = computed(() => {
+  return {
+    text: 'var(--text-color)',
+    lightBg: 'var(--bg-color-light)',
+    border: 'var(--border-color)',
+    hoverBg: 'var(--bg-color-hover)',
+  };
+});
 </script>
+
 <template>
   <div
     class="TrackCard"
@@ -86,20 +100,18 @@ const palette = computed(() => {
     gap-8px
     overflow-hidden
   >
-    <div
-      flex
-      justify-between
-      items-center
-      class="[--svg-h:var(--app-icon-size)]"
-    >
+    <div flex justify-between items-center class="[--svg-h:24px]">
       <div flex items-center gap-4px>
         <SvgIcon name="path" />
-        <div text="20px/28px" font-bold>选择器路径视图</div>
+        <div text="20px/28px" font-bold :style="{ color: themeColors.text }">
+          选择器路径视图
+        </div>
       </div>
       <NButton text @click="onClose">
         <SvgIcon name="close" />
       </NButton>
     </div>
+
     <div flex-1 flex gap-12px overflow-hidden>
       <div self-stretch flex="[2]">
         <TrackGraph
@@ -109,7 +121,9 @@ const palette = computed(() => {
           :showUnitResults="showUnitResults"
           :filterUnitResults="filterUnitResults"
           class="h-[calc(100%-2px)] b-1px b-solid"
+          :style="{ borderColor: themeColors.border }"
         />
+
         <div relative pointer-events-none z-1>
           <div
             absolute
@@ -122,6 +136,7 @@ const palette = computed(() => {
           </div>
         </div>
       </div>
+
       <NScrollbar class="self-stretch flex-1 text-20px leading-28px gkd_code">
         <div
           mb-24px
@@ -136,6 +151,7 @@ const palette = computed(() => {
             :getNodeStyle="getNodeStyle"
           />
         </div>
+
         <div flex flex-col gap-12px>
           <div v-if="singleUnitResults.length" flex gap-8px>
             <div
@@ -154,6 +170,7 @@ const palette = computed(() => {
               />
             </div>
           </div>
+
           <div
             v-for="(unitResult, i) in showUnitResults"
             :key="i"
