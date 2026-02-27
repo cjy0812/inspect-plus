@@ -4,9 +4,8 @@ import vueJsx from '@vitejs/plugin-vue-jsx';
 import process from 'node:process';
 import unocss from 'unocss/vite';
 import data from 'unplugin-data/vite';
-import { defineConfig } from 'vite';
-import type { ESBuildOptions } from 'vite';
-import { mirror, unAutoImport, _404Page, svgMinify } from './plugins';
+import { defineConfig, type ESBuildOptions } from 'vite';
+import { _404Page, mirror, svgMinify, unAutoImport } from './plugins';
 
 // support top-level-await
 const chromeVersion = 89;
