@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { AntQuadratic } from '@/utils/g6';
 import { getNodeQf, getTrackTreeContext } from '@/utils/node';
 import { colorList } from '@/utils/others';
 import { transform } from '@/utils/selector';
@@ -6,7 +7,6 @@ import type { EdgeData, TreeData } from '@antv/g6';
 import { Graph, treeToGraphData } from '@antv/g6';
 import { QueryPath, QueryResult } from '@gkd-kit/selector';
 import { uniqBy } from 'lodash-es';
-import { AntQuadratic } from '@/utils/g6';
 
 const props = withDefaults(
   defineProps<{
@@ -74,16 +74,20 @@ const edgeCtx = computed<EdgeContext>(() => {
     countMap[key] = count + 1;
     const id = key + (count > 0 ? `-${count}` : '');
     edgePathMap[id] = path;
+
+    const _isPrevious = path.connectWrapper.segment.operator.key === '->';
+    const _similarId = [path.source.id, path.target.id, Number(_isPrevious)]
+      .sort()
+      .join('-');
     return {
       id,
       source: String(path.source.id),
       target: String(path.target.id),
-      _similarId: [path.source.id, path.target.id].sort().join('-'),
+      _similarId,
+      _isPrevious,
     };
   };
-  const getSimilarId = (edge: EdgeData): string => {
-    return Reflect.get(edge, '_similarId') as string;
-  };
+  const getSimilarId = (edge: EdgeData) => edge._similarId as string;
   const resultAndPathList = props.showUnitResults.map((result) => {
     return {
       result,
@@ -115,7 +119,9 @@ const edgeCtx = computed<EdgeContext>(() => {
     return colorList[i % colorList.length];
   };
   const getCurveOffset = (edge: EdgeData): number => {
-    const direction = Number(edge.source) > Number(edge.target) ? 1 : -1;
+    const direction =
+      (Number(edge.source) > Number(edge.target) ? 1 : -1) *
+      (edge._isPrevious ? -1 : 1);
     const fistSimilarIndex = edgeList.findIndex(
       (e) => getSimilarId(e) === getSimilarId(edge),
     );
