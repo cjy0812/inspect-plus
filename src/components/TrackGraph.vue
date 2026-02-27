@@ -18,7 +18,7 @@ const props = withDefaults(
   {},
 );
 
-const el = ref<HTMLElement>();
+const el = shallowRef<HTMLElement>();
 
 const getNode = (id: string | number): RawNode => {
   return props.nodes[id as number];
@@ -62,6 +62,7 @@ interface EdgeContext {
   getLabel: (edge: EdgeData) => string;
   getColor: (edge: EdgeData) => string;
   getGroupIndex: (edge: EdgeData) => number;
+  getCurveOffset: (edge: EdgeData) => number;
 }
 
 const edgeCtx = computed<EdgeContext>(() => {
@@ -110,12 +111,25 @@ const edgeCtx = computed<EdgeContext>(() => {
     );
     return colorList[i % colorList.length];
   };
+  const curveCountCache = new Map<string, number>();
+  const getCurveOffset = (d: EdgeData): number => {
+    const key = [d.source, d.target].sort().join('-');
+    if (!curveCountCache.has(key)) {
+      curveCountCache.set(key, 1);
+    } else {
+      curveCountCache.set(key, curveCountCache.get(key)! + 1);
+    }
+    const count = curveCountCache.get(key)!;
+    const direction = Number(d.source) > Number(d.target) ? 1 : -1;
+    return 30 * direction * Math.sqrt(count);
+  };
   return {
     groupList,
     edgeList,
     getLabel,
     getColor,
     getGroupIndex,
+    getCurveOffset,
   };
 });
 
@@ -198,7 +212,7 @@ watch(el, async () => {
           const labelText = edgeCtx.value.getLabel(d);
           const hasNum = labelText.match(numReg);
           return {
-            curveOffset: 30 * (Number(d.source) > Number(d.target) ? 1 : -1),
+            curveOffset: edgeCtx.value.getCurveOffset(d),
             stroke: edgeCtx.value.getColor(d) || '#FF7FFF',
             zIndex: 1 + edgeCtx.value.getGroupIndex(d),
             pointerEvents: 'none',
