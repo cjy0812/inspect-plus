@@ -5,7 +5,11 @@ export const _404Page = (): Plugin => {
     enforce: 'post',
     apply: 'build',
     generateBundle(_, bundle) {
-      bundle['404.html'] = { ...bundle['index.html'], fileName: '404.html' };
+      this.emitFile({
+        type: 'asset',
+        fileName: '404.html',
+        source: Reflect.get(bundle['index.html'], 'source'),
+      });
     },
   };
 };
