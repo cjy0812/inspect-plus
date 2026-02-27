@@ -29,7 +29,7 @@ const props = withDefaults(
 
 const allUnitResults = computed(() => {
   if (!props.queryResult) return [];
-  return props.queryResult.unitResults.asJsReadonlyArrayView().concat();
+  return Array.from(props.queryResult.unitResults.asJsReadonlyArrayView());
 });
 
 const singleUnitResults = computed(() => {

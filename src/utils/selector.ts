@@ -143,13 +143,15 @@ export const parseSelector = (source: string): ResolvedSelector => {
   const ast = Selector.Companion.parseAst(source);
   const value = ast.value;
   value.checkType(typeInfo);
-  const binaryExpressionList =
-    value.expression.binaryExpressionList.asJsReadonlyArrayView();
-  const fastQueryList = value.expression.fastQueryList
-    .asJsReadonlyArrayView()
-    .concat();
-  const connectSegmentList =
-    value.expression.connectSegmentList.asJsReadonlyArrayView();
+  const binaryExpressionList = Array.from(
+    value.expression.binaryExpressionList.asJsReadonlyArrayView(),
+  );
+  const fastQueryList = Array.from(
+    value.expression.fastQueryList.asJsReadonlyArrayView(),
+  );
+  const connectSegmentList = Array.from(
+    value.expression.connectSegmentList.asJsReadonlyArrayView(),
+  );
   const innerFindAst = <T>(t: AstNode<any>, v: T): AstNode<T> | undefined => {
     if (t.value === v) {
       for (const c of t.outChildren) {
