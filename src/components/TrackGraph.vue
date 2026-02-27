@@ -23,6 +23,9 @@ const el = shallowRef<HTMLElement>();
 const graphRef = shallowRef<Graph>();
 const { themeTokens } = useTheme();
 
+// ==========================================
+// 1. 基础数据计算区 (原版保持一致)
+// ==========================================
 const getNode = (id: string | number): RawNode => props.nodes[id as number];
 
 const subNodes = computed(() => {
@@ -50,6 +53,9 @@ const treeGraphData = computed(() =>
 const hasChildren = (node: RawNode): boolean =>
   treeCtx.value.getChildren(node).length > 0;
 
+// ==========================================
+// 2. 边数据处理区 (安全提取 + 原版偏移算法)
+// ==========================================
 interface EdgeContext {
   groupList: {
     result: QueryResult.UnitResult<RawNode>;
@@ -66,7 +72,6 @@ interface EdgeContext {
 
 const edgeCtx = computed<EdgeContext>(() => {
   const countMap: Record<string, number> = {};
-  // 扩展存储：增加原版需要的 _isPrevious 和 _similarId
   const edgeSafeDataMap: Record<
     string,
     {
@@ -87,31 +92,27 @@ const edgeCtx = computed<EdgeContext>(() => {
     let label = '';
     let _isPrevious = false;
 
+    // [自定义] 增加异常防护
     try {
       operatorKey = path.operator?.key || '';
       label = path.formatConnectOffset || '';
-      // 原版逻辑：根据操作符判断方向
       _isPrevious = path.connectWrapper.segment.operator.key === '->';
     } catch {
       console.warn(`无法从路径 ${id} 提取 GKD 数据`);
     }
 
-    // 原版逻辑：生成相似 ID 用于计算 offset
     const _similarId = [path.source.id, path.target.id, Number(_isPrevious)]
       .sort()
       .join('-');
-
     edgeSafeDataMap[id] = { label, operatorKey, _isPrevious, _similarId };
 
     return {
       id,
       source: String(path.source.id),
       target: String(path.target.id),
-      _isPrevious, // 必须传出，用于 getCurveOffset 内部计算
-      _similarId, // 必须传出，用于 getCurveOffset 内部计算
-      data: {
-        operatorKey,
-      },
+      _isPrevious,
+      _similarId,
+      data: { operatorKey },
     };
   };
 
@@ -141,6 +142,7 @@ const edgeCtx = computed<EdgeContext>(() => {
     );
   };
 
+  // [自定义] 使用 themeTokens 取代原版的 colorList
   const getColor = (edge: EdgeData): string => {
     const group = groupList[getGroupIndex(edge)];
     if (!group) return '#888';
@@ -153,25 +155,21 @@ const edgeCtx = computed<EdgeContext>(() => {
     );
   };
 
-  // --- 合并原版核心算法：精准计算曲线偏移 ---
+  // [原版] 核心曲线偏移算法
   const getCurveOffset = (edge: EdgeData): number => {
     const direction =
       (Number(edge.source) > Number(edge.target) ? 1 : -1) *
       (edge._isPrevious ? -1 : 1);
-
     const firstSimilarIndex = edgeList.findIndex(
       (e) => getSimilarId(e) === getSimilarId(edge),
     );
-
     const count =
       edgeList
-        .filter((e, i) => {
-          return (
-            i >= firstSimilarIndex && getSimilarId(e) === getSimilarId(edge)
-          );
-        })
+        .filter(
+          (e, i) =>
+            i >= firstSimilarIndex && getSimilarId(e) === getSimilarId(edge),
+        )
         .findIndex((e) => e.id === edge.id) + 1;
-
     return 30 * direction * Math.sqrt(count);
   };
 
@@ -186,8 +184,6 @@ const edgeCtx = computed<EdgeContext>(() => {
     getCurveOffset,
   };
 });
-
-// ... 保持你原有的 getEdgeDistance, isCurveEdge, redrawGraph 函数不变 ...
 
 const isCurveEdge = (edge: EdgeData): boolean => edge.id?.[0] === '#';
 
@@ -220,7 +216,16 @@ const getEdgeDistance = (g: Graph, d: EdgeData): number => {
 
 const numReg = /\d+/;
 
-// ... Watchers 和 Graph 初始化保持你的风格，确保使用了 themeTokens 和 OperatorEdge ...
+// ==========================================
+// 3. 生命周期与画布渲染控制
+// ==========================================
+
+// [修复]: 补回了原版的销毁逻辑，防止内存泄漏
+onUnmounted(() => {
+  if (graphRef.value) {
+    graphRef.value.destroy();
+  }
+});
 
 watch(el, async () => {
   if (!el.value) return;
@@ -250,6 +255,7 @@ watch(el, async () => {
           labelOffsetX: 2,
           labelFontWeight: qf && !placeholdered ? 'bold' : undefined,
           labelOpacity: placeholdered ? 0.5 : undefined,
+          labelPointerEvents: 'none', // [修复] 补回：防止标签阻挡画布拖拽
           labelStroke: isTarget
             ? themeTokens.value.graphTargetLabelStroke
             : undefined,
@@ -263,20 +269,31 @@ watch(el, async () => {
           const distance = getEdgeDistance(graph, d);
           const labelText = edgeCtx.value.getLabel(d) || '';
           const hasNum = labelText.match(numReg);
+
           return {
             curveOffset: edgeCtx.value.getCurveOffset(d),
             stroke: edgeCtx.value.getColor(d),
             zIndex: 1 + edgeCtx.value.getGroupIndex(d),
+            pointerEvents: 'none',
             endArrow: true,
             endArrowOpacity: 0.5,
+            endArrowPointerEvents: 'none', // [修复] 补回
+
+            // [修复] 完美还原原版复杂的 Label 排版，并融合你的主题色
             labelText,
             labelFill: themeTokens.value.graphEdgeLabelColor,
             labelFontSize: hasNum ? (distance < 50 ? 8 : 12) : 12,
             labelBackground: true,
             labelBackgroundStroke: themeTokens.value.graphEdgeLabelBgStroke,
+            labelPadding: hasNum ? [0, 1, -2, 0] : [0, 0, -1, 0], // [修复] 补回：精细的数字错位修正
+            labelBackgroundLineWidth: 1, // [修复] 补回
+            labelBackgroundRadius: 2, // [修复] 补回：圆角标签更好看
+            labelBackgroundPointerEvents: 'none', // [修复] 补回
+            labelOffsetX: distance < 50 ? -5 : 0, // [修复] 补回：防短线标签重叠
+            labelPointerEvents: 'none', // [修复] 补回
+
             operatorKey: edgeCtx.value.getOperatorKey(d),
             lineDash: [AntQuadratic.lineDashGap, AntQuadratic.lineDashGap],
-            pointerEvents: 'none',
           };
         }
         return {
@@ -305,9 +322,7 @@ watch(el, async () => {
 
 const showEdgeList = computed(() => {
   const list = props.filterUnitResults;
-  if (!list?.length) {
-    return [];
-  }
+  if (!list?.length) return [];
   return edgeCtx.value.groupList
     .filter((g) => list.includes(g.result))
     .flatMap((v) => v.edgeGroup);
@@ -325,9 +340,7 @@ watch(
         const addEdgeList = newEdgeList.filter(
           (v) => !oldEdgeList.some((e) => e.id === v.id),
         );
-        if (!removeEdgeList.length && !addEdgeList.length) {
-          return;
-        }
+        if (!removeEdgeList.length && !addEdgeList.length) return;
         graph.removeEdgeData(removeEdgeList.map((v) => v.id!));
         await graph.draw();
         graph.addEdgeData(addEdgeList);
