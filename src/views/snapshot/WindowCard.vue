@@ -12,17 +12,22 @@ import {
 } from '@/utils/node';
 import { copy, delay } from '@/utils/others';
 import type { TreeInst, TreeOption, TreeProps } from 'naive-ui';
-import { h, type ShallowRef } from 'vue';
+import { h, type ShallowRef, useTemplateRef } from 'vue';
 import { useSnapshotStore } from './snapshot';
 import SvgIcon from '@/components/SvgIcon.vue';
 
+// ==========================================
+// 1. 自定义扩展定义区 (Quick Find)
+// ==========================================
 interface QuickFindMeta {
   self: boolean;
   has: boolean;
 }
 
+// ==========================================
+// 2. 原版核心状态区
+// ==========================================
 const router = useRouter();
-
 const snapshotStore = useSnapshotStore();
 const { updateFocusNode, focusNode, focusTime } = snapshotStore;
 const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
@@ -31,42 +36,88 @@ const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
 let lastClickId = Number.NaN;
 const expandedKeys = shallowRef<number[]>([]);
 const selectedKeys = shallowRef<number[]>([]);
+const treeContainer = useTemplateRef<HTMLElement>('treeContainerRef');
+const treeRef = shallowRef<TreeInst>();
+
+// ==========================================
+// 3. 自定义功能计算区 (Quick Find 逻辑)
+// ==========================================
+const quickFindMeta = computed(() => {
+  const root = rootNode.value;
+  if (!root) return new Map<number, QuickFindMeta>();
+
+  const metaMap = new Map<number, QuickFindMeta>();
+  const computeMeta = (node: RawNode): QuickFindMeta => {
+    const self = getNodeQf(node);
+    let has = self;
+    for (const child of node.children) {
+      if (computeMeta(child).has) has = true;
+    }
+    const meta = { self, has };
+    metaMap.set(node.id, meta);
+    return meta;
+  };
+  computeMeta(root);
+  return metaMap;
+});
+
+const findQuickTarget = (node: RawNode): RawNode | null => {
+  const meta = quickFindMeta.value.get(node.id);
+  if (!meta || !meta.has) return null;
+  if (meta.self) return node;
+  for (const child of node.children) {
+    const target = findQuickTarget(child);
+    if (target) return target;
+  }
+  return null;
+};
+
+// ==========================================
+// 4. 核心监听与渲染区 (原版混合扩展)
+// ==========================================
 watch([() => focusNode.value, () => focusTime.value], async () => {
   if (!focusNode.value) return;
   const key = focusNode.value.id;
 
-  // Check if focus change was triggered by tree node click
+  // --- [扩展插件] Quick Find 拦截 ---
   if (lastClickId === key) {
-    // When click targeted this node, skip quick find
     lastClickId = Number.NaN;
   } else {
-    // Reset lastClickId for next time
     lastClickId = Number.NaN;
-
-    // Find first quick target in current node's subtree
     const target = findQuickTarget(focusNode.value);
     if (target && target.id !== key) {
-      // Update focus to quick target
       updateFocusNode(target);
-      return; // Exit to avoid duplicate processing
+      return; // 拦截成功，退出本次滚动逻辑
     }
   }
+  // ----------------------------------
 
   nextTick().then(async () => {
     await delay(300);
     if (key === focusNode.value?.id) {
       selectedKeys.value = [key];
 
-      // Scroll using treeRef only to avoid duplicate DOM operations
-      treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
+      // --- [原版] 节点树滚动逻辑 (完整保留，防止冲突) ---
+      if (!treeContainer.value) return;
+      const nodeRef = treeContainer.value.querySelector(
+        `[data-node-id="${key}"]`,
+      );
+      if (nodeRef) {
+        nodeRef.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      } else {
+        await delay(300);
+        treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
+      }
+      // ---------------------------------------------------
     }
   });
 
-  // Expand all ancestor nodes
+  // [原版] 展开所有父节点
   let parent = focusNode.value.parent;
-  if (!parent) {
-    return;
-  }
+  if (!parent) return;
   const s = new Set(expandedKeys.value);
   while (parent) {
     s.add(parent.id);
@@ -81,7 +132,6 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
   expandedKeys.value = [...s];
 });
 
-const treeRef = shallowRef<TreeInst>();
 const treeData = computed<TreeOption[]>(() => {
   return rootNode.value ? [rootNode.value as unknown as TreeOption] : [];
 });
@@ -90,54 +140,48 @@ const treeFilter: NonNullable<TreeProps['filter']> = (_pattern, node) => {
   const rawNode = node as unknown as RawNode;
   return rawNode.id === focusNode.value?.id;
 };
+
 const treeNodeProps: NonNullable<TreeProps['nodeProps']> = (info) => {
   const option = info.option as unknown as RawNode;
+
+  // 1. [原版] 基础样式与事件
   const style = getNodeStyle(option, focusNode.value);
-  const meta = quickFindMeta.value.get(option.id);
-
-  // Create new style object with proper type
-  const newStyle: Record<string, string | number | undefined> = { ...style };
-
-  // Add opacity only if node has no quick find potential and opacity is undefined
-  if (meta && !meta.has && newStyle.opacity === undefined) {
-    newStyle.opacity = 0.7;
-  }
-
-  return {
+  const props = {
     onClick: () => {
       lastClickId = option.id;
       updateFocusNode(option);
     },
     style: {
       '--n-node-text-color': style.color,
-      ...newStyle,
-    },
+      ...style,
+    } as Record<string, string | number | undefined>,
     class: 'whitespace-nowrap',
     'data-node-id': String(option.id),
   };
+
+  // 2. [扩展插件] 追加 Quick Find 的透明度处理
+  const meta = quickFindMeta.value.get(option.id);
+  if (meta && !meta.has && props.style.opacity === undefined) {
+    props.style.opacity = 0.7;
+  }
+
+  return props;
 };
 
 const renderLabel: NonNullable<TreeProps['renderLabel']> = (info) => {
   const option = info.option as unknown as RawNode;
-  // Compute node label once and reuse
-  const label = getNodeLabel(option);
+  const label = getNodeLabel(option); // [原版] 获取 label
   const meta = quickFindMeta.value.get(option.id);
 
-  // If node has no quick find potential, return original label
+  // [扩展插件] 如果没有 QF 数据，直接返回原版 label
   if (!meta || !meta.has) {
     return label;
   }
 
-  // If node has quick find potential, return label with icon
+  // [扩展插件] 有 QF 数据，使用 h 函数渲染带有 Icon 的 label
   return h(
     'span',
-    {
-      style: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '4px',
-      },
-    },
+    { style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } },
     [
       label,
       h(SvgIcon, {
@@ -160,13 +204,14 @@ const renderLabel: NonNullable<TreeProps['renderLabel']> = (info) => {
   );
 };
 
-const deviceName = computed(() => {
-  return `${getDevice(snapshot.value).manufacturer} Android ${getDevice(snapshot.value).release || ``}`;
-});
-
-const isSystem = computed(() => {
-  return getAppInfo(snapshot.value).isSystem;
-});
+// ==========================================
+// 5. 顶栏信息计算区 (原版)
+// ==========================================
+const deviceName = computed(
+  () =>
+    `${getDevice(snapshot.value).manufacturer} Android ${getDevice(snapshot.value).release || ``}`,
+);
+const isSystem = computed(() => getAppInfo(snapshot.value).isSystem);
 const activityId = computed(() => {
   const v = snapshot.value.activityId;
   const appId = snapshot.value.appId;
@@ -176,68 +221,15 @@ const activityId = computed(() => {
   }
   return v;
 });
-
-const onDelete = async () => {
-  message.success(`删除成功,即将回到首页`);
-  await delay(2000);
-  router.replace({
-    path: `/`,
-  });
-};
 const gkdVersionName = computed(() => {
   const v = getGkdAppInfo(snapshot.value).versionName;
   return v ? `GKD@${v}` : undefined;
 });
 
-const quickFindMeta = computed(() => {
-  const root = rootNode.value;
-  if (!root) {
-    return new Map<number, QuickFindMeta>();
-  }
-  const metaMap = new Map<number, QuickFindMeta>();
-  const computeMeta = (node: RawNode): QuickFindMeta => {
-    const self = getNodeQf(node);
-    let has = self;
-
-    for (const child of node.children) {
-      const childMeta = computeMeta(child);
-      if (childMeta.has) {
-        has = true;
-      }
-    }
-
-    const meta = { self, has };
-    metaMap.set(node.id, meta);
-    return meta;
-  };
-
-  computeMeta(root);
-  return metaMap;
-});
-
-// Find first quick target in subtree
-const findQuickTarget = (node: RawNode): RawNode | null => {
-  const meta = quickFindMeta.value.get(node.id);
-
-  // If node has no quick find potential, return null immediately
-  if (!meta || !meta.has) {
-    return null;
-  }
-
-  // If node itself is a quick find target, return it
-  if (meta.self) {
-    return node;
-  }
-
-  // Otherwise, recurse into children
-  for (const child of node.children) {
-    const target = findQuickTarget(child);
-    if (target) {
-      return target;
-    }
-  }
-
-  return null;
+const onDelete = async () => {
+  message.success(`删除成功,即将回到首页`);
+  await delay(2000);
+  router.replace({ path: `/` });
 };
 </script>
 
@@ -250,20 +242,14 @@ const findQuickTarget = (node: RawNode): RawNode | null => {
         </template>
         <NTooltip>
           <template #trigger>
-            <div @click="copy(deviceName)">
-              {{ deviceName }}
-            </div>
+            <div @click="copy(deviceName)">{{ deviceName }}</div>
           </template>
           设备名称
         </NTooltip>
 
         <NTooltip>
           <template #trigger>
-            <div
-              :class="{
-                'opacity-50': !gkdVersionName,
-              }"
-            >
+            <div :class="{ 'opacity-50': !gkdVersionName }">
               {{ gkdVersionName || 'null' }}
             </div>
           </template>
@@ -317,9 +303,7 @@ const findQuickTarget = (node: RawNode): RawNode | null => {
         <NTooltip>
           <template #trigger>
             <div
-              :class="{
-                'opacity-50': !activityId,
-              }"
+              :class="{ 'opacity-50': !activityId }"
               @click="copy(activityId)"
             >
               {{ activityId || 'null' }}
@@ -336,8 +320,10 @@ const findQuickTarget = (node: RawNode): RawNode | null => {
         @delete="onDelete"
       />
     </div>
+
     <div h-1px mt-4px style="background-color: var(--divider-color)" />
-    <div flex-1 min-h-0>
+
+    <div ref="treeContainerRef" flex-1 min-h-0>
       <NTree
         ref="treeRef"
         v-model:expandedKeys="expandedKeys"
