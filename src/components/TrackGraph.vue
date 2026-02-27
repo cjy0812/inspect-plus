@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { getNodeQf, getTrackTreeContext } from '@/utils/node';
-import { transform, connectOperatorIcons } from '@/utils/selector';
+import { transform } from '@/utils/selector';
 import type { EdgeData, TreeData } from '@antv/g6';
 import { Graph, treeToGraphData } from '@antv/g6';
-import type { QueryPath } from '@gkd-kit/selector';
-import { QueryResult } from '@gkd-kit/selector';
+import { QueryPath, QueryResult } from '@gkd-kit/selector';
 import { uniqBy } from 'lodash-es';
 import { AntQuadratic, OperatorEdge } from '@/utils/g6';
 import { useTheme } from '@/composables/useTheme';
@@ -21,6 +20,7 @@ const props = withDefaults(
 
 const el = shallowRef<HTMLElement>();
 const graphRef = shallowRef<Graph>();
+const graphError = shallowRef('');
 const { themeTokens } = useTheme();
 
 // ==========================================
@@ -65,46 +65,26 @@ interface EdgeContext {
   getLabel: (edge: EdgeData) => string;
   getColor: (edge: EdgeData) => string;
   getGroupIndex: (edge: EdgeData) => number;
-  getOperatorIcon: (edge: EdgeData) => string;
   getOperatorKey: (edge: EdgeData) => string;
   getCurveOffset: (edge: EdgeData) => number;
 }
 
 const edgeCtx = computed<EdgeContext>(() => {
   const countMap: Record<string, number> = {};
-  const edgeSafeDataMap: Record<
-    string,
-    {
-      label: string;
-      operatorKey: string;
-      _isPrevious: boolean;
-      _similarId: string;
-    }
-  > = {};
+  const edgePathMap: Record<string, QueryPath<RawNode>> = {};
 
   const getNodeEdge = (path: QueryPath<RawNode>): EdgeData => {
     const key = `#${path.source.id}-${path.target.id}`;
     const count = countMap[key] || 0;
     countMap[key] = count + 1;
     const id = key + (count > 0 ? `-${count}` : '');
-
-    let operatorKey = '';
-    let label = '';
-    let _isPrevious = false;
-
-    // [自定义] 增加异常防护
-    try {
-      operatorKey = path.operator?.key || '';
-      label = path.formatConnectOffset || '';
-      _isPrevious = path.connectWrapper.segment.operator.key === '->';
-    } catch {
-      console.warn(`无法从路径 ${id} 提取 GKD 数据`);
-    }
+    edgePathMap[id] = path;
+    const operatorKey = path.connectWrapper.segment.operator.key;
+    const _isPrevious = operatorKey === '->';
 
     const _similarId = [path.source.id, path.target.id, Number(_isPrevious)]
       .sort()
       .join('-');
-    edgeSafeDataMap[id] = { label, operatorKey, _isPrevious, _similarId };
 
     return {
       id,
@@ -117,23 +97,27 @@ const edgeCtx = computed<EdgeContext>(() => {
   };
 
   const groupList = props.showUnitResults.map((result) => {
-    let edgeGroup: EdgeData[] = [];
-    try {
-      const paths = result
-        .getNodeConnectPath(transform)
-        .asJsReadonlyArrayView();
-      edgeGroup = paths.map((v) => getNodeEdge(v));
-    } catch {
-      console.error('GKD 路径生成失败');
-    }
+    const paths = Array.from(
+      result.getNodeConnectPath(transform).asJsReadonlyArrayView(),
+    );
+    const edgeGroup = paths.map((v) => getNodeEdge(v));
     return { result, edgeGroup };
   });
 
   const edgeList = groupList.flatMap((v) => v.edgeGroup);
 
-  const getLabel = (edge: EdgeData) => edgeSafeDataMap[edge.id!]?.label || '';
+  const getLabel = (edge: EdgeData) => {
+    const path = edgePathMap[edge.id!];
+    if (!path) return '';
+    try {
+      return path.formatConnectOffset || '';
+    } catch {
+      // gkd selector's formatOffset requires offset >= 0; fallback to raw operator key.
+      return path.connectWrapper.segment.operator.key || '';
+    }
+  };
   const getOperatorKey = (edge: EdgeData) =>
-    edgeSafeDataMap[edge.id!]?.operatorKey || '';
+    edgePathMap[edge.id!]?.connectWrapper.segment.operator.key || '';
   const getSimilarId = (edge: EdgeData) => (edge._similarId as string) || '';
 
   const getGroupIndex = (edge: EdgeData): number => {
@@ -179,11 +163,20 @@ const edgeCtx = computed<EdgeContext>(() => {
     getLabel,
     getColor,
     getGroupIndex,
-    getOperatorIcon: (edge) => connectOperatorIcons[getOperatorKey(edge)] || '',
     getOperatorKey,
     getCurveOffset,
   };
 });
+
+const getErrorMessage = (err: unknown, fallback: string) => {
+  if (err && typeof err === 'object' && 'message' in err) {
+    const message = Reflect.get(err, 'message');
+    if (typeof message === 'string' && message.trim()) {
+      return `${fallback}: ${message}`;
+    }
+  }
+  return fallback;
+};
 
 const isCurveEdge = (edge: EdgeData): boolean => edge.id?.[0] === '#';
 
@@ -229,6 +222,11 @@ onUnmounted(() => {
 
 watch(el, async () => {
   if (!el.value) return;
+  if (graphRef.value) {
+    graphRef.value.destroy();
+    graphRef.value = undefined;
+  }
+  graphError.value = '';
   const graph = new Graph({
     container: el.value,
     data: treeGraphData.value,
@@ -316,7 +314,8 @@ watch(el, async () => {
     await graph.render();
     graphRef.value = graph;
   } catch (e) {
-    console.error('G6 渲染初始化失败:', e);
+    graphError.value = getErrorMessage(e, '关系图渲染失败');
+    console.error(graphError.value, e);
   }
 });
 
@@ -348,13 +347,41 @@ watch(
         graph.addEdgeData(newEdgeList);
       }
       await graph.draw();
+      graphError.value = '';
     } catch (e) {
-      console.warn('更新图表边数据时出错:', e);
+      graphError.value = getErrorMessage(e, '关系图更新失败');
+      console.warn(graphError.value, e);
     }
   },
 );
 </script>
 
 <template>
-  <div ref="el" class="TrackGraph" />
+  <div class="TrackGraphWrap">
+    <div ref="el" class="TrackGraph" />
+    <div v-if="graphError" class="TrackGraphError">
+      {{ graphError }}
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.TrackGraphWrap {
+  position: relative;
+}
+
+.TrackGraphError {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  max-width: min(80%, 460px);
+  padding: 6px 10px;
+  border: 1px solid var(--accent-danger-color);
+  border-radius: 6px;
+  background: var(--surface-raised-color);
+  color: var(--accent-danger-color);
+  font-size: 12px;
+  line-height: 1.35;
+}
+</style>
