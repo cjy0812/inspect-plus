@@ -29,25 +29,31 @@ jobs:
       - run: pnpm exec tsx ./scripts/updateVersion.ts
       - run: pnpm run build:mirror
 
+      # --- 容错处理开始 ---
+
       - name: Publish package
+        continue-on-error: true # 如果 NPM 发布失败（Token报错），跳过并继续
         run: |
           pnpm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
           pnpm publish --no-git-checks
 
       # 1. Cloudflare Pages 部署
       - name: Deploy to Cloudflare Pages
+        continue-on-error: true # 如果 CF 部署失败（项目名报错），跳过并继续
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=gkd-inspect
+          command: pages deploy dist --project-name=inspect-plus1
 
-      # 2. GitHub Pages 部署 (分两步：上传产物 -> 正式发布)
+      # 2. GitHub Pages 部署
       - name: Upload GitHub Pages artifact
+        continue-on-error: true
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist # 指定构建后的静态文件目录
+          path: ./dist
 
       - name: Deploy to GitHub Pages
+        continue-on-error: true # 如果 GH Pages 部署失败，不影响整个流程结束
         id: deployment
         uses: actions/deploy-pages@v4

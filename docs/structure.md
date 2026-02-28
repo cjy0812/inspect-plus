@@ -36,7 +36,17 @@
 
 ## 在线部署指南
 
-### - 部署到 Cloudflare Pages
+### 部署到 Cloudflare Pages
+
+> [!IMPORTANT]
+> **部署方式说明（二选一）**
+> 1. **自动分发模式 **：
+> 直接配置 GitHub Secrets（Token）。当你修改代码并 `push` 后，GitHub Actions 会自动帮你在 **Cloudflare Pages** 和 **GitHub Pages** 同时更新网页，版本号也会自动更新。
+> 2. **网页直接绑定模式 **：
+> 在 Cloudflare 后台直接关联 GitHub 仓库。虽然设置简单，但无法运行项目自定义的自动更新脚本，可能导致网页显示的版本信息不准。
+> 
+
+
 1. 获取认证凭据 (Secrets)
 
 因为你是通过 GitHub Actions 远程“推”文件给 Cloudflare，而不是让 Cloudflare 来“拉”代码，所以必须给 Actions 授权。
@@ -82,8 +92,31 @@
   * 将`CLOUDFLARE_ACCOUNT_ID`与`CLOUDFLARE_API_TOKEN`分别填进去
 
     ![image-20260228070118137](./images/09_Github-add.webp)
+    
+---
+3. **在CloudFlare创建对应Pages**
 
-### - 部署到 GitHub Pages
+  * 回到CF worker & pages页 -> 
+    ![image-20260228090843607](./images/19_CF-Pagesmain.webp)
+  * 点击`开始使用` -> 导入现有git存储库
+<div style="display:flex; gap:10px;">
+    <img src="./images/20_CF-Pagesadd.webp" alt="image-20260228091113378" style="zoom: 58%;" />
+    <img src="./images/21_CF-Pagesadd-git.webp" alt="image-20260228091408354" style="zoom:67%;" />
+</div>
+
+  * 登录你的GitHub/GitLab账户后选择你自己仓库点继续
+    <img src="./images/22_CF-Pagesadd-git-add.webp" alt="image-20260228091747114" style="zoom:67%;" />
+  * 填写好参数(纯在CF网页构建需要)后点击`保存并部署`，Aciton构建用户只需留空
+<div style="display:flex; gap:10px;">
+    <img src="./images/23_CF-Pagescommad02.webp" alt="image-20260228092312160" style="zoom:67%;" />
+    <img src="./images/25_CF-Pagescommad01.png" alt="image-20260228093307881" style="zoom:67%;" />
+</div>
+
+  * 回到项目源代码修改`.github/workflows/deploy.yml`文件其中`--project-name=你的pages名`![image-20260228092947111](./images/24_ci-CFyml.webp)
+
+
+
+### 部署到 GitHub Pages
 
 把 GitHub Pages 的部署方式改为 YAML（Actions）分发后，**必须**在 GitHub 仓库设置里进行一次“接头认证”，否则 Actions 跑完后页面也不会更新。
 
