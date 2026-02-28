@@ -126,7 +126,7 @@ GitHub 默认会去寻找 `gh-pages` 分支，现在我们要告诉它“等 Act
 * 在使用 Actions 部署时，构建产物 `dist` 目录里**必须包含一个名为 `CNAME` 的文件**，内容是你的域名。
 * 或者在部署成功后，去 **Settings** -> **Pages** 重新填一遍自定义域名，GitHub 会自动帮你处理。
 
-## 3. 发布NPM包
+## 3. 发布NPM包 (非必须)
 
 ### 解决方案
 
@@ -156,9 +156,12 @@ GitHub 默认会去寻找 `gh-pages` 分支，现在我们要告诉它“等 Act
 2. **更新 GitHub 仓库配置**：
     - 进入仓库 **Settings** -> **Secrets and variables** -> **Actions**。
     ![image-20260228065533714](./images/08_Github-settings.webp)
-
     - 变量名称填 `NPM_TOKEN`，点击修改（或重新创建），粘贴刚才生成的 Token
     ![image-20260228084051262](./images/17_NPM-token-github.webp)
+
+3. **修改发包名为自己**
+   - 在根目录找到`package.json`文件把开头名字换成`@你的npm用户名（必须）/仓库名(非强制一样)`  
+    ![image-20260228085420358](./images/18_NPM-Packagejson.webp)
 
 
 ## 项目目录结构
