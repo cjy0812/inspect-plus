@@ -44,7 +44,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=inspect-plus1
+          command: pages deploy dist --project-name=inspect-plus
 
       # 2. GitHub Pages 部署
       - name: Upload GitHub Pages artifact
