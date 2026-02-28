@@ -27,7 +27,7 @@ jobs:
       - run: pnpm install
 
       - run: pnpm exec tsx ./scripts/updateVersion.ts
-      - run: pnpm run build:mirror
+      - run: pnpm run build
 
       # --- 容错处理开始 ---
 
