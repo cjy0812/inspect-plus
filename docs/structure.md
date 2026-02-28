@@ -41,32 +41,32 @@
 
 因为你是通过 GitHub Actions 远程“推”文件给 Cloudflare，而不是让 Cloudflare 来“拉”代码，所以必须给 Actions 授权。
 
-  * 获取**CLOUDFLARE_ACCOUNT_ID**:
+   * 获取**CLOUDFLARE_ACCOUNT_ID**:
 
-  * 登录 Cloudflare 控制台，点击左侧的**Computer**-> **Workers & Pages**  。
+   * 登录 Cloudflare 控制台，点击左侧的**Computer**-> **Workers & Pages**  
 
-  * 在右侧栏可以看到 **Account ID**，复制它备用。
+   * 在右侧栏可以看到 **Account ID**，复制它备用。
 
   ![image-20260228055225745](./images/01_CF-AccountID.webp)
 
 ---
 
-  * 获取**CLOUDFLARE_API_TOKEN**:
-  * 点击左上角快速搜索 -> 输入**api** -> **回车**，出现 **账户API令牌**-> **创建令牌**
+   * 获取**CLOUDFLARE_API_TOKEN**:
+   * 点击左上角快速搜索 -> 输入**api** -> **回车**，出现 **账户API令牌**-> **创建令牌**
 <div style="display:flex; gap:10px;">
   <img src="./images/02_CF-API-Tokensearch.webp" alt="image-20260228055053315" style="zoom:46%;" />
   <img src="./images/03_CF-API-Tokenadd.webp" alt="image-20260228055937967" style="zoom: 38%;" />
 </div>
 
-  * 使用**自定义令牌**-> **开始使用**
+   * 使用**自定义令牌**-> **开始使用**
 
   <img src="./images/04_CF-API-Tokenadd-02.webp" alt="image-20260228061105050" style="zoom:80%;" />
 
-  * 确保权限包含 `Cloudflare Pages: Edit`！
+   * 确保权限包含 `Cloudflare Pages: Edit`！
 
   <img src="./images/05_CF-API-Tokenedit.webp" alt="image-20260228061622372" style="zoom: 80%;" />
 
-  * 点击**创建令牌**后**复制字符串**
+   * 点击**创建令牌**后**复制字符串**
 <div style="display:flex; gap:10px;">
   <img src="./images/06_CF-API-Tokenadd-03.webp" alt="image-20260228061932995" style="zoom:67%;" />
   <img src="./images/07_CF-API-Tokencopy-02.webp" alt="image-20260228062213438" style="zoom:80%;" />
@@ -76,12 +76,12 @@
 
 2. **配置到 GitHub**:
 
-  * 到你的Github仓库点击**设置** -> **机密和变量**下拉菜单 -> **操作** -> 点击`新建操作变量`
+   * 到你的Github仓库点击**设置** -> **机密和变量**下拉菜单 -> **操作** -> 点击`新建操作变量`
     ![image-20260228065533714](./images/08_Github-settings.webp)
-  
+
   * 将`CLOUDFLARE_ACCOUNT_ID`与`CLOUDFLARE_API_TOKEN`分别填进去
 
-  ![image-20260228070118137](./images/09_Github-add.webp)
+    ![image-20260228070118137](./images/09_Github-add.webp)
 
 ### - 部署到 GitHub Pages
 
@@ -125,6 +125,40 @@ GitHub 默认会去寻找 `gh-pages` 分支，现在我们要告诉它“等 Act
 
 * 在使用 Actions 部署时，构建产物 `dist` 目录里**必须包含一个名为 `CNAME` 的文件**，内容是你的域名。
 * 或者在部署成功后，去 **Settings** -> **Pages** 重新填一遍自定义域名，GitHub 会自动帮你处理。
+
+## 3. 发布NPM包
+
+### 解决方案
+
+#### 第一步：检查并重新配置 GitHub Secrets
+
+1. **生成新 Token**：
+
+   - 登录 [npmjs.com](https://www.npmjs.com/)。
+
+   - 进入 **Access Tokens** -> **Generate New Token** ->
+    <div style="display:flex; gap:10px;">
+      <img src="./images/12_NPM-main.webp" alt="image-20260228080118195" style="zoom:40%;" />
+      <img src="./images/13_NPM-main-token.webp" alt="image-20260228080331750" style="zoom:40%;" />
+    </div>
+
+   - 填好名称日期等信息后点`Generate token`
+    <div style="display:flex; gap:10px;">
+      <img src="./images/14_NPM-token-add01.webp" alt="image-20260228082205605" style="zoom:60%;" />
+      <img src="./images/15_NPM-token-add02.webp" alt="image-20260228082342486" style="zoom:50%;" />
+    </div>
+   
+   - 创建好点`copy`
+
+    ![image-20260228083334285](./images/16_NPM-token-copy.webp)
+
+
+2. **更新 GitHub 仓库配置**：
+    - 进入仓库 **Settings** -> **Secrets and variables** -> **Actions**。
+    ![image-20260228065533714](./images/08_Github-settings.webp)
+
+    - 变量名称填 `NPM_TOKEN`，点击修改（或重新创建），粘贴刚才生成的 Token
+    ![image-20260228084051262](./images/17_NPM-token-github.webp)
 
 
 ## 项目目录结构
