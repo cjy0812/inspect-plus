@@ -34,9 +34,13 @@ export const useSnapshotPlus = () => {
     loadingBar.finish();
   });
 
-  const searchShow = useStorage('searchShow', true, sessionStorage);
-  const ruleShow = useStorage('ruleShow', false, sessionStorage);
-  const attrShow = useStorage('attrShow', true, sessionStorage);
+  const searchShow = useStorage(
+    'snapshotPlus:searchShow',
+    true,
+    sessionStorage,
+  );
+  const ruleShow = useStorage('snapshotPlus:ruleShow', false, sessionStorage);
+  const attrShow = useStorage('snapshotPlus:attrShow', true, sessionStorage);
   const settingsDlgShow = shallowRef(false);
 
   /** 打开设置弹窗 */
