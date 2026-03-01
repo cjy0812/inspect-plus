@@ -1,32 +1,25 @@
+import { watchEffect, onScopeDispose, shallowRef, type Ref } from 'vue';
+import { useStorage } from '@vueuse/core';
 import { loadingBar } from '@/utils/discrete';
 import { useSnapshotStore } from '@/views/snapshot/snapshot';
 
 /**
- * Snapshot Plus 面板显示状态（会话级持久化）。
+ * Snapshot Plus 面板显示状态接口
  */
-export interface SnapshotPlusPanels {
-  /** 搜索面板显示状态 */
+export interface SnapshotPlusState {
   searchShow: Ref<boolean>;
-  /** 规则测试面板显示状态 */
   ruleShow: Ref<boolean>;
-  /** 属性面板显示状态 */
   attrShow: Ref<boolean>;
-  /** 设置弹窗显示状态 */
   settingsDlgShow: Ref<boolean>;
 }
 
-/**
- * SnapshotPage 的 Plus 逻辑聚合：
- * - 加载条联动
- * - 面板显隐状态
- * - 轨迹弹窗关闭清理
- */
 export const useSnapshotPlus = () => {
-  const { snapshot, rootNode, loading, redirected, trackData, trackShow } =
-    useSnapshotStore();
+  // 1. 获取官方 Store 实例
+  const snapshotStore = useSnapshotStore();
 
+  // 2. 联动加载条逻辑
   watchEffect(() => {
-    if (loading.value) loadingBar.start();
+    if (snapshotStore.loading.value) loadingBar.start();
     else loadingBar.finish();
   });
 
@@ -34,6 +27,7 @@ export const useSnapshotPlus = () => {
     loadingBar.finish();
   });
 
+  // 3. Plus 专属持久化状态
   const searchShow = useStorage(
     'snapshotPlus:searchShow',
     true,
@@ -43,23 +37,18 @@ export const useSnapshotPlus = () => {
   const attrShow = useStorage('snapshotPlus:attrShow', true, sessionStorage);
   const settingsDlgShow = shallowRef(false);
 
-  /** 打开设置弹窗 */
   const openSettings = () => {
     settingsDlgShow.value = true;
   };
 
-  /** 轨迹弹窗关闭后清理数据，防止残留引用 */
   const onTrackDialogClosed = () => {
-    trackData.value = undefined;
+    snapshotStore.trackData.value = undefined;
   };
 
   return {
-    snapshot,
-    rootNode,
-    loading,
-    redirected,
-    trackData,
-    trackShow,
+    // 转发官方 Store 内容（保持扁平化以便视图直接读取）
+    ...snapshotStore,
+    // 注入 Plus 逻辑
     searchShow,
     ruleShow,
     attrShow,
