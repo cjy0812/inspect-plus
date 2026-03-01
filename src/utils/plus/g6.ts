@@ -1,5 +1,5 @@
 import { ExtensionCategory, register } from '@antv/g6';
-import type { EdgeData, ID, Node } from '@antv/g6';
+import type { EdgeData, Node } from '@antv/g6';
 import { AntQuadratic } from '@/utils/g6';
 
 /**
@@ -26,13 +26,13 @@ export class OperatorEdge extends AntQuadratic {
 
   private drawOperatorIcon() {
     const attr: EdgeAttributes = this.attributes as EdgeAttributes;
-    const edgeModel: EdgeModel = this.context.model.getEdgeData(
-      this.id as ID,
-    ) as EdgeModel;
+    const edgeModel = this.context.model
+      .getEdgeData()
+      .find((edge) => edge.id === this.id);
     const operatorKey =
       attr.operatorKey ||
       attr.data?.operatorKey ||
-      edgeModel?.data?.operatorKey;
+      getOperatorKeyFromEdgeData(edgeModel);
 
     if (!operatorKey) return;
 
@@ -104,8 +104,11 @@ interface EdgeAttributes {
   };
 }
 
-interface EdgeModel extends EdgeData {
-  data?: {
-    operatorKey?: string;
-  };
-}
+const getOperatorKeyFromEdgeData = (edge: EdgeData | undefined) => {
+  if (!edge || !('data' in edge)) return undefined;
+  const data = edge.data;
+  if (!data || typeof data !== 'object') return undefined;
+  if (!('operatorKey' in data)) return undefined;
+  const key = data.operatorKey;
+  return typeof key === 'string' ? key : undefined;
+};
