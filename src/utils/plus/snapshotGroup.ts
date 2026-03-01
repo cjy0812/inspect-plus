@@ -1,4 +1,4 @@
-import { getAppInfo } from './node';
+import { getAppInfo } from '@/utils/node';
 
 export interface SnapshotActivityGroup {
   activityId: string;

@@ -10,12 +10,11 @@ import {
 import { buildEmptyFn, delay } from '@/utils/others';
 import { snapshotStorage } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
+import { getImportUrl, getImagUrl } from '@/utils/url';
 import {
   getCustomDomainImportUrl,
   getOfficialImportUrl,
-  getImportUrl,
-  getImagUrl,
-} from '@/utils/url';
+} from '@/utils/plus/url';
 
 const props = withDefaults(
   defineProps<{
