@@ -30,6 +30,10 @@ export const useSnapshotPlus = () => {
     else loadingBar.finish();
   });
 
+  onScopeDispose(() => {
+    loadingBar.finish();
+  });
+
   const searchShow = useStorage('searchShow', true, sessionStorage);
   const ruleShow = useStorage('ruleShow', false, sessionStorage);
   const attrShow = useStorage('attrShow', true, sessionStorage);
