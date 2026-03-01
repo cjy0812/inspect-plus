@@ -11,9 +11,14 @@ export interface SnapshotPlusState {
   ruleShow: Ref<boolean>;
   attrShow: Ref<boolean>;
   settingsDlgShow: Ref<boolean>;
+  openSettings: () => void;
+  onTrackDialogClosed: () => void;
 }
 
-export const useSnapshotPlus = () => {
+export type UseSnapshotPlusResult = ReturnType<typeof useSnapshotStore> &
+  SnapshotPlusState;
+
+export const useSnapshotPlus = (): UseSnapshotPlusResult => {
   // 1. 获取官方 Store 实例
   const snapshotStore = useSnapshotStore();
 

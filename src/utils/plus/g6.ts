@@ -7,7 +7,7 @@ import { AntQuadratic } from '@/utils/g6';
  * 继承自官方 AntQuadratic，实现自定义图标绘制。
  */
 export class OperatorEdge extends AntQuadratic {
-  // 注意：此处建议跟随项目习惯，如果官方基类用 tyoe，这里也可以考虑兼容
+  // 注意：此处建议跟随项目习惯，如果官方基类用 type，这里也可以考虑兼容
   static type = 'operator-edge';
 
   onCreate() {
@@ -68,7 +68,7 @@ export class OperatorEdge extends AntQuadratic {
         case '-':
           return 'M -4 0 L 4 0';
         case '+':
-          return 'M -4 0 L 4 0 M 0 -4 L 0 4';
+          return 'M -4 0 L 4 0';
         case '~':
           return 'M -4 0 Q 0 -3 4 0';
         default:

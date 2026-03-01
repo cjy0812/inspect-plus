@@ -30,7 +30,9 @@ export const normalizeOriginText = (originText: string) => {
   const text = originText.trim();
   if (!text) return '';
   const u = isValidUrl(text);
-  return u ? u.origin : '';
+  if (!u) return '';
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+  return u.origin;
 };
 
 /**
