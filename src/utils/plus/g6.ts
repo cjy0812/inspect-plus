@@ -26,13 +26,12 @@ export class OperatorEdge extends AntQuadratic {
 
   private drawOperatorIcon() {
     const attr: EdgeAttributes = this.attributes as EdgeAttributes;
-    const edgeModel = this.context.model
-      .getEdgeData()
-      .find((edge) => edge.id === this.id);
+    const operatorKeyFromAttr = attr.operatorKey || attr.data?.operatorKey;
     const operatorKey =
-      attr.operatorKey ||
-      attr.data?.operatorKey ||
-      getOperatorKeyFromEdgeData(edgeModel);
+      operatorKeyFromAttr ||
+      getOperatorKeyFromEdgeData(
+        this.context.model.getEdgeData().find((edge) => edge.id === this.id),
+      );
 
     if (!operatorKey) return;
 
