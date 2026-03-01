@@ -1,4 +1,5 @@
 import { ExtensionCategory, register } from '@antv/g6';
+import type { EdgeData, ID, Node } from '@antv/g6';
 import { AntQuadratic } from '@/utils/g6';
 
 /**
@@ -24,8 +25,10 @@ export class OperatorEdge extends AntQuadratic {
   }
 
   private drawOperatorIcon() {
-    const attr = this.attributes as any;
-    const edgeModel = this.context.model.getEdgeData(this.id as any) as any;
+    const attr: EdgeAttributes = this.attributes as EdgeAttributes;
+    const edgeModel: EdgeModel = this.context.model.getEdgeData(
+      this.id as ID,
+    ) as EdgeModel;
     const operatorKey =
       attr.operatorKey ||
       attr.data?.operatorKey ||
@@ -46,9 +49,10 @@ export class OperatorEdge extends AntQuadratic {
       centerX = (bbox.left + bbox.right) / 2;
       centerY = (bbox.top + bbox.bottom) / 2;
     } catch {
-      // 这里的 sourceNode 和 targetNode 假设已在基类定义
-      const sourcePos = (this as any).sourceNode.getPosition();
-      const targetPos = (this as any).targetNode.getPosition();
+      const sourceNode: Node = this.sourceNode;
+      const targetNode: Node = this.targetNode;
+      const sourcePos = sourceNode.getPosition();
+      const targetPos = targetNode.getPosition();
       centerX = (sourcePos[0] + targetPos[0]) / 2;
       centerY = (sourcePos[1] + targetPos[1]) / 2;
     }
@@ -91,3 +95,17 @@ export class OperatorEdge extends AntQuadratic {
 }
 
 register(ExtensionCategory.EDGE, OperatorEdge.type, OperatorEdge);
+
+interface EdgeAttributes {
+  operatorKey?: string;
+  stroke?: string;
+  data?: {
+    operatorKey?: string;
+  };
+}
+
+interface EdgeModel extends EdgeData {
+  data?: {
+    operatorKey?: string;
+  };
+}
