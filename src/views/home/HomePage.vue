@@ -70,6 +70,36 @@ const groupedSnapshots = computed(() =>
   buildGroupedSnapshots(filteredSnapshots.value, snapshotImportTime),
 );
 
+const snapshotDisplayLimit = 50;
+const expandedActivitySnapshotKeys = shallowRef<string[]>([]);
+const getActivityDisplayKey = (packageName: string, activityId: string) =>
+  `${packageName}::${activityId}`;
+const isActivityFullyShown = (packageName: string, activityId: string) =>
+  expandedActivitySnapshotKeys.value.includes(
+    getActivityDisplayKey(packageName, activityId),
+  );
+const getVisibleSnapshots = (
+  packageName: string,
+  activity: { activityId: string; snapshots: Snapshot[] },
+) => {
+  if (
+    isActivityFullyShown(packageName, activity.activityId) ||
+    activity.snapshots.length <= snapshotDisplayLimit
+  ) {
+    return activity.snapshots;
+  }
+  return activity.snapshots.slice(0, snapshotDisplayLimit);
+};
+const showMoreSnapshots = (packageName: string, activityId: string) => {
+  const key = getActivityDisplayKey(packageName, activityId);
+  if (!expandedActivitySnapshotKeys.value.includes(key)) {
+    expandedActivitySnapshotKeys.value = [
+      ...expandedActivitySnapshotKeys.value,
+      key,
+    ];
+  }
+};
+
 const expandedPackageNames = shallowRef<(string | number)[]>([]);
 const expandedActivityNames = shallowRef<(string | number)[]>([]);
 watchEffect(() => {
@@ -427,6 +457,7 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
           :accordion="false"
           :displayDirective="settingsStore.lowMemoryMode ? 'if' : 'show'"
         >
+          <!-- TODO(perf): 当前为嵌套 NCollapse + 明细列表，后续可迁移到 Virtual List 以优化超大快照集渲染 -->
           <NCollapseItem
             v-for="group in groupedSnapshots"
             :key="group.packageName"
@@ -542,7 +573,10 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
                 </template>
                 <NSpace vertical :size="6">
                   <div
-                    v-for="item in activity.snapshots"
+                    v-for="item in getVisibleSnapshots(
+                      group.packageName,
+                      activity,
+                    )"
                     :key="item.id"
                     class="rounded-8px border border-solid px-10px py-6px transition-colors"
                     :class="[
@@ -671,6 +705,31 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
                         :onDelete="updateSnapshots"
                       />
                     </div>
+                  </div>
+                  <div
+                    v-if="
+                      activity.snapshots.length > snapshotDisplayLimit &&
+                      !isActivityFullyShown(
+                        group.packageName,
+                        activity.activityId,
+                      )
+                    "
+                    class="text-center py-6px"
+                  >
+                    <NButton
+                      quaternary
+                      size="small"
+                      @click="
+                        showMoreSnapshots(
+                          group.packageName,
+                          activity.activityId,
+                        )
+                      "
+                    >
+                      {{
+                        `显示更多（剩余 ${activity.snapshots.length - snapshotDisplayLimit} 条）`
+                      }}
+                    </NButton>
                   </div>
                 </NSpace>
               </NCollapseItem>

@@ -13,8 +13,6 @@ interface DialogOptions {
 interface DialogState {
   visible: boolean;
   options: DialogOptions;
-  resolve?: (value: any) => void;
-  reject?: (reason?: any) => void;
 }
 
 export interface DialogStoreState {
@@ -24,6 +22,11 @@ export interface DialogStoreState {
 }
 
 export const useDialogStore = createGlobalState(() => {
+  const callbacks = new Map<
+    string,
+    { resolve: (value: any) => void; reject: (reason?: any) => void }
+  >();
+
   const state = shallowReactive<DialogStoreState>({
     shareLink: {
       visible: false,
@@ -54,38 +57,44 @@ export const useDialogStore = createGlobalState(() => {
 
     // 返回 Promise 以便调用者可以等待用户操作
     return new Promise((resolve, reject) => {
-      state[dialogName].resolve = resolve;
-      state[dialogName].reject = reject;
+      callbacks.set(dialogName, { resolve, reject });
     });
   };
 
   const close = (dialogName: string) => {
     if (state[dialogName]) {
       // 确保异步链路闭环，防止内存泄漏
-      if (state[dialogName].reject) {
-        state[dialogName].reject('cancel');
+      const callback = callbacks.get(dialogName);
+      if (callback) {
+        callback.reject('cancel');
+        callbacks.delete(dialogName);
       }
       state[dialogName].visible = false;
-      // 清理 resolve/reject
-      state[dialogName].resolve = undefined;
-      state[dialogName].reject = undefined;
     }
   };
 
   const resolve = (dialogName: string, value: any) => {
-    if (state[dialogName]?.resolve) {
-      state[dialogName].resolve(value);
+    const callback = callbacks.get(dialogName);
+    if (callback) {
+      callback.resolve(value);
+      callbacks.delete(dialogName);
     }
     // 自动关闭
-    close(dialogName);
+    if (state[dialogName]) {
+      state[dialogName].visible = false;
+    }
   };
 
   const reject = (dialogName: string, reason?: any) => {
-    if (state[dialogName]?.reject) {
-      state[dialogName].reject(reason);
+    const callback = callbacks.get(dialogName);
+    if (callback) {
+      callback.reject(reason);
+      callbacks.delete(dialogName);
     }
     // 自动关闭
-    close(dialogName);
+    if (state[dialogName]) {
+      state[dialogName].visible = false;
+    }
   };
 
   return {

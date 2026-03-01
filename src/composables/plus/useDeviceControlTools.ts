@@ -1,8 +1,8 @@
 import { useDeviceApi } from '@/utils/api';
 import { message } from '@/utils/discrete';
 import { errorWrap } from '@/utils/error';
+import { tryParseJSON5Tolerant } from '@/utils/plus/json';
 import { useTask } from '@/utils/task';
-import JSON5 from 'json5';
 
 export const useDeviceControlTools = () => {
   const { api, origin } = useDeviceApi();
@@ -23,7 +23,13 @@ export const useDeviceControlTools = () => {
   const subsText = shallowRef('');
   const updateSubs = useTask(async () => {
     ensureDeviceConnected();
-    const data = errorWrap(() => JSON5.parse(subsText.value.trim()));
+    const parsed = tryParseJSON5Tolerant(subsText.value.trim());
+    if (parsed.error) {
+      const msg = parsed.error.message || '订阅文本解析失败';
+      message.error(msg);
+      return;
+    }
+    const data = errorWrap(() => parsed.value);
     if (data == null) return;
     if (data?.categories || data?.globalGroups || data?.apps) {
       await api.updateSubscription(data);

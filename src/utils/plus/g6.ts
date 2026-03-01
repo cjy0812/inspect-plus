@@ -7,7 +7,10 @@ import { AntQuadratic } from '@/utils/g6';
  * 继承自官方 AntQuadratic，实现自定义图标绘制。
  */
 export class OperatorEdge extends AntQuadratic {
-  // 注意：此处建议跟随项目习惯，如果官方基类用 type，这里也可以考虑兼容
+  /**
+   * Plus 侧统一使用标准命名 `type`。
+   * 说明：官方 `AntQuadratic` 当前同样使用 `type`，这里保持一致并避免沿用历史 typo 命名。
+   */
   static type = 'operator-edge';
 
   onCreate() {

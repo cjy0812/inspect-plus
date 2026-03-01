@@ -80,8 +80,7 @@ export class DialogService {
     console.log('[DialogService] 重置所有弹窗状态');
     Object.keys(this.dialogStore.state).forEach((key) => {
       this.dialogStore.state[key].visible = false;
-      this.dialogStore.state[key].resolve = undefined;
-      this.dialogStore.state[key].reject = undefined;
+      this.dialogStore.state[key].options = {};
     });
   }
 }
