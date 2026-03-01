@@ -5,7 +5,7 @@ import ErrorDlg from './components/ErrorDlg.vue';
 import DialogContainer from './components/DialogContainer.vue';
 import { ScrollbarWrapper } from './utils/others';
 import { debounce } from 'lodash-es';
-import { useTheme } from './composables/useTheme';
+import { useTheme } from './composables/plus/useTheme';
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {

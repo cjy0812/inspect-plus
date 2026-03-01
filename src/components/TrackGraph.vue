@@ -5,8 +5,9 @@ import type { EdgeData, TreeData } from '@antv/g6';
 import { Graph, treeToGraphData } from '@antv/g6';
 import { QueryPath, QueryResult } from '@gkd-kit/selector';
 import { uniqBy } from 'lodash-es';
-import { AntQuadratic, OperatorEdge } from '@/utils/g6';
-import { useTheme } from '@/composables/useTheme';
+import { AntQuadratic } from '@/utils/g6';
+import { OperatorEdge } from '@/utils/plus/g6';
+import { useTheme } from '@/composables/plus/useTheme';
 
 const props = withDefaults(
   defineProps<{

@@ -7,7 +7,8 @@ import { getAppInfo, getNodeLabel, getNodeStyle } from '@/utils/node';
 import { buildEmptyFn, copy } from '@/utils/others';
 import { parseSelector, wasmLoadTask } from '@/utils/selector';
 import { gkdWidth, vw } from '@/utils/size';
-import { getImagUrl, getImportUrl, getOfficialImportUrl } from '@/utils/url';
+import { getImagUrl, getImportUrl } from '@/utils/url';
+import { getOfficialImportUrl } from '@/utils/plus/url';
 import {
   AstNode,
   FastQuery,

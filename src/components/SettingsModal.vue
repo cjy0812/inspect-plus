@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { showTextDLg } from '@/utils/dialog';
-import { normalizeOriginText } from '@/utils/url';
+import { normalizeOriginText } from '@/utils/plus/url';
 import { message } from '@/utils/discrete';
 import {
   screenshotStorage,

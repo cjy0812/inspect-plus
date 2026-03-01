@@ -1,4 +1,5 @@
 import localforage from 'localforage';
+import { normalizeSnapshotMeta } from '@/utils/plus/snapshot';
 
 const useStorage = <T>(options: LocalForageOptions = {}) => {
   options.driver ??= localforage.INDEXEDDB;
@@ -69,14 +70,7 @@ export const screenshotStorage = useStorage<ArrayBuffer>({
 });
 
 export const setSnapshot = async (snapshot: Snapshot, bf: ArrayBuffer) => {
-  const appId = snapshot.appId || snapshot.appInfo?.id || '';
-  snapshot.appId = appId;
-  if (snapshot.appInfo && !snapshot.appInfo.id) {
-    snapshot.appInfo.id = appId;
-  }
-  if (!snapshot.activityId) {
-    snapshot.activityId = '(unknown)';
-  }
+  normalizeSnapshotMeta(snapshot);
   Object.entries(importSnapshotId).forEach(([k, v]) => {
     if (v == snapshot.id) {
       delete importSnapshotId[k];

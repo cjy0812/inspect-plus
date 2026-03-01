@@ -1,5 +1,3 @@
-import { settingsStore } from '@/store/storage';
-
 export const isValidUrl = (url: string): URL | undefined => {
   try {
     return new URL(url);
@@ -88,34 +86,4 @@ export const getImportFileUrl = (importId: number | string) => {
 
 export const getImageFileUrl = (imageId: number | string) => {
   return `https://github.com/user-attachments/assets/${imageId}`;
-};
-
-export const getOfficialImportUrl = (importId: number | string) => {
-  return `https://i.gkd.li/i/${importId}`;
-};
-
-export const normalizeOriginText = (originText: string) => {
-  const text = originText.trim();
-  if (!text) return '';
-  const u = isValidUrl(text);
-  return u ? u.origin : '';
-};
-
-export const getImportUrlByOrigin = (
-  originText: string,
-  importId: number | string,
-) => {
-  const origin = normalizeOriginText(originText);
-  if (!origin) return '';
-  return `${origin}/i/${importId}`;
-};
-
-export const getCustomDomainImportUrl = (importId: number | string) => {
-  const custom = normalizeOriginText(settingsStore.shareCustomImportDomain);
-  if (!custom) return '';
-  const primary = settingsStore.shareUseOfficialImportDomain
-    ? getOfficialImportUrl(importId)
-    : getImportUrl(importId);
-  if (new URL(primary).origin == custom) return '';
-  return `${custom}/i/${importId}`;
 };

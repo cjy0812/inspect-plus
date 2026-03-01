@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DraggableCard from '@/components/DraggableCard.vue';
-import { useDeviceControlTools } from '@/composables/useDeviceControlTools';
+import { useDeviceControlTools } from '@/composables/plus/useDeviceControlTools';
 import type { TooltipProps } from 'naive-ui';
 
 const props = withDefaults(
