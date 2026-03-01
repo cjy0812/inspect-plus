@@ -1,5 +1,20 @@
 import { settingsStore } from '@/store/storage';
-import { getImportUrl, isValidUrl } from '@/utils/url';
+
+/**
+ * 校验 URL 字符串，合法时返回 URL 实例。
+ */
+export const isValidUrl = (url: string): URL | undefined => {
+  try {
+    return new URL(url);
+  } catch {}
+};
+
+/**
+ * 基于当前站点 origin 生成导入页链接。
+ */
+export const getImportUrl = (importId: number | string) => {
+  return location.origin + `/i/${importId}`;
+};
 
 /**
  * 官方快照导入页地址。
