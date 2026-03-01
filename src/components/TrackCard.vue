@@ -8,7 +8,7 @@ import { type ResolvedSelector } from '@/utils/selector';
 import type { AstNode, QueryResult } from '@gkd-kit/selector';
 import { UnitSelectorExpression } from '@gkd-kit/selector';
 import type { StyleValue } from 'vue';
-import { useTheme } from '@/composables/useTheme';
+import { useTheme } from '@/composables/plus/useTheme';
 
 const TrackGraphLoader = () => import('@/components/TrackGraph.vue');
 const TrackGraph = defineAsyncComponent({

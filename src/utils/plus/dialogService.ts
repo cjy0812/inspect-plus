@@ -1,5 +1,5 @@
-import { useDialogStore, type DialogStoreState } from '../store/dialog';
-import { settingsStore } from '../store/storage';
+import { useDialogStore, type DialogStoreState } from '@/store/dialog';
+import { settingsStore } from '@/store/storage';
 
 export class DialogService {
   private static instance: DialogService;

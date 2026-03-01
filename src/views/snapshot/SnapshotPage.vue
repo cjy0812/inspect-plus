@@ -3,27 +3,28 @@ import DeviceControlTools from '@/components/DeviceControlTools.vue';
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import SettingsModal from '@/components/SettingsModal.vue';
 import TrackCard from '@/components/TrackCard.vue';
-import { loadingBar } from '@/utils/discrete';
+import { useSnapshotPlus } from '@/composables/plus/useSnapshotPlus';
 import AttrCard from './AttrCard.vue';
 import OverlapCard from './OverlapCard.vue';
 import RuleCard from './RuleCard.vue';
 import ScreenshotCard from './ScreenshotCard.vue';
 import SearchCard from './SearchCard.vue';
-import { useSnapshotStore } from './snapshot';
 import WindowCard from './WindowCard.vue';
 
-const { snapshot, rootNode, loading, redirected, trackData, trackShow } =
-  useSnapshotStore();
-
-watchEffect(() => {
-  if (loading.value) loadingBar.start();
-  else loadingBar.finish();
-});
-
-const searchShow = useStorage('searchShow', true, sessionStorage);
-const ruleShow = useStorage('ruleShow', false, sessionStorage);
-const attrShow = useStorage('attrShow', true, sessionStorage);
-const settingsDlgShow = shallowRef(false);
+const {
+  snapshot,
+  rootNode,
+  loading,
+  redirected,
+  trackData,
+  trackShow,
+  searchShow,
+  ruleShow,
+  attrShow,
+  settingsDlgShow,
+  openSettings,
+  onTrackDialogClosed,
+} = useSnapshotPlus();
 </script>
 
 <template>
@@ -48,7 +49,7 @@ const settingsDlgShow = shallowRef(false);
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="settingsDlgShow = true"
+            <NButton text @click="openSettings"
               ><SvgIcon name="settings"
             /></NButton>
           </template>
@@ -118,7 +119,7 @@ const settingsDlgShow = shallowRef(false);
     <RuleCard :show="ruleShow" @updateShow="ruleShow = $event" />
     <AttrCard :show="attrShow" @updateShow="attrShow = $event" />
     <OverlapCard />
-    <FullScreenDialog v-model:show="trackShow" @closed="trackData = undefined">
+    <FullScreenDialog v-model:show="trackShow" @closed="onTrackDialogClosed">
       <TrackCard
         v-if="trackData"
         class="snapshot-floating-panel snapshot-window window-anim"

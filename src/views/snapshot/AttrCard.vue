@@ -3,8 +3,8 @@ import DraggableCard from '@/components/DraggableCard.vue';
 import { getNodeSelectorText } from '@/utils/node';
 import { buildEmptyFn, copy } from '@/utils/others';
 import { useSnapshotStore } from './snapshot';
-import AttrNameCell from './AttrNameCell.vue';
-import AttrValueCell from './AttrValueCell.vue';
+import AttrNameCell from '@/components/plus/snapshot/AttrNameCell.vue';
+import AttrValueCell from '@/components/plus/snapshot/AttrValueCell.vue';
 
 withDefaults(
   defineProps<{

@@ -217,17 +217,6 @@ export const checkSelector = (source: string) => {
   return Selector.Companion.parseOrNull(source) != null;
 };
 
-/**
- * 连接操作符图标映射
- * 映射操作符键到对应的图标名称
- */
-export const connectOperatorIcons: Record<string, string> = {
-  '->': 'arrow', // 直接子元素
-  '-': 'minus', // 后代元素
-  '+': 'minus', // 相邻兄弟元素（使用减号图标作为替代）
-  '~': 'minus', // 通用兄弟元素（使用减号图标作为替代）
-};
-
 // keep class name avoid minify
 const clazzList = Object.entries({
   MatchOption,
