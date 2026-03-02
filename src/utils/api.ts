@@ -6,6 +6,11 @@ interface Reqid {
   id: number;
 }
 
+interface RpcError {
+  __error: boolean;
+  message: string;
+}
+
 export const useDeviceApi = (initOrigin?: string) => {
   const origin = shallowRef(initOrigin);
   const serverInfo = shallowRef<ServerInfo>();
@@ -99,6 +104,9 @@ export const useDeviceApi = (initOrigin?: string) => {
         `execSelector`,
         data,
       );
+    },
+    deleteSnapshot: async (data: Reqid) => {
+      return jsonRpc<{ message: string }>(`deleteSnapshot`, data);
     },
   };
   return { origin, api, serverInfo };

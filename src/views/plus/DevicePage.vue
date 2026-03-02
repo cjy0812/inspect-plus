@@ -238,6 +238,21 @@ const shareSnapshotImageUrl = useBatchTask(
   (r) => r.id,
 );
 
+const deleteSnapshot = useBatchTask(
+  async (row: Snapshot) => {
+    await api.deleteSnapshot({ id: row.id });
+    message.success('快照删除成功');
+    // 从本地存储中删除
+    await snapshotStorage.removeItem(row.id);
+    await screenshotStorage.removeItem(row.id);
+    // 刷新快照列表
+    const result = await api.getSnapshots();
+    result.sort((a, b) => b.id - a.id);
+    snapshots.value = result;
+  },
+  (r) => r.id,
+);
+
 const expandedPackageNames = shallowRef<(string | number)[]>([]);
 const expandedActivityNames = shallowRef<(string | number)[]>([]);
 watchEffect(() => {
@@ -522,12 +537,17 @@ watchEffect(() => {
                     <NTooltip>
                       <template #trigger>
                         <span class="inline-flex">
-                          <NButton text disabled>
+                          <NButton
+                            text
+                            type="error"
+                            :loading="deleteSnapshot.loading[item.id]"
+                            @click="deleteSnapshot.invoke(item)"
+                          >
                             <template #icon><SvgIcon name="delete" /></template>
                           </NButton>
                         </span>
                       </template>
-                      远端删除尚未实现
+                      删除快照
                     </NTooltip>
                   </div>
                 </div>
