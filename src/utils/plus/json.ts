@@ -129,6 +129,21 @@ const cleanBlockSyntax = (text: string): string => {
       // 移除 TS 断言，如 as const, as any, as AppConfig[]
       .replace(/\s+as\s+const\b/g, '')
       .replace(/\s+as\s+[A-Za-z_$][A-Za-z0-9_$<>[\]]*/g, '')
+      // 去除闭合前多余逗号
+      .replace(/,\s*([}\]])/g, '$1')
+      // 去除行尾孤立逗号
+      .replace(/,\s*$/g, '')
+      .trim()
+  );
+};
+
+const repairCommonBrokenTail = (text: string): string => {
+  return (
+    text
+      // 清理常见“残缺复制”尾巴
+      .replace(/}\s*,\s*]\s*,\s*}\s*,?\s*$/g, '}]}')
+      .replace(/]\s*,\s*}\s*,?\s*$/g, ']}')
+      .replace(/}\s*,?\s*$/g, '}')
       .trim()
   );
 };
@@ -153,7 +168,7 @@ export function tryParseJSON5Tolerant(rawText: string): {
 
   try {
     // 1. 预处理噪音
-    const noisyText = stripNoise(rawText);
+    const noisyText = repairCommonBrokenTail(stripNoise(rawText));
 
     // 2. 提取所有可能的 JSON/TS 对象块
     const blocks = extractAllJsonBlocks(noisyText);

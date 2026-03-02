@@ -68,6 +68,7 @@ type RuleCheckResultFailure = {
   stage: ValidateStage;
   field?: string;
   index?: number;
+  node?: RawNode;
   start?: number;
   end?: number;
   line?: number;
@@ -190,6 +191,19 @@ function expandActivityIds(
   if (!arr) return [];
   if (!appId) return arr.slice();
   return arr.map((id) => (id.startsWith('.') ? `${appId}${id}` : id));
+}
+
+function isActivityMatched(
+  currentActivityId: string,
+  normalizedActivityId: string,
+): boolean {
+  if (!normalizedActivityId) return false;
+  if (currentActivityId.startsWith(normalizedActivityId)) return true;
+  // 兼容 activityIds 使用 .MainActivity 这类简写
+  if (normalizedActivityId.startsWith('.')) {
+    return currentActivityId.endsWith(normalizedActivityId);
+  }
+  return false;
 }
 
 /* -------------------------
@@ -387,7 +401,9 @@ function checkRule(
   const normalizedActivityIds = obj.activityIds ?? [];
   const expanded = expandActivityIds(normalizedActivityIds, appId);
   if (!ignoreActivityCheck && expanded.length > 0 && currentActivityId) {
-    const matched = expanded.some((aid) => currentActivityId.startsWith(aid));
+    const matched = expanded.some((aid) =>
+      isActivityMatched(currentActivityId, aid),
+    );
     if (!matched) {
       return {
         success: false,
@@ -435,6 +451,7 @@ function checkRule(
         stage: 'execute',
         field: 'excludeMatches',
         index,
+        node: excludeResults[index]?.[0],
       };
     }
   }
@@ -448,22 +465,39 @@ function checkRule(
         (nodes) => Array.isArray(nodes) && nodes.length > 0,
       );
     if (allMatched) {
+      const hitNode = excludeAllResults.find((nodes) => nodes.length > 0)?.[0];
       return {
         success: false,
         error: `excludeAllMatches 全部命中（规则被排除）`,
         stage: 'execute',
         field: 'excludeAllMatches',
+        node: hitNode,
       };
     }
   }
 
   const matchesArr = obj.matches ?? [];
   const matchesResults = resolveSelectorsToNodes(matchesArr);
+  const anyArr = obj.anyMatches ?? [];
+  const anyResults = resolveSelectorsToNodes(anyArr);
   if (matchesArr.length) {
     const notIndex = matchesResults.findIndex(
       (nodes) => !Array.isArray(nodes) || nodes.length === 0,
     );
     if (notIndex >= 0) {
+      const anyHitIndex = anyResults.findIndex(
+        (nodes) => Array.isArray(nodes) && nodes.length > 0,
+      );
+      if (anyHitIndex >= 0) {
+        return {
+          success: false,
+          error: `matches[${notIndex}] 未命中，但 anyMatches[${anyHitIndex}] 可命中（建议改用 anyMatches 语义）`,
+          stage: 'execute',
+          field: 'matches',
+          index: notIndex,
+          node: anyResults[anyHitIndex]?.[0],
+        };
+      }
       return {
         success: false,
         error: `无法匹配: matches[${notIndex}] 查找结果为空`,
@@ -487,8 +521,6 @@ function checkRule(
     };
   }
 
-  const anyArr = obj.anyMatches ?? [];
-  const anyResults = resolveSelectorsToNodes(anyArr);
   if (anyArr.length) {
     if (
       anyResults.every((nodes) => !Array.isArray(nodes) || nodes.length === 0)
@@ -695,11 +727,35 @@ const targetNode = computed(() => {
   return null;
 });
 
+const errorHitNode = computed(() => {
+  const result = parsedRuleResult.value;
+  if (!result || result.success) return null;
+  return result.node ?? null;
+});
+
 const matchedRuleKeyText = computed(() => {
   const result = parsedRuleResult.value;
   if (!result || !result.success) return '';
   const key = result.meta?.matchedRuleKey;
   return Number.isInteger(key) ? `命中规则 key=${key}` : '';
+});
+
+const matchStatusTag = computed(() => {
+  const result = parsedRuleResult.value;
+  if (!result) return null;
+  if (result.success) {
+    return {
+      type: 'success' as const,
+      text: '规则命中',
+    };
+  }
+  if (result.field === 'matches' && result.error.includes('anyMatches')) {
+    return {
+      type: 'warning' as const,
+      text: 'matches 未命中，但 anyMatches 可命中',
+    };
+  }
+  return null;
 });
 
 const errorPreview = computed(() => {
@@ -800,6 +856,11 @@ const errorPreview = computed(() => {
       </div>
 
       <div min-h-24px mt-4px>
+        <div v-if="matchStatusTag" mb-6px>
+          <NTag size="small" :type="matchStatusTag.type">
+            {{ matchStatusTag.text }}
+          </NTag>
+        </div>
         <div v-if="errorText" color-red whitespace-pre>
           {{ errorText }}
           <template v-if="diagnostics">
@@ -809,6 +870,16 @@ const errorPreview = computed(() => {
               {{ diagnostics.stage }}
             </span>
           </template>
+        </div>
+        <div v-if="errorHitNode" mt-6px>
+          <NTag size="small" type="warning" mr-6px>命中节点</NTag>
+          <NButton
+            size="small"
+            :style="getNodeStyle(errorHitNode, focusNode)"
+            @click="snapshotStore.updateFocusNode(errorHitNode)"
+          >
+            {{ getNodeLabel(errorHitNode) }}
+          </NButton>
         </div>
 
         <NButton
