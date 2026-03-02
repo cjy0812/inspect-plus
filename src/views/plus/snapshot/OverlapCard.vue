@@ -12,7 +12,7 @@ const left = _1vw * 25.5;
   <DraggableCard
     v-slot="{ onRef }"
     :initialValue="{ top: 215, left }"
-    class="box-shadow-dim w-420px"
+    class="box-shadow-dim w-420px snapshot-window window-anim"
     :show="Boolean(overlapNodes && focusPosition)"
   >
     <NCard
@@ -24,7 +24,7 @@ const left = _1vw * 25.5;
       <template #header>
         <div :ref="onRef" cursor-move>
           位置
-          <span bg="#eee" px-2px>{{
+          <span class="overlap-pos-token">{{
             `${focusPosition.x.toFixed(0)},${focusPosition.y.toFixed(0)}`
           }}</span>
           存在 {{ overlapNodes.length }} 个层叠节点

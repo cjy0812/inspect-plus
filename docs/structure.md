@@ -326,3 +326,42 @@ src/
 2. `plus` 文件中统一使用 `@/` 绝对路径导入，不使用 `../` 回跳主干目录。
 3. 组件层优先“组合式扩展”而不是直接改页面大文件，降低冲突面积。
 4. 引入官方更新时，先合并主干，再逐步回放 `plus/` 目录改动。
+
+#### 本次解耦补充（官方兼容路由层）
+
+为减少后续与官方同路径文件冲突，当前将“可运行入口”切换到 `views/plus/` 目录，官方同名页面用于保持目录与实现基线：
+
+```text
+src/views/
+├─ DevicePage.vue              # 官方基线页（保留）
+├─ SelectorPage.vue            # 官方基线页（保留）
+├─ SvgPage.vue                 # 官方基线页（保留）
+├─ home/
+│  └─ HomePage.vue             # 官方基线页（保留）
+└─ snapshot/
+   ├─ SnapshotPage.vue         # 官方基线页（保留）
+   ├─ snapshot.ts              # 官方快照 store（保留）
+   ├─ AttrCard.vue             # 官方基线组件（保留）
+   ├─ MiniHoverImg.vue         # 官方基线组件（保留）
+   ├─ OverlapCard.vue          # 官方基线组件（保留）
+   ├─ RuleCard.vue             # 官方基线组件（保留）
+   ├─ ScreenshotCard.vue       # 官方基线组件（保留）
+   ├─ SearchCard.vue           # 官方基线组件（保留）
+   └─ WindowCard.vue           # 官方基线组件（保留）
+└─ plus/
+   ├─ DevicePage.vue           # plus 设备页入口（路由实际使用）
+   ├─ SelectorPage.vue         # plus 选择器页入口（路由实际使用）
+   ├─ SvgPage.vue              # plus SVG 页入口（路由实际使用）
+   ├─ home/
+   │  └─ HomePage.vue          # plus 首页入口（路由实际使用）
+   └─ snapshot/
+      ├─ SnapshotPage.vue      # plus 快照页入口（路由实际使用）
+      ├─ snapshot.ts           # plus 快照 store
+      ├─ AttrCard.vue          # plus 组件
+      ├─ MiniHoverImg.vue      # plus 组件
+      ├─ OverlapCard.vue       # plus 组件
+      ├─ RuleCard.vue          # plus 组件
+      ├─ ScreenshotCard.vue    # plus 组件
+      ├─ SearchCard.vue        # plus 组件
+      └─ WindowCard.vue        # plus 组件
+```

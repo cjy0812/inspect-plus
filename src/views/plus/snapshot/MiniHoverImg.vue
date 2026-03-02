@@ -18,20 +18,19 @@ const {
     <!-- 渲染在外部防止被遮挡 -->
     <div
       v-show="imgHover"
-      class="MiniHoverImg"
+      class="MiniHoverImg mini-hover-image"
       :style="{
         left: imgBounding.right.value + 4 + 'px',
         top: imgBounding.top.value + 'px',
+        borderColor: 'var(--mini-hover-border-color)',
       }"
       pointer-events-none
       fixed
       overflow-hidden
       z-2
-      bg-white
       h-200px
       w-200px
       border-1px
-      border-indigo-600
       border-dashed
     >
       <img
@@ -50,7 +49,7 @@ const {
         p-1px
         z-1
         text-13px
-        class="leading-[1] bg-[rgba(256,256,256,0.7)]"
+        class="leading-[1] mini-hover-token"
       >
         {{ `${hoverPosition.ox.toFixed(0)}, ${hoverPosition.oy.toFixed(0)}` }}
       </div>
@@ -62,7 +61,7 @@ const {
         p-1px
         z-1
         text-12px
-        class="leading-[1] bg-[rgba(256,256,256,0.7)]"
+        class="leading-[1] mini-hover-token"
         flex
         flex-col
         flex-items-center
@@ -85,7 +84,7 @@ const {
         p-1px
         z-1
         text-12px
-        class="leading-[1] bg-[rgba(256,256,256,0.7)]"
+        class="leading-[1] mini-hover-token"
         flex
         flex-col
         flex-items-center
@@ -109,8 +108,8 @@ const {
             to left,
             transparent 0%,
             transparent 50%,
-            #fff 50%,
-            #fff 100%
+            var(--mini-hover-cross-color) 50%,
+            var(--mini-hover-cross-color) 100%
           );
           background-position-x: 1.5px;
         "
@@ -128,8 +127,8 @@ const {
             to top,
             transparent 0%,
             transparent 50%,
-            #fff 50%,
-            #fff 100%
+            var(--mini-hover-cross-color) 50%,
+            var(--mini-hover-cross-color) 100%
           );
           background-position-y: 1.5px;
         "

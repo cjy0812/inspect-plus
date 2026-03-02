@@ -8,7 +8,14 @@ import { buildEmptyFn, copy } from '@/utils/others';
 import { parseSelector, wasmLoadTask } from '@/utils/selector';
 import { gkdWidth, vw } from '@/utils/size';
 import { getImagUrl, getImportUrl } from '@/utils/url';
-import { FastQuery, GkdException } from '@gkd-kit/selector';
+import { getOfficialImportUrl } from '@/utils/plus/url';
+import {
+  AstNode,
+  FastQuery,
+  GkdException,
+  Selector,
+  SyntaxException,
+} from '@gkd-kit/selector';
 import dayjs from 'dayjs';
 import * as base64url from 'universal-base64url';
 import type { ShallowRef } from 'vue';
@@ -26,7 +33,7 @@ withDefaults(
 );
 
 const route = useRoute();
-const { snapshotImportId, snapshotImageId } = useStorageStore();
+const { settingsStore, snapshotImportId, snapshotImageId } = useStorageStore();
 
 const snapshotStore = useSnapshotStore();
 const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
@@ -34,19 +41,17 @@ const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
 const { focusNode, updateFocusNode } = snapshotStore;
 
 const searchText = shallowRef(``);
+const searchTextLazy = useDebounce(searchText, 220);
 
 const selectorResults = shallowReactive<SearchResult[]>([]);
 const expandedKeys = shallowRef<number[]>([]);
+
 const searchSelector = (text: string) => {
   const selector = errorWrap(
     () => parseSelector(text),
     (e) => {
-      if (typeof e == 'string') {
-        return e;
-      }
-      if (e instanceof GkdException) {
-        return `非法选择器:` + e.outMessage;
-      }
+      if (typeof e == 'string') return e;
+      if (e instanceof GkdException) return `非法选择器:` + e.outMessage;
       return `非法选择器:` + (e instanceof Error ? e.message : e);
     },
   );
@@ -62,20 +67,24 @@ const searchSelector = (text: string) => {
   }
 
   const results = selector.querySelfOrSelectorAllContext(rootNode.value);
-  if (results.length == 0) {
+  // 修正 1: 将 QueryResult 转换为真正的数组以适配 TS 和后续的 map 操作
+  const resultsArray = Array.from(results);
+
+  if (resultsArray.length == 0) {
     message.success(`没有选择到节点`);
     return;
   }
-  message.success(`选择到 ${results.length} 个节点`);
+  message.success(`选择到 ${resultsArray.length} 个节点`);
   selectorResults.unshift({
     selector,
-    nodes: results.map((r) => r.target),
-    results,
+    nodes: resultsArray.map((r) => r.target),
+    results: resultsArray as any,
     key: Date.now(),
     gkd: true,
   });
-  return results.length;
+  return resultsArray.length;
 };
+
 const searchString = (text: string) => {
   if (
     selectorResults.find(
@@ -107,6 +116,7 @@ const searchString = (text: string) => {
   });
   return results.length;
 };
+
 const refreshExpandedKeys = () => {
   const newResult = selectorResults[0];
   const newNode = newResult.nodes[0];
@@ -120,6 +130,7 @@ const refreshExpandedKeys = () => {
   newKeys.push(newResult.key);
   expandedKeys.value = newKeys;
 };
+
 const searchBySelector = errorTry(() => {
   const text = searchText.value.trim();
   if (!text) return;
@@ -130,6 +141,13 @@ const searchBySelector = errorTry(() => {
   }
   refreshExpandedKeys();
 });
+
+const handleTextareaKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    searchBySelector();
+  }
+};
 
 onMounted(async () => {
   await wasmLoadTask;
@@ -148,11 +166,19 @@ onMounted(async () => {
 const generateRules = errorTry(async (result: SelectorSearchResult) => {
   const imageId = snapshotImageId[snapshot.value.id];
   const importId = snapshotImportId[snapshot.value.id];
-  const snapshotUrls = importId ? getImportUrl(importId) : undefined;
+  const snapshotUrls = importId
+    ? settingsStore.shareUseOfficialImportDomain
+      ? getOfficialImportUrl(importId)
+      : getImportUrl(importId)
+    : undefined;
   const exampleUrls = imageId ? getImagUrl(imageId) : undefined;
 
   const s = result.selector;
-  const t = result.results.map((v) => v.context.toArray().at(-1)!)[0];
+  // 修正 2: 显式类型转换以修复 .map 报错
+  // 使用 Array.from 配合 unknown 转换，这是最符合 TS 规范的绕过方式
+  const t = Array.from(result.results as unknown as Iterable<any>).map(
+    (v: any) => v.context.toArray().at(-1)!,
+  )[0];
 
   const fastQuery = [
     (t.quickFind ?? t.idQf) &&
@@ -194,13 +220,76 @@ const generateRules = errorTry(async (result: SelectorSearchResult) => {
 
   copy(JSON5.stringify(rule, undefined, 2));
 });
+
 const enableSearchBySelector = shallowRef(true);
+const selectorSyntaxText = computed(() => {
+  if (!enableSearchBySelector.value) return '';
+  return searchTextLazy.value.trim();
+});
+
+const selectorSyntaxResult = computed(() => {
+  const text = selectorSyntaxText.value;
+  if (!text) return;
+  try {
+    return Selector.Companion.parseAst(text);
+  } catch (e) {
+    return e as GkdException;
+  }
+});
+
+const selectorSyntaxAst = computed(() => {
+  if (selectorSyntaxResult.value instanceof AstNode) {
+    return selectorSyntaxResult.value;
+  }
+  return undefined;
+});
+
+const selectorSyntaxError = computed(() => {
+  const result = selectorSyntaxResult.value;
+  const text = selectorSyntaxText.value;
+  if (result instanceof SyntaxException) {
+    const hasErrorChar = result.index < text.length;
+    const eofLike =
+      !hasErrorChar || /expect\s+eof/i.test(result.outMessage || '');
+    return {
+      isEof: eofLike,
+      headText: text.substring(0, result.index),
+      errorText: hasErrorChar
+        ? text.substring(result.index, result.index + 1)
+        : '',
+      tailText: hasErrorChar ? text.substring(result.index + 1) : '',
+      message: result.outMessage,
+    };
+  }
+  if (result && !(result instanceof AstNode)) {
+    const msg =
+      typeof (result as any).outMessage == 'string'
+        ? (result as any).outMessage
+        : typeof (result as any).message == 'string'
+          ? (result as any).message
+          : '';
+    return {
+      isEof: /expect\s+eof/i.test(msg),
+      headText: '',
+      errorText: '',
+      tailText: '',
+      message: msg,
+    };
+  }
+  return undefined;
+});
+
 const hasZipId = computed(() => {
   return snapshotImportId[snapshot.value.id];
 });
+
 const shareResult = (result: SearchResult) => {
   if (!hasZipId.value) return;
-  const importUrl = new URL(getImportUrl(snapshotImportId[snapshot.value.id]));
+  const importUrl = new URL(
+    settingsStore.shareUseOfficialImportDomain
+      ? getOfficialImportUrl(snapshotImportId[snapshot.value.id])
+      : getImportUrl(snapshotImportId[snapshot.value.id]),
+  );
   if (typeof result.selector == 'object') {
     importUrl.searchParams.set(
       'gkd',
@@ -212,6 +301,7 @@ const shareResult = (result: SearchResult) => {
   copy(importUrl.toString());
 };
 </script>
+
 <template>
   <DraggableCard
     v-slot="{ onRef }"
@@ -222,10 +312,17 @@ const shareResult = (result: SearchResult) => {
     }"
     :minWidth="300"
     sizeDraggable
-    class="box-shadow-dim"
+    class="box-shadow-dim snapshot-window window-anim"
     :show="show"
   >
-    <div bg-white b-1px b-solid b-gray-200 rounded-4px p-8px>
+    <div
+      class="snapshot-floating-panel"
+      b-1px
+      b-solid
+      b-gray-200
+      rounded-12px
+      p-8px
+    >
       <div flex m-b-4px pr-4px>
         <NRadioGroup v-model:value="enableSearchBySelector">
           <NSpace>
@@ -243,9 +340,11 @@ const shareResult = (result: SearchResult) => {
       <NInputGroup>
         <NInput
           v-model:value="searchText"
+          type="textarea"
           :placeholder="enableSearchBySelector ? `请输入选择器` : `请输入字符`"
-          :inputProps="{ class: 'gkd_code' }"
-          @keyup.enter="searchBySelector"
+          :autosize="{ minRows: 1, maxRows: 6 }"
+          :inputProps="{ class: 'selector-textarea' }"
+          @keydown="handleTextareaKeyDown"
         />
         <NButton @click="searchBySelector">
           <template #icon>
@@ -253,6 +352,59 @@ const shareResult = (result: SearchResult) => {
           </template>
         </NButton>
       </NInputGroup>
+
+      <div
+        v-if="enableSearchBySelector && selectorSyntaxText"
+        mt-6px
+        mb-8px
+        p-4px
+        gkd_code
+        transition-colors
+        class="selector-ast-view"
+        :class="selectorSyntaxError ? `selector-ast-view-error` : ``"
+      >
+        <div v-if="selectorSyntaxAst" overflow-x-scroll scrollbar-hidden>
+          <SelectorText
+            :source="selectorSyntaxText"
+            :node="selectorSyntaxAst"
+          />
+        </div>
+        <span v-else-if="selectorSyntaxError" whitespace-pre-wrap>
+          <span v-if="selectorSyntaxError.headText">{{
+            selectorSyntaxError.headText
+          }}</span>
+          <span bg-red relative>
+            <span v-if="selectorSyntaxError.errorText">{{
+              selectorSyntaxError.errorText
+            }}</span>
+            <span v-else pl-20px />
+            <div
+              absolute
+              left-0
+              right-0
+              top--12px
+              flex
+              flex-col
+              items-center
+              animate-bounce
+              pointer-events-none
+            >
+              <SvgIcon name="arrow" class="selector-error-arrow" />
+            </div>
+          </span>
+          <span v-if="selectorSyntaxError.tailText">{{
+            selectorSyntaxError.tailText
+          }}</span>
+        </span>
+      </div>
+      <div
+        v-if="selectorSyntaxError && !selectorSyntaxError.isEof"
+        p-4px
+        gkd_code
+        class="selector-error-box"
+      >
+        {{ selectorSyntaxError.message }}
+      </div>
       <div p-5px />
       <NCollapse v-model:expandedNames="expandedKeys">
         <NCollapseItem
@@ -276,7 +428,7 @@ const shareResult = (result: SearchResult) => {
               break-all
               px-4px
               leading-20px
-              bg="#eee"
+              class="snapshot-token"
               gkd_code
               :title="result.gkd ? `选择器` : `搜索字符`"
             >
@@ -344,7 +496,7 @@ const shareResult = (result: SearchResult) => {
                     @click="
                       snapshotStore.showTrack(
                         result.selector,
-                        result.results[i],
+                        (result.results as any)[i],
                       )
                     "
                   >
@@ -369,3 +521,12 @@ const shareResult = (result: SearchResult) => {
     </div>
   </DraggableCard>
 </template>
+
+<style scoped>
+:deep(.selector-textarea) {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  resize: none;
+}
+</style>

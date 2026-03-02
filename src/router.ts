@@ -28,14 +28,14 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: recordModule(() => import('@/views/home/HomePage.vue')),
+      component: recordModule(() => import('@/views/plus/home/HomePage.vue')),
       meta: { title: '首页' },
     },
     {
       path: '/snapshot/:snapshotId',
       name: 'snapshot',
       component: recordModule(
-        () => import('@/views/snapshot/SnapshotPage.vue'),
+        () => import('@/views/plus/snapshot/SnapshotPage.vue'),
       ),
       meta: { title: '快照' },
     },
@@ -67,7 +67,7 @@ const router = createRouter({
     },
     {
       path: '/device',
-      component: recordModule(() => import('@/views/DevicePage.vue')),
+      component: recordModule(() => import('@/views/plus/DevicePage.vue')),
       beforeEnter(to, _, next) {
         const u = toValidURL(String(to.query.url));
         if (u) {
@@ -82,12 +82,12 @@ const router = createRouter({
     },
     {
       path: '/selector',
-      component: recordModule(() => import('@/views/SelectorPage.vue')),
+      component: recordModule(() => import('@/views/plus/SelectorPage.vue')),
       meta: { title: '选择器' },
     },
     {
       path: '/svg',
-      component: recordModule(() => import('@/views/SvgPage.vue')),
+      component: recordModule(() => import('@/views/plus/SvgPage.vue')),
       meta: { title: 'SVG' },
     },
     {

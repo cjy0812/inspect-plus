@@ -37,10 +37,19 @@ const { clickImg, imgHover, imgMove, imgLoadTime, positionStyle, imgRef } =
         absolute
         transition-all-300
         b-1px
-        b-blue
         b-solid
+        style="border-color: var(--screenshot-focus-border-color)"
       >
-        <div absolute left-0 top-0 bottom-0 right-0 b-solid b-1px b-red />
+        <div
+          absolute
+          left-0
+          top-0
+          bottom-0
+          right-0
+          b-solid
+          b-1px
+          style="border-color: var(--screenshot-focus-border-inner-color)"
+        />
       </div>
     </div>
     <div
@@ -54,10 +63,26 @@ const { clickImg, imgHover, imgMove, imgLoadTime, positionStyle, imgRef } =
       flex
       gap-4px
     >
-      <div py-1px px-2px bg="#ffffff90" title="尺寸">
+      <div
+        py-1px
+        px-2px
+        style="
+          background-color: var(--screenshot-card-bg-color);
+          color: var(--screenshot-card-text-color);
+        "
+        title="尺寸"
+      >
         {{ `${snapshot.screenWidth}x${snapshot.screenHeight}` }}
       </div>
-      <div py-1px px-2px bg="#ffffff90" title="创建时间">
+      <div
+        py-1px
+        px-2px
+        style="
+          background-color: var(--screenshot-card-bg-color);
+          color: var(--screenshot-card-text-color);
+        "
+        title="创建时间"
+      >
         {{ dayjs(snapshot.id).format('YYYY-MM-DD HH:mm:ss') }}
       </div>
     </div>

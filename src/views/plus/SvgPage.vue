@@ -48,13 +48,14 @@ const copy = async (text: string) => {
         items-center
         b-b-solid
         b-1px
-        class="bg-[#f9f9f9]"
+        class="bg-[var(--svg-page-card-bg-color)]"
         :title="getTitle(svgId)"
         @click="copy(getTitle(svgId))"
       >
         <SvgIcon
           :name="svgId"
-          class="text-32px color-[#575bca] flex-shrink-0"
+          class="text-32px flex-shrink-0"
+          style="color: var(--svg-page-icon-color)"
         />
         <div
           px-4px

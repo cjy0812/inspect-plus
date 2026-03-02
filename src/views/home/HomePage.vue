@@ -1,8 +1,5 @@
-﻿<script setup lang="ts">
+<script lang="tsx" setup>
 import ActionCard from '@/components/ActionCard.vue';
-import DeviceControlTools from '@/components/DeviceControlTools.vue';
-import SettingsModal from '@/components/SettingsModal.vue';
-import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 import { toValidURL } from '@/utils/check';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
 import { dialog } from '@/utils/discrete';
@@ -13,26 +10,16 @@ import {
   batchZipDownloadZip,
 } from '@/utils/export';
 import { importFromLocal, importFromNetwork } from '@/utils/import';
-import { getAppInfo, getDevice } from '@/utils/node';
-import { filterQuery, getDragEventFiles } from '@/utils/others';
-import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
-import {
-  screenshotStorage,
-  shallowSnapshotStorage,
-  snapshotStorage,
-} from '@/utils/snapshot';
+import { getAppInfo } from '@/utils/node';
+import { getDragEventFiles } from '@/utils/others';
+import { shallowSnapshotStorage, snapshotStorage } from '@/utils/snapshot';
+import { renderDevice, useSnapshotColumns } from '@/utils/table';
 import { useTask } from '@/utils/task';
-import { getImagUrl, getImportUrl } from '@/utils/url';
-import {
-  getCustomDomainImportUrl,
-  getOfficialImportUrl,
-} from '@/utils/plus/url';
-import dayjs from 'dayjs';
+import { getImagUrl } from '@/utils/url';
+import type { DataTableColumns, PaginationProps } from 'naive-ui';
+import type { SortState } from 'naive-ui/es/data-table/src/interface';
 
-const route = useRoute();
-const router = useRouter();
-const { settingsStore, snapshotImportTime, snapshotViewedTime } =
-  useStorageStore();
+const { settingsStore } = useStorageStore();
 
 const snapshots = shallowRef<Snapshot[]>([]);
 const loading = shallowRef(true);
@@ -43,126 +30,167 @@ const updateSnapshots = async () => {
   loading.value = false;
 };
 onMounted(updateSnapshots);
-
 const filterOption = shallowReactive({
-  query: '',
-  actualQuery: '',
+  query: ``,
+  actualQuery: ``,
   updateQuery: () => {
     filterOption.actualQuery = filterOption.query.trim();
     checkedRowKeys.value = [];
   },
 });
-
-const filteredSnapshots = computed(() => {
-  const query = filterOption.actualQuery;
+const filterSnapshots = computed(() => {
+  const actualQuery = filterOption.actualQuery;
+  if (!actualQuery) return snapshots.value;
   return snapshots.value.filter((s) => {
-    if (!query) return true;
     return (
-      (getAppInfo(s).name || '').includes(query) ||
-      (s.appId || '').includes(query) ||
-      (s.appInfo?.id || '').includes(query) ||
-      (s.activityId || '').includes(query)
+      (getAppInfo(s).name || ``).includes(actualQuery) ||
+      (s.appId || ``).includes(actualQuery) ||
+      (s.activityId || ``).includes(actualQuery)
     );
   });
 });
-
-const groupedSnapshots = computed(() =>
-  buildGroupedSnapshots(filteredSnapshots.value, snapshotImportTime),
-);
-
-const snapshotDisplayLimit = 50;
-const expandedActivitySnapshotKeys = shallowRef<string[]>([]);
-const getActivityDisplayKey = (packageName: string, activityId: string) =>
-  `${packageName}::${activityId}`;
-const isActivityFullyShown = (packageName: string, activityId: string) =>
-  expandedActivitySnapshotKeys.value.includes(
-    getActivityDisplayKey(packageName, activityId),
-  );
-const getVisibleSnapshots = (
-  packageName: string,
-  activity: { activityId: string; snapshots: Snapshot[] },
-) => {
-  if (
-    isActivityFullyShown(packageName, activity.activityId) ||
-    activity.snapshots.length <= snapshotDisplayLimit
-  ) {
-    return activity.snapshots;
-  }
-  return activity.snapshots.slice(0, snapshotDisplayLimit);
-};
-const showMoreSnapshots = (packageName: string, activityId: string) => {
-  const key = getActivityDisplayKey(packageName, activityId);
-  if (!expandedActivitySnapshotKeys.value.includes(key)) {
-    expandedActivitySnapshotKeys.value = [
-      ...expandedActivitySnapshotKeys.value,
-      key,
-    ];
-  }
-};
-
-const expandedPackageNames = shallowRef<(string | number)[]>([]);
-const expandedActivityNames = shallowRef<(string | number)[]>([]);
-watchEffect(() => {
-  if (!settingsStore.autoExpandSnapshots) {
-    expandedPackageNames.value = [];
-    expandedActivityNames.value = [];
-    return;
-  }
-  expandedPackageNames.value = groupedSnapshots.value
-    .slice(0, 4)
-    .map((g) => g.packageName);
-  expandedActivityNames.value = groupedSnapshots.value
-    .slice(0, 4)
-    .flatMap((g) =>
-      g.activities.slice(0, 3).map((a) => `${g.packageName}::${a.activityId}`),
-    );
-});
-
-const goToSnapshot = (snapshotId: number) => {
-  router.push({
-    name: 'snapshot',
-    params: { snapshotId },
-    query: filterQuery(route.query, ['str', 'gkd']),
-  });
-};
 
 const importLocal = useTask(async (_files?: File[]) => {
   if (await importFromLocal(_files)) {
     await updateSnapshots();
   }
 });
+
 useEventListener(document.body, 'drop', async (e) => {
   e.preventDefault();
   await importLocal.invoke(getDragEventFiles(e));
 });
-useEventListener(document.body, 'dragover', (e) => e.preventDefault());
+useEventListener(document.body, 'dragover', (e) => {
+  e.preventDefault();
+});
 
+const {
+  activityIdCol,
+  appIdCol,
+  appNameCol,
+  ctimeCol,
+  mtimeCol,
+  deviceCol,
+  appVersionCodeCol,
+  appVersionNameCol,
+  resetColWidth,
+} = useSnapshotColumns();
+
+watchEffect(() => {
+  const set = filterSnapshots.value.reduce(
+    (p, c) => (p.add(renderDevice(c)), p),
+    new Set<string>(),
+  );
+  if (set.size <= 1) {
+    deviceCol.filterOptions = undefined;
+    return;
+  }
+  deviceCol.filterOptions = [...set.values()].map((s) => ({
+    value: s,
+    label: s,
+  }));
+});
+
+watchEffect(() => {
+  const set = filterSnapshots.value.reduce(
+    (p, c) => (p.add(getAppInfo(c).name), p),
+    new Set<string>(),
+  );
+  if (set.size <= 1) {
+    appNameCol.filterOptions = undefined;
+    return;
+  }
+  appNameCol.filterOptions = [...set.values()].map((s) => ({
+    value: s,
+    label: s,
+  }));
+});
+
+watchEffect(() => {
+  const set = filterSnapshots.value.reduce(
+    (p, c) => (p.add(c.activityId), p),
+    new Set<string>(),
+  );
+  if (set.size <= 1) {
+    activityIdCol.filterOptions = undefined;
+    return;
+  }
+  activityIdCol.filterOptions = [...set.values()].map((s) => ({
+    value: s,
+    label: s,
+  }));
+});
+
+const columns: DataTableColumns<Snapshot> = reactive([
+  {
+    type: 'selection',
+  },
+  ctimeCol,
+  mtimeCol,
+  deviceCol,
+  appNameCol,
+  appIdCol,
+  appVersionCodeCol,
+  appVersionNameCol,
+  activityIdCol,
+  {
+    key: `actions`,
+    title: `操作`,
+    fixed: 'right',
+    width: `160px`,
+    render(row) {
+      return <ActionCard snapshot={row} onDelete={updateSnapshots} />;
+    },
+  },
+]);
+
+const pagination = shallowReactive<PaginationProps>({
+  page: 1,
+  pageSize: 50,
+  showSizePicker: true,
+  pageSizes: [50, 100],
+  onChange: (page: number) => {
+    pagination.page = page;
+  },
+  onUpdatePageSize: (pageSize: number) => {
+    pagination.pageSize = pageSize;
+    pagination.page = 1;
+  },
+});
+watch(pagination, resetColWidth);
+
+const handleSorterChange = (sorter: SortState) => {
+  [ctimeCol, mtimeCol].forEach((c) => {
+    if (sorter.columnKey != c.key) {
+      c.sortOrder = undefined;
+    } else {
+      c.sortOrder = sorter.order;
+    }
+  });
+};
+mtimeCol.sortOrder = `descend`;
 const showImportModal = shallowRef(false);
-const textImportValue = shallowRef('');
+const textImportValue = shallowRef(``);
 const importNetwork = useTask(async () => {
   const urls = textImportValue.value
     .trim()
-    .split('\n')
+    .split(`\n`)
     .map((u) => u.trim())
     .filter((u) => toValidURL(u));
   if (urls.length == 0) return;
   const r = await importFromNetwork(urls);
   if (!r) return;
   await updateSnapshots();
-  textImportValue.value = '';
+  textImportValue.value = ``;
 });
 
 useEventListener(document.body, 'paste', (e) => {
   if (showImportModal.value) return;
   const target = e.target as HTMLElement;
-  const className =
-    target.getAttribute?.('class') ||
-    (typeof target.className == 'string' ? target.className : '');
   if (
     target instanceof HTMLInputElement ||
     target instanceof HTMLTextAreaElement ||
-    target.classList?.contains('input') ||
-    className.includes('input')
+    (target.className || '').includes('input')
   ) {
     return;
   }
@@ -178,58 +206,20 @@ useEventListener(document.body, 'paste', (e) => {
 });
 
 const checkedRowKeys = shallowRef<number[]>([]);
-const checkedSet = computed(() => new Set(checkedRowKeys.value));
-const allFilteredSnapshotIds = computed(() =>
-  filteredSnapshots.value.map((s) => s.id),
-);
-const getActivitySnapshotIds = (activity: { snapshots: Snapshot[] }) =>
-  activity.snapshots.map((s) => s.id);
-const getGroupSnapshotIds = (group: {
-  activities: Array<{ snapshots: Snapshot[] }>;
-}) => group.activities.flatMap((a) => getActivitySnapshotIds(a));
-const getCheckedStats = (ids: number[]) => {
-  if (!ids.length) return { checked: false, indeterminate: false };
-  let checkedCount = 0;
-  ids.forEach((id) => {
-    if (checkedSet.value.has(id)) checkedCount++;
-  });
-  return {
-    checked: checkedCount == ids.length,
-    indeterminate: checkedCount > 0 && checkedCount < ids.length,
-  };
-};
-const setCheckedByIds = (ids: number[], checked: boolean) => {
-  if (checked) {
-    const next = new Set(checkedRowKeys.value);
-    ids.forEach((id) => next.add(id));
-    checkedRowKeys.value = [...next];
-    return;
-  }
-  const idSet = new Set(ids);
-  checkedRowKeys.value = checkedRowKeys.value.filter((id) => !idSet.has(id));
-};
-const toggleChecked = (id: number, checked: boolean) => {
-  if (checked) {
-    if (!checkedSet.value.has(id))
-      checkedRowKeys.value = [...checkedRowKeys.value, id];
-  } else {
-    checkedRowKeys.value = checkedRowKeys.value.filter((k) => k != id);
-  }
-};
-const checkedSnapshots = () =>
-  Promise.all(
+const checkedSnapshots = () => {
+  return Promise.all(
     checkedRowKeys.value.map(
       (id) => snapshotStorage.getItem(id) as Promise<Snapshot>,
     ),
   );
-
+};
 const batchDelete = useTask(async () => {
   await new Promise((res, rej) => {
     dialog.warning({
-      title: '删除',
+      title: `删除`,
       content: `是否批量删除 ${checkedRowKeys.value.length} 个快照`,
-      negativeText: '取消',
-      positiveText: '确认',
+      negativeText: `取消`,
+      positiveText: `确认`,
       onClose: rej,
       onEsc: rej,
       onMaskClick: rej,
@@ -237,6 +227,7 @@ const batchDelete = useTask(async () => {
       onPositiveClick: res,
     });
   });
+
   await Promise.all(
     checkedRowKeys.value.map((k) => snapshotStorage.removeItem(k)),
   );
@@ -248,72 +239,26 @@ const batchDownloadImage = useTask(async () => {
 const batchDownloadZip = useTask(async () => {
   await batchZipDownloadZip(await checkedSnapshots());
 });
+
 const batchShareImageUrl = useTask(async () => {
   await waitShareAgree();
   const imageIds = await batchCreateImageId(await checkedSnapshots());
   showTextDLg({
-    content: imageIds.map((s) => getImagUrl(s)).join('\n') + '\n',
+    content: imageIds.map((s) => getImagUrl(s)).join(`\n`) + `\n`,
   });
 });
 const batchShareZipUrl = useTask(async () => {
   await waitShareAgree();
   const zipUrls = await batchCreateZipUrl(await checkedSnapshots());
-  const primaryUrls = zipUrls.map((s) =>
-    settingsStore.shareUseOfficialImportDomain
-      ? getOfficialImportUrl(s)
-      : getImportUrl(s),
-  );
-  const customUrls = zipUrls
-    .map((s) => getCustomDomainImportUrl(s))
-    .filter((s) => !!s);
   showTextDLg({
-    content: primaryUrls.join('\n') + '\n',
-    extraContent: customUrls.length ? customUrls.join('\n') + '\n' : '',
+    content: zipUrls.map((s) => location.origin + '/i/' + s).join(`\n`) + `\n`,
   });
 });
 
 const settingsDlgShow = shallowRef(false);
+
 const inputImportRef = shallowRef();
-const groupRemarkModal = shallowReactive({
-  show: false,
-  key: '',
-  title: '',
-  value: '',
-});
-const ensureGroupRemarks = () => {
-  if (!settingsStore.groupRemarks) settingsStore.groupRemarks = {};
-  return settingsStore.groupRemarks;
-};
-const getGroupRemark = (key: string) =>
-  (ensureGroupRemarks()[key] || '').trim();
-const getPackageRemarkKey = (packageName: string) => `package:${packageName}`;
-const getActivityRemarkKey = (packageName: string, activityId: string) =>
-  `activity:${packageName}::${activityId}`;
-const openGroupRemarkModal = (key: string, title: string) => {
-  groupRemarkModal.show = true;
-  groupRemarkModal.key = key;
-  groupRemarkModal.title = title;
-  groupRemarkModal.value = getGroupRemark(key);
-};
-const saveGroupRemark = () => {
-  const key = groupRemarkModal.key;
-  if (!key) return;
-  const value = groupRemarkModal.value.trim();
-  if (value) ensureGroupRemarks()[key] = value;
-  else delete ensureGroupRemarks()[key];
-  groupRemarkModal.show = false;
-};
-
-const previewCacheLimit = computed(() =>
-  settingsStore.lowMemoryMode ? 6 : 24,
-);
-const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
-  usePreviewCache({
-    getScreenshot: (id) => screenshotStorage.getItem(id),
-    cacheLimit: previewCacheLimit,
-  });
 </script>
-
 <template>
   <div flex flex-col p-10px gap-10px page-size>
     <div flex>
@@ -321,97 +266,126 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
         <NInputGroup>
           <NInput
             v-model:value="filterOption.query"
-            placeholder="请输入应用名/应用ID/界面ID"
+            placeholder="请输入应用名称/应用ID/界面ID"
             clearable
             class="min-w-320px"
             @keyup.enter="filterOption.updateQuery"
             @change="filterOption.updateQuery"
           />
           <NButton @click="filterOption.updateQuery">
-            <template #icon><SvgIcon name="search" /></template>
+            <template #icon>
+              <SvgIcon name="search" />
+            </template>
           </NButton>
         </NInputGroup>
-        <NCheckbox
-          v-if="allFilteredSnapshotIds.length"
-          :checked="getCheckedStats(allFilteredSnapshotIds).checked"
-          :indeterminate="getCheckedStats(allFilteredSnapshotIds).indeterminate"
-          @update:checked="setCheckedByIds(allFilteredSnapshotIds, $event)"
-        >
-          {{ `全选当前结果 (${allFilteredSnapshotIds.length})` }}
-        </NCheckbox>
         <template v-if="checkedRowKeys.length">
           <NPopover>
-            <template #trigger><NButton>批量下载</NButton></template>
+            <template #trigger>
+              <NButton> 批量下载 </NButton>
+            </template>
             <NSpace vertical>
               <NButton
                 :loading="batchDownloadZip.loading"
                 @click="batchDownloadZip.invoke"
-                >批量下载-快照</NButton
               >
+                批量下载-快照
+              </NButton>
               <NButton
                 :loading="batchDownloadImage.loading"
                 @click="batchDownloadImage.invoke"
-                >批量下载-图片</NButton
               >
+                批量下载-图片
+              </NButton>
             </NSpace>
           </NPopover>
           <NPopover>
-            <template #trigger><NButton>批量分享</NButton></template>
+            <template #trigger>
+              <NButton> 批量分享 </NButton>
+            </template>
             <NSpace vertical>
               <NButton
                 :loading="batchShareZipUrl.loading"
                 @click="batchShareZipUrl.invoke"
-                >批量生成链接-快照</NButton
               >
+                批量生成链接-快照
+              </NButton>
               <NButton
                 :loading="batchShareImageUrl.loading"
                 @click="batchShareImageUrl.invoke"
-                >批量生成链接-图片</NButton
               >
+                批量生成链接-图片
+              </NButton>
             </NSpace>
           </NPopover>
-          <NButton @click="batchDelete.invoke">批量删除</NButton>
+          <NButton @click="batchDelete.invoke"> 批量删除 </NButton>
           <div h-full flex flex-items-center>
             {{ `已选中 ${checkedRowKeys.length} 个快照` }}
           </div>
         </template>
       </NSpace>
       <div flex-1 />
-      <div flex gap-24px items-center pr-8px class="home-topbar-icons">
+      <div flex gap-24px items-center pr-8px class="[--svg-h:24px]">
         <NTooltip>
           <template #trigger>
-            <NButton text @click="settingsDlgShow = true"
-              ><SvgIcon name="settings"
-            /></NButton>
+            <NButton text @click="settingsDlgShow = true">
+              <SvgIcon name="settings" />
+            </NButton>
           </template>
           设置
         </NTooltip>
+        <NTooltip>
+          <template #trigger>
+            <RouterLink flex to="/selector">
+              <NButton text>
+                <SvgIcon name="terminal" />
+              </NButton>
+            </RouterLink>
+          </template>
+          测试选择器
+        </NTooltip>
         <NPopover>
-          <template #trigger
-            ><NButton text><SvgIcon name="import" /></NButton
-          ></template>
+          <template #trigger>
+            <NButton text>
+              <SvgIcon name="import" />
+            </NButton>
+          </template>
           <NSpace vertical>
-            <NButton
-              :loading="importLocal.loading"
-              @click="importLocal.invoke()"
-              >导入本地文件</NButton
-            >
-            <NButton
-              :loading="importNetwork.loading"
-              @click="showImportModal = true"
-              >导入网络文件</NButton
-            >
+            <NTooltip placement="left">
+              <template #trigger>
+                <NButton
+                  :loading="importLocal.loading"
+                  @click="importLocal.invoke()"
+                >
+                  导入本地文件
+                </NButton>
+              </template>
+              <div class="whitespace-nowrap">支持拖拽文件到页面任意位置</div>
+            </NTooltip>
+            <NTooltip placement="left">
+              <template #trigger>
+                <NButton
+                  :loading="importNetwork.loading"
+                  @click="showImportModal = true"
+                >
+                  导入网络文件
+                </NButton>
+              </template>
+              <div class="whitespace-nowrap">
+                支持任意位置粘贴(Ctrl+V)文本触发导入
+              </div>
+            </NTooltip>
           </NSpace>
         </NPopover>
         <NTooltip>
           <template #trigger>
-            <RouterLink flex to="/device"
-              ><NButton text><SvgIcon name="device" /></NButton
-            ></RouterLink>
+            <RouterLink flex to="/device">
+              <NButton text>
+                <SvgIcon name="device" />
+              </NButton>
+            </RouterLink>
           </template>
           连接设备
         </NTooltip>
-        <DeviceControlTools />
         <NTooltip>
           <template #trigger>
             <a
@@ -420,7 +394,9 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
               target="_blank"
               rel="noopener noreferrer"
             >
-              <NButton text><SvgIcon name="discussion" /></NButton>
+              <NButton text>
+                <SvgIcon name="discussion" />
+              </NButton>
             </a>
           </template>
           讨论交流
@@ -429,317 +405,34 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
           <template #trigger>
             <a
               flex
-              href="https://github.com/cjy0812/inspect-plus"
+              href="https://github.com/gkd-kit/inspect"
               target="_blank"
               rel="noopener noreferrer"
             >
-              <NButton text><SvgIcon name="github" /></NButton>
+              <NButton text>
+                <SvgIcon name="github" />
+              </NButton>
             </a>
           </template>
           Github
         </NTooltip>
       </div>
     </div>
-
-    <div class="flex-1 min-h-0 overflow-auto pr-6px">
-      <NSpin :show="loading" class="h-full">
-        <div
-          v-if="!loading && !groupedSnapshots.length"
-          py-40px
-          text-center
-          opacity-70
-        >
-          未找到匹配快照
-        </div>
-        <NCollapse
-          v-else
-          v-model:expandedNames="expandedPackageNames"
-          :accordion="false"
-          :displayDirective="settingsStore.lowMemoryMode ? 'if' : 'show'"
-        >
-          <!-- TODO(perf): 当前为嵌套 NCollapse + 明细列表，后续可迁移到 Virtual List 以优化超大快照集渲染 -->
-          <NCollapseItem
-            v-for="group in groupedSnapshots"
-            :key="group.packageName"
-            :name="group.packageName"
-          >
-            <template #header>
-              <div flex items-center gap-8px>
-                <NCheckbox
-                  :checked="getCheckedStats(getGroupSnapshotIds(group)).checked"
-                  :indeterminate="
-                    getCheckedStats(getGroupSnapshotIds(group)).indeterminate
-                  "
-                  @click.stop
-                  @update:checked="
-                    setCheckedByIds(getGroupSnapshotIds(group), $event)
-                  "
-                />
-                <NTag type="info" size="small">应用</NTag>
-                <code>{{ `${group.appName} (${group.packageName})` }}</code>
-                <NTag size="small">{{ group.activities.length }} 个界面</NTag>
-                <NTag
-                  v-if="getGroupRemark(getPackageRemarkKey(group.packageName))"
-                  size="small"
-                  class="max-w-240px"
-                >
-                  {{ getGroupRemark(getPackageRemarkKey(group.packageName)) }}
-                </NTag>
-                <NButton
-                  text
-                  size="tiny"
-                  @click.stop="
-                    openGroupRemarkModal(
-                      getPackageRemarkKey(group.packageName),
-                      `应用备注: ${group.packageName}`,
-                    )
-                  "
-                >
-                  备注
-                </NButton>
-              </div>
-            </template>
-            <NCollapse
-              v-model:expandedNames="expandedActivityNames"
-              :accordion="false"
-              :displayDirective="settingsStore.lowMemoryMode ? 'if' : 'show'"
-            >
-              <NCollapseItem
-                v-for="activity in group.activities"
-                :key="`${group.packageName}::${activity.activityId}`"
-                :name="`${group.packageName}::${activity.activityId}`"
-              >
-                <template #header>
-                  <div flex items-center gap-8px>
-                    <NCheckbox
-                      :checked="
-                        getCheckedStats(getActivitySnapshotIds(activity))
-                          .checked
-                      "
-                      :indeterminate="
-                        getCheckedStats(getActivitySnapshotIds(activity))
-                          .indeterminate
-                      "
-                      @click.stop
-                      @update:checked="
-                        setCheckedByIds(
-                          getActivitySnapshotIds(activity),
-                          $event,
-                        )
-                      "
-                    />
-                    <NTag type="success" size="small">Activity</NTag>
-                    <code>{{ activity.activityId }}</code>
-                    <NTag size="small"
-                      >{{ activity.snapshots.length }} 个快照</NTag
-                    >
-                    <NTag
-                      v-if="
-                        getGroupRemark(
-                          getActivityRemarkKey(
-                            group.packageName,
-                            activity.activityId,
-                          ),
-                        )
-                      "
-                      size="small"
-                      class="max-w-240px"
-                    >
-                      {{
-                        getGroupRemark(
-                          getActivityRemarkKey(
-                            group.packageName,
-                            activity.activityId,
-                          ),
-                        )
-                      }}
-                    </NTag>
-                    <NButton
-                      text
-                      size="tiny"
-                      @click.stop="
-                        openGroupRemarkModal(
-                          getActivityRemarkKey(
-                            group.packageName,
-                            activity.activityId,
-                          ),
-                          `界面备注: ${activity.activityId}`,
-                        )
-                      "
-                    >
-                      备注
-                    </NButton>
-                  </div>
-                </template>
-                <NSpace vertical :size="6">
-                  <div
-                    v-for="item in getVisibleSnapshots(
-                      group.packageName,
-                      activity,
-                    )"
-                    :key="item.id"
-                    class="rounded-8px border border-solid px-10px py-6px transition-colors"
-                    :class="[
-                      snapshotViewedTime[item.id]
-                        ? 'snapshot-row-viewed'
-                        : 'surface-card',
-                    ]"
-                  >
-                    <div flex items-start gap-10px flex-wrap>
-                      <NCheckbox
-                        :checked="checkedSet.has(item.id)"
-                        @update:checked="toggleChecked(item.id, $event)"
-                      />
-                      <NPopover
-                        trigger="hover"
-                        placement="right-start"
-                        :flip="true"
-                        :shift="true"
-                        @update:show="
-                          if ($event) {
-                            ensurePreview(item.id);
-                          }
-                        "
-                      >
-                        <template #trigger>
-                          <div
-                            class="min-w-0 inline-flex max-w-full cursor-default select-text flex-col"
-                            @mouseenter="ensurePreview(item.id)"
-                          >
-                            <div flex items-center gap-6px leading-18px>
-                              <NTag size="small" type="warning">{{
-                                dayjs(item.id).format('MM-DD HH:mm:ss')
-                              }}</NTag>
-                              <NTag
-                                v-if="snapshotViewedTime[item.id]"
-                                size="small"
-                                type="success"
-                                >已查看</NTag
-                              >
-                              <span class="truncate font-600">{{
-                                getAppInfo(item).name || item.appId
-                              }}</span>
-                            </div>
-                            <div text-12px mt-2px class="font-600">
-                              界面ID: {{ item.activityId || '(unknown)' }}
-                            </div>
-                            <div
-                              text-11px
-                              opacity-65
-                              leading-18px
-                              flex
-                              flex-wrap
-                              gap-x-10px
-                            >
-                              <span mr-10px
-                                >创建:
-                                {{
-                                  dayjs(item.id).format('YYYY-MM-DD HH:mm:ss')
-                                }}</span
-                              >
-                              <span
-                                >导入:
-                                {{
-                                  dayjs(
-                                    snapshotImportTime[item.id] || item.id,
-                                  ).format('YYYY-MM-DD HH:mm:ss')
-                                }}</span
-                              >
-                            </div>
-                            <div
-                              text-11px
-                              opacity-65
-                              leading-18px
-                              flex
-                              flex-wrap
-                              gap-x-10px
-                            >
-                              <span mr-10px
-                                >设备:
-                                {{
-                                  `${getDevice(item).manufacturer} Android ${getDevice(item).release || ''}`
-                                }}</span
-                              >
-                              <span mr-10px>应用ID: {{ item.appId }}</span>
-                              <span mr-10px
-                                >版本代码:
-                                {{ getAppInfo(item).versionCode }}</span
-                              >
-                              <span
-                                >版本号:
-                                {{
-                                  getAppInfo(item).versionName || 'unknown'
-                                }}</span
-                              >
-                            </div>
-                          </div>
-                        </template>
-                        <div class="inline-block w-fit max-w-90vw">
-                          <img
-                            v-if="previewUrlMap[item.id]"
-                            :src="previewUrlMap[item.id]"
-                            class="block h-auto w-auto max-h-320px max-w-80vw rounded-6px"
-                            alt="preview"
-                          />
-                          <div v-else py-20px text-center opacity-70>
-                            {{
-                              previewErrorMap[item.id] ||
-                              (previewLoadingMap[item.id]
-                                ? '预览加载中...'
-                                : '暂无预览')
-                            }}
-                          </div>
-                        </div>
-                      </NPopover>
-                      <NButton
-                        text
-                        size="small"
-                        class="ml-auto shrink-0"
-                        @click="goToSnapshot(item.id)"
-                      >
-                        <template #icon><SvgIcon name="code" /></template>
-                      </NButton>
-                      <ActionCard
-                        :snapshot="item"
-                        :showPreview="false"
-                        :onDelete="updateSnapshots"
-                      />
-                    </div>
-                  </div>
-                  <div
-                    v-if="
-                      activity.snapshots.length > snapshotDisplayLimit &&
-                      !isActivityFullyShown(
-                        group.packageName,
-                        activity.activityId,
-                      )
-                    "
-                    class="text-center py-6px"
-                  >
-                    <NButton
-                      quaternary
-                      size="small"
-                      @click="
-                        showMoreSnapshots(
-                          group.packageName,
-                          activity.activityId,
-                        )
-                      "
-                    >
-                      {{
-                        `显示更多（剩余 ${activity.snapshots.length - snapshotDisplayLimit} 条）`
-                      }}
-                    </NButton>
-                  </div>
-                </NSpace>
-              </NCollapseItem>
-            </NCollapse>
-          </NCollapseItem>
-        </NCollapse>
-      </NSpin>
-    </div>
+    <NDataTable
+      v-model:checkedRowKeys="checkedRowKeys"
+      striped
+      virtualScroll
+      :data="filterSnapshots"
+      :columns="columns"
+      :scrollX="1800"
+      :rowKey="(r:Snapshot)=>r.id"
+      size="small"
+      class="flex-1"
+      flex-height
+      :loading="loading"
+      @update:sorter="handleSorterChange"
+    />
   </div>
-
   <NModal
     :show="showImportModal"
     preset="dialog"
@@ -754,15 +447,20 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
     @close="showImportModal = false"
     @esc="showImportModal = false"
     @afterEnter="inputImportRef?.focus()"
-    @afterLeave="textImportValue = ''"
+    @afterLeave="textImportValue = ``"
   >
     <NInput
       ref="inputImportRef"
       :value="textImportValue"
       type="textarea"
-      :placeholder="`1.支持 ZIP 文件链接\n2.支持快照分享链接\n每行一个\n空白行自动忽略\n非法链接行自动忽略`"
-      :autosize="{ minRows: 8, maxRows: 16 }"
-      :inputProps="{ style: 'white-space: nowrap;' }"
+      :placeholder="`1.支持ZIP文件链接\n2.支持快照链接\n每行一个\n空白行自动忽略\n非法链接行自动忽略`"
+      :autosize="{
+        minRows: 8,
+        maxRows: 16,
+      }"
+      :inputProps="{
+        style: `white-space: nowrap;`,
+      }"
       @update:value="
         if (!importNetwork.loading) {
           textImportValue = $event;
@@ -771,26 +469,26 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
     />
   </NModal>
 
-  <SettingsModal v-model:show="settingsDlgShow" />
-
   <NModal
-    :show="groupRemarkModal.show"
+    v-model:show="settingsDlgShow"
     preset="dialog"
-    :title="groupRemarkModal.title || '分组备注'"
+    title="设置"
     :showIcon="false"
-    positiveText="保存"
-    negativeText="取消"
-    @positiveClick="saveGroupRemark"
-    @negativeClick="groupRemarkModal.show = false"
-    @close="groupRemarkModal.show = false"
+    positiveText="关闭"
+    style="width: 600px"
+    @positiveClick="settingsDlgShow = false"
   >
-    <NInput
-      v-model:value="groupRemarkModal.value"
-      type="textarea"
-      maxlength="160"
-      show-count
-      :autosize="{ minRows: 3, maxRows: 6 }"
-      placeholder="请输入备注"
-    />
+    <NCheckbox v-model:checked="settingsStore.ignoreUploadWarn">
+      关闭生成分享链接弹窗提醒
+    </NCheckbox>
+    <div h-1px my-10px bg="#eee" />
+    <NCheckbox v-model:checked="settingsStore.ignoreWasmWarn">
+      关闭浏览器版本正则表达式 WASM(GC) 提醒
+    </NCheckbox>
+    <div h-1px my-10px bg="#eee" />
+    <div flex gap-10px>
+      <NSwitch v-model:value="settingsStore.autoUploadImport" />
+      <div>打开快照页面自动生成分享链接(请确保不含隐私)</div>
+    </div>
   </NModal>
 </template>

@@ -12,6 +12,9 @@ import {
 import { copy, delay } from '@/utils/others';
 import type { TreeInst } from 'naive-ui';
 import type { HTMLAttributes, ShallowRef } from 'vue';
+import { h } from 'vue';
+import SvgIcon from '@/components/SvgIcon.vue';
+import { useWindowQuickFind } from '@/composables/plus/useWindowQuickFind';
 import { useSnapshotStore } from './snapshot';
 
 const router = useRouter();
@@ -20,11 +23,11 @@ const snapshotStore = useSnapshotStore();
 const { updateFocusNode, focusNode, focusTime } = snapshotStore;
 const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
 const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
+const { getNodeQuickFindMeta } = useWindowQuickFind(rootNode);
 
 let lastClickId = Number.NaN;
 const expandedKeys = shallowRef<number[]>([]);
 const selectedKeys = shallowRef<number[]>([]);
-const treeContainer = useTemplateRef('treeContainerRef');
 watch([() => focusNode.value, () => focusTime.value], async () => {
   if (!focusNode.value) return;
   const key = focusNode.value.id;
@@ -37,19 +40,7 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
         return;
       }
       selectedKeys.value = [key];
-      if (!treeContainer.value) return;
-      const nodeRef = treeContainer.value.querySelector(
-        `[data-node-id="${key}"]`,
-      );
-      if (nodeRef) {
-        nodeRef.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-      } else {
-        await delay(300);
-        treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
-      }
+      treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
     }
   });
   let parent = focusNode.value.parent;
@@ -98,20 +89,52 @@ const renderLabel = (info: {
   checked: boolean;
   selected: boolean;
 }) => {
-  return getNodeLabel(info.option);
+  const label = getNodeLabel(info.option);
+  const meta = getNodeQuickFindMeta(info.option);
+  if (!meta?.has) {
+    return label;
+  }
+  return h(
+    'span',
+    { style: { display: 'inline-flex', alignItems: 'center' } },
+    [
+      label,
+      h(SvgIcon, {
+        name: 'ok',
+        class: 'quickfind-icon',
+        style: {
+          marginLeft: '4px',
+          width: '14px',
+          height: '14px',
+          opacity: meta.self ? '1' : '0.4',
+        },
+      }),
+    ],
+  );
 };
 
 const deviceName = computed(() => {
-  return `${getDevice(snapshot.value).manufacturer} Android ${getDevice(snapshot.value).release || ``}`;
+  // 1. 如果没有快照，返回空字符串或占位符
+  if (!snapshot.value) return '';
+  const device = getDevice(snapshot.value);
+  return `${device.manufacturer} Android ${device.release || ''}`;
 });
 
 const isSystem = computed(() => {
-  return getAppInfo(snapshot.value).isSystem;
+  // 2. 增加可选链 ?. 防御，防止 snapshot 为空时调用 getAppInfo 崩溃
+  if (!snapshot.value) return false;
+  return getAppInfo(snapshot.value)?.isSystem ?? false;
 });
+
 const activityId = computed(() => {
-  const v = snapshot.value.activityId;
-  const appId = snapshot.value.appId;
+  // 3. 这里的 snapshot.value.activityId 在初始状态下会直接报错
+  const snap = snapshot.value;
+  if (!snap) return '';
+
+  const v = snap.activityId;
+  const appId = snap.appId;
   if (!v || !appId) return '';
+
   if (v.startsWith(appId) && v[appId.length] === '.') {
     return v.substring(appId.length);
   }
@@ -227,7 +250,7 @@ const gkdVersionName = computed(() => {
       />
     </div>
     <div h-1px mt-4px bg="#efeff5" />
-    <div ref="treeContainerRef" flex-1 min-h-0>
+    <div flex-1 min-h-0>
       <NTree
         ref="treeRef"
         v-model:expandedKeys="expandedKeys"

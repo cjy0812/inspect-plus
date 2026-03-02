@@ -103,7 +103,8 @@ const error = computed(() => {
       p-4px
       gkd_code
       transition-colors
-      :class="error ? `bg-red-200` : `bg-light-600`"
+      class="selector-ast-view"
+      :class="error ? `selector-ast-view-error` : ``"
     >
       <div v-if="ast" overflow-x-scroll scrollbar-hidden>
         <SelectorText :source="text" :node="ast" />
@@ -124,13 +125,13 @@ const error = computed(() => {
             animate-bounce
             pointer-events-none
           >
-            <SvgIcon name="arrow" class="text-18px color-dark" />
+            <SvgIcon name="arrow" class="text-18px selector-error-arrow" />
           </div>
         </span>
         <span v-if="error.tailText">{{ error.tailText }}</span>
       </span>
     </div>
-    <div v-if="error" p-4px bg-red-300 gkd_code>
+    <div v-if="error" p-4px gkd_code class="selector-error-box">
       {{ error.message }}
     </div>
   </div>
