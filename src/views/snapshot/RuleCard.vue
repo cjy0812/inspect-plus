@@ -58,6 +58,7 @@ type RuleCheckResultSuccess = {
   meta?: {
     expandedActivityIds?: string[];
     usedFastQuery?: boolean;
+    matchedRuleKey?: number;
   };
 };
 
@@ -92,6 +93,68 @@ const toArray = (v: any): string[] | undefined => {
 const isObj = (v: any): v is Record<string, any> => {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 };
+
+type RuleCandidate = {
+  rule: any;
+  key?: number;
+};
+
+function collectRuleCandidates(input: any): RuleCandidate[] {
+  const out: RuleCandidate[] = [];
+  const pushRule = (rule: any) => {
+    if (!isObj(rule)) return;
+    out.push({
+      rule,
+      key: Number.isInteger(rule.key) ? (rule.key as number) : undefined,
+    });
+  };
+  const fromGroup = (group: any) => {
+    if (!isObj(group)) return;
+    if (Array.isArray(group.rules)) group.rules.forEach(pushRule);
+  };
+  const fromApp = (app: any) => {
+    if (!isObj(app)) return;
+    if (Array.isArray(app.groups)) app.groups.forEach(fromGroup);
+  };
+
+  if (Array.isArray(input)) {
+    input.forEach((item: any) => {
+      if (!isObj(item)) return;
+      if (Array.isArray(item.rules)) {
+        item.rules.forEach(pushRule);
+        return;
+      }
+      if (Array.isArray(item.groups)) {
+        item.groups.forEach(fromGroup);
+        return;
+      }
+      if (Array.isArray(item.apps)) {
+        item.apps.forEach(fromApp);
+        return;
+      }
+      pushRule(item);
+    });
+    return out;
+  }
+
+  if (isObj(input)) {
+    if (Array.isArray(input.rules)) {
+      input.rules.forEach(pushRule);
+      return out;
+    }
+    if (Array.isArray(input.groups)) {
+      input.groups.forEach(fromGroup);
+      return out;
+    }
+    if (Array.isArray(input.apps)) {
+      input.apps.forEach(fromApp);
+      return out;
+    }
+    pushRule(input);
+  }
+
+  return out;
+}
 
 function indexToLineCol(
   text: string,
@@ -504,27 +567,65 @@ const parsedRuleResult = computed<RuleCheckResult | null>(() => {
   }
 
   const parsed = parsedAttempt.value;
-  const candidate = Array.isArray(parsed) && parsed.length ? parsed[0] : parsed;
-  const validated = validateAndNormalizeRuleCandidate(candidate);
+  const candidates = collectRuleCandidates(parsed);
+  if (!candidates.length) {
+    return {
+      success: false,
+      error:
+        '未识别到可测试规则（请提供 rule 或包含 rules/groups/apps 的结构）',
+      stage: 'structure',
+      line: 1,
+      column: 1,
+      start: 0,
+      end: Math.min(rawNormalized.length, 20),
+    };
+  }
 
-  if (!validated.success) {
-    const errorObj = validated;
+  let firstFailure: RuleCheckResultFailure | null = null;
+  for (const candidate of candidates) {
+    const validated = validateAndNormalizeRuleCandidate(candidate.rule);
+    if (!validated.success) {
+      if (!firstFailure) firstFailure = validated;
+      continue;
+    }
+    const executed = checkRule(validated.rule, rootNode.value, {
+      appId: snapshot.value?.appId,
+      currentActivityId: snapshot.value?.activityId,
+      simulatedPreKeys: [],
+      ignoreActivityCheck: false,
+    });
+    if (executed.success) {
+      return {
+        ...executed,
+        meta: {
+          ...executed.meta,
+          matchedRuleKey: candidate.key,
+        },
+      };
+    }
+    if (!firstFailure) firstFailure = executed;
+  }
+
+  if (firstFailure) {
     let start = 0;
     let end = Math.min(200, rawNormalized.length);
     let line = 1;
     let column = 1;
 
     if (
-      errorObj.stage === 'selector' &&
-      errorObj.field &&
-      errorObj.index !== undefined
+      firstFailure.stage === 'selector' &&
+      firstFailure.field &&
+      firstFailure.index !== undefined
     ) {
       try {
-        const fieldValue = (candidate as any)[errorObj.field];
+        const fieldValue = (candidates[0]?.rule as any)?.[firstFailure.field];
         let selectorString: string | undefined;
-        if (Array.isArray(fieldValue) && fieldValue.length > errorObj.index) {
-          selectorString = fieldValue[errorObj.index];
-        } else if (typeof fieldValue === 'string' && errorObj.index === 0) {
+        if (
+          Array.isArray(fieldValue) &&
+          fieldValue.length > firstFailure.index
+        ) {
+          selectorString = fieldValue[firstFailure.index];
+        } else if (typeof fieldValue === 'string' && firstFailure.index === 0) {
           selectorString = fieldValue;
         }
         if (selectorString) {
@@ -541,27 +642,25 @@ const parsedRuleResult = computed<RuleCheckResult | null>(() => {
       } catch {
         /* fallback */
       }
-    } else if (errorObj.stage === 'structure' && errorObj.field) {
-      const pos = findFirstOccurrence(rawNormalized, errorObj.field);
+    } else if (firstFailure.stage === 'structure' && firstFailure.field) {
+      const pos = findFirstOccurrence(rawNormalized, firstFailure.field);
       start = pos >= 0 ? Math.max(0, pos - 10) : 0;
       end =
         pos >= 0
-          ? Math.min(rawNormalized.length, pos + errorObj.field.length + 10)
+          ? Math.min(rawNormalized.length, pos + firstFailure.field.length + 10)
           : Math.min(rawNormalized.length, start + 20);
       const lc = indexToLineCol(rawNormalized, start);
       line = lc.line;
       column = lc.column;
     }
 
-    return { ...errorObj, start, end, line, column };
+    return { ...firstFailure, start, end, line, column };
   }
-
-  return checkRule(validated.rule, rootNode.value, {
-    appId: snapshot.value?.appId,
-    currentActivityId: snapshot.value?.activityId,
-    simulatedPreKeys: [],
-    ignoreActivityCheck: false,
-  });
+  return {
+    success: false,
+    error: '规则测试失败（未命中任何候选规则）',
+    stage: 'execute',
+  };
 });
 
 /* -------------------------
@@ -594,6 +693,13 @@ const targetNode = computed(() => {
     return parsedRuleResult.value.node;
   }
   return null;
+});
+
+const matchedRuleKeyText = computed(() => {
+  const result = parsedRuleResult.value;
+  if (!result || !result.success) return '';
+  const key = result.meta?.matchedRuleKey;
+  return Number.isInteger(key) ? `命中规则 key=${key}` : '';
 });
 
 const errorPreview = computed(() => {
@@ -713,6 +819,9 @@ const errorPreview = computed(() => {
         >
           {{ getNodeLabel(targetNode) }}
         </NButton>
+        <div v-if="matchedRuleKeyText" mt-6px text-12px opacity-75>
+          {{ matchedRuleKeyText }}
+        </div>
       </div>
     </div>
   </DraggableCard>
