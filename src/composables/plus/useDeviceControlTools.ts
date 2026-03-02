@@ -232,8 +232,8 @@ export const useDeviceControlTools = () => {
 
     if (Array.isArray(data) && data.length) {
       if (data.every((item) => isRuleApp(item))) {
-        data.forEach((app) => {
-          appendAppCandidates(app, 'root');
+        data.forEach((app, idx) => {
+          appendAppCandidates(app, `root:${idx}`);
         });
         return candidates;
       }

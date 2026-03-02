@@ -21,143 +21,113 @@ const stripNoise = (rawText: string): string => {
     .map((line) => line.replace(/^\s*(\d+\s*[|:]|[+-])\s/, ''))
     .join('\n');
 
-  // 4. 移除所有的 import 语句 (支持单行或多行 import)
+  // 4. 移除所有的 import 语句
   text = text.replace(/(?:^|\n)\s*import\s+[^;]+;\s*/g, '');
 
   return text.trim();
 };
 
 /**
- * 第二步：结构提取引擎
- * 核心逻辑：通过栈计数寻找第一个闭合的 { } 或 [ ]
- * 能够自动忽略开头的碎片（如 "}, ],"）和末尾的脏数据（如 ");"）
+ * 第二步：全量结构提取引擎
+ * 核心逻辑：循环扫描文本，识别并提取所有独立的 {对象}、[数组] 或 defineGkdApp(参数)
  */
-const extractFirstStructure = (text: string): string | null => {
-  let start = -1;
-  let openChar = '';
-  let closeChar = '';
-
-  // 寻找第一个结构起点
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] === '{' || text[i] === '[') {
-      start = i;
-      openChar = text[i];
-      closeChar = openChar === '{' ? '}' : ']';
-      break;
-    }
-  }
-
-  if (start === -1) return null;
-
-  let depth = 0;
-  let inStr = false;
-  let strChar = '';
-  let escaped = false;
-
-  for (let i = start; i < text.length; i++) {
-    const char = text[i];
-
-    // 处理字符串内部，防止字符串里的括号干扰计数
-    if (inStr) {
-      if (escaped) {
-        escaped = false;
-      } else if (char === '\\') {
-        escaped = true;
-      } else if (char === strChar) {
-        inStr = false;
-      }
-      continue;
-    }
-
-    // 检测字符串起点（支持双引号、单引号和反引号）
-    if (char === '"' || char === "'" || char === '`') {
-      inStr = true;
-      strChar = char;
-      continue;
-    }
-
-    // 括号深度计数
-    if (char === openChar) {
-      depth++;
-    } else if (char === closeChar) {
-      depth--;
-      if (depth === 0) {
-        // 找到第一个完整匹配的闭合结构，立即截断返回
-        return text.substring(start, i + 1);
-      }
-    }
-  }
-
-  return null; // 未能找到闭合结构
-};
-
-const extractDefineGkdAppArgs = (text: string): string[] => {
+const extractAllJsonBlocks = (text: string): string[] => {
   const blocks: string[] = [];
-  let cursor = 0;
-  const findCallStart = (from: number) => {
-    const fn = 'defineGkdApp';
-    let p = text.indexOf(fn, from);
-    while (p !== -1) {
-      let i = p + fn.length;
-      while (i < text.length && /\s/.test(text[i])) i++;
-      if (text[i] === '(') return { nameStart: p, openParen: i };
-      p = text.indexOf(fn, p + fn.length);
+  let i = 0;
+
+  while (i < text.length) {
+    const nextBrace = text.indexOf('{', i);
+    const nextBracket = text.indexOf('[', i);
+    const nextFn = text.indexOf('defineGkdApp', i);
+
+    const indices = [nextBrace, nextBracket, nextFn].filter(
+      (idx) => idx !== -1,
+    );
+    if (indices.length === 0) break;
+
+    let start = Math.min(...indices);
+    let openChar = text[start];
+
+    // 解决 "Assigned value is not used" 警告：直接声明不赋初始空值
+    let closeChar: string;
+
+    // 处理函数调用情况
+    if (openChar === 'd') {
+      const parenStart = text.indexOf('(', start);
+      if (parenStart === -1) {
+        i = start + 12; // 跳过关键字继续寻找
+        continue;
+      }
+      start = parenStart;
+      openChar = '(';
+      closeChar = ')';
+    } else {
+      closeChar = openChar === '{' ? '}' : ']';
     }
-    return null;
-  };
-  while (cursor < text.length) {
-    const call = findCallStart(cursor);
-    if (!call) break;
-    let i = call.openParen + 1;
-    let depth = 1;
+
+    let depth = 0;
     let inStr = false;
     let strChar = '';
     let escaped = false;
-    for (; i < text.length; i++) {
-      const ch = text[i];
+    let found = false;
+
+    for (let j = start; j < text.length; j++) {
+      const char = text[j];
+
+      // 处理字符串内部逻辑，防止括号干扰
       if (inStr) {
-        if (escaped) escaped = false;
-        else if (ch === '\\') escaped = true;
-        else if (ch === strChar) {
+        if (escaped) {
+          escaped = false;
+        } else if (char === '\\') {
+          escaped = true;
+        } else if (char === strChar) {
           inStr = false;
-          strChar = '';
         }
         continue;
       }
-      if (ch === '"' || ch === "'" || ch === '`') {
+
+      if (char === '"' || char === "'" || char === '`') {
         inStr = true;
-        strChar = ch;
+        strChar = char;
         continue;
       }
-      if (ch === '(') depth++;
-      else if (ch === ')') {
+
+      // 括号深度计数
+      if (char === openChar) {
+        depth++;
+      } else if (char === closeChar) {
         depth--;
         if (depth === 0) {
-          const argText = text.substring(call.openParen + 1, i).trim();
-          if (argText) blocks.push(argText);
-          cursor = i + 1;
+          // 提取闭合结构内部的内容
+          let content = text.substring(start, j + 1);
+          // 如果是函数调用提取的内容，剥离最外层的 ()
+          if (openChar === '(') {
+            content = content.substring(1, content.length - 1).trim();
+          }
+          if (content) blocks.push(content);
+          i = j + 1;
+          found = true;
           break;
         }
       }
     }
-    if (i >= text.length) break;
+
+    if (!found) i = start + 1;
   }
   return blocks;
 };
 
 /**
- * 第三步：TS 语法清洗
- * 擦除 TS 特有的类型断言，且不会引起 ESLint 报错
+ * 第三步：清洗具体的块内容
+ * 擦除 TS 特有的类型断言、导出语句等
  */
-const cleanTsSyntax = (text: string): string => {
+const cleanBlockSyntax = (text: string): string => {
   return (
     text
       .replace(/^\s*export\s+default\s+/, '')
       .replace(/^\s*(const|let|var)\s+\w+\s*=\s*/, '')
-      .replace(/\)\s*;?\s*$/, '')
-      // 移除 "as const"
+      // 移除 TS 断言，如 as const, as any, as AppConfig[]
       .replace(/\s+as\s+const\b/g, '')
-      // 移除 "as Type" 或 "as Type[]"，修复了 eslint no-useless-escape 的反斜杠报错
       .replace(/\s+as\s+[A-Za-z_$][A-Za-z0-9_$<>[\]]*/g, '')
       .trim()
   );
@@ -184,65 +154,45 @@ export function tryParseJSON5Tolerant(rawText: string): {
   try {
     // 1. 预处理噪音
     const noisyText = stripNoise(rawText);
-    const fullCleanText = cleanTsSyntax(noisyText);
 
-    // 2. 优先尝试解析完整文本（避免只提取到首个子结构）
-    try {
-      const parsed = JSON5.parse(fullCleanText);
-      return { value: parsed };
-    } catch {
-      // fallback 到结构提取
+    // 2. 提取所有可能的 JSON/TS 对象块
+    const blocks = extractAllJsonBlocks(noisyText);
+
+    if (blocks.length === 0) {
+      return { error: new Error('未能从文本中识别出任何有效的规则结构') };
     }
 
-    // 2.1 兼容多个 defineGkdApp({...}) 片段
-    const appBlocks = extractDefineGkdAppArgs(fullCleanText);
-    if (appBlocks.length) {
+    const results: any[] = [];
+    let lastError: Error | null = null;
+
+    // 3. 遍历并解析所有提取到的块
+    for (const block of blocks) {
       try {
-        const parsedApps = appBlocks.map((block) =>
-          JSON5.parse(cleanTsSyntax(block)),
-        );
-        return { value: parsedApps.length === 1 ? parsedApps[0] : parsedApps };
-      } catch {
-        // keep fallback
+        const cleaned = cleanBlockSyntax(block);
+        const parsed = JSON5.parse(cleaned);
+
+        // 如果解析结果是数组，平铺存入结果集
+        if (Array.isArray(parsed)) {
+          results.push(...parsed);
+        } else if (parsed && typeof parsed === 'object') {
+          results.push(parsed);
+        }
+      } catch (e: any) {
+        lastError = e;
       }
     }
 
-    // 2.2 兼容“多个顶层对象片段”输入：{...},{...}
-    try {
-      const wrapped = fullCleanText.replace(/,\s*$/, '');
-      const parsed = JSON5.parse(`[${wrapped}]`);
-      if (Array.isArray(parsed) && parsed.length > 1) {
-        return { value: parsed };
-      }
-    } catch {
-      // keep fallback
-    }
-
-    // 3. 尝试提取有效的 JSON 结构
-    const structure = extractFirstStructure(noisyText);
-
-    if (!structure) {
+    // 4. 最终结果汇总
+    if (results.length === 0) {
       return {
         error: new Error(
-          '未能从文本中识别出任何有效的 { 对象 } 或 [ 数组 ] 结构',
+          `解析失败: ${lastError?.message || '语法错误'}。请检查括号、逗号是否完整。`,
         ),
       };
     }
 
-    // 4. 清理 TS 类型干扰并使用 JSON5 解析
-    const finalCleanText = cleanTsSyntax(structure);
-
-    try {
-      const parsed = JSON5.parse(finalCleanText);
-      return { value: parsed };
-    } catch (parseError: any) {
-      // 提供具体的解析错误位置和原因
-      return {
-        error: new Error(
-          `JSON5 解析失败: ${parseError.message}。请检查代码语法（如括号、逗号是否完整）。`,
-        ),
-      };
-    }
+    // 返回单对象或对象数组
+    return { value: results.length === 1 ? results[0] : results };
   } catch (globalError: any) {
     return { error: new Error(`解析发生未知错误: ${globalError.message}`) };
   }
