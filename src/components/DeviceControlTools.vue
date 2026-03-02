@@ -16,7 +16,6 @@ const {
   subsText,
   parsedCandidates,
   selectedCandidateKeys,
-  candidateOptions,
   selectAllCandidates,
   clearCandidateSelection,
   invertCandidateSelection,
@@ -27,6 +26,112 @@ const {
   clickAction,
   execSelector,
 } = useDeviceControlTools();
+
+type CandidateTreeOption = {
+  key: string;
+  label: string;
+  children?: CandidateTreeOption[];
+  checkboxDisabled?: boolean;
+};
+
+const candidateTreeOptions = computed<CandidateTreeOption[]>(() => {
+  const appRoot: CandidateTreeOption = {
+    key: '__branch__:apps',
+    label: 'Apps',
+    children: [],
+  };
+  const globalRoot: CandidateTreeOption = {
+    key: '__branch__:global',
+    label: 'GlobalGroups',
+    checkboxDisabled: true,
+    children: [],
+  };
+  const categoryRoot: CandidateTreeOption = {
+    key: '__branch__:categories',
+    label: 'Categories',
+    checkboxDisabled: true,
+    children: [],
+  };
+  const appMap = new Map<string, CandidateTreeOption>();
+
+  const normalizeLeafLabel = (text: string) => {
+    if (text.startsWith('AppGroup: ')) {
+      const idx = text.indexOf(' / ');
+      return idx >= 0 ? text.substring(idx + 3) : text;
+    }
+    return text;
+  };
+
+  parsedCandidates.value.forEach((item) => {
+    if (item.kind === 'app') {
+      const app = item.payload.apps?.[0];
+      const appId = app?.id || '(unknown)';
+      const appName = app?.name || appId;
+      const appKey = `__branch__:app:${appId}`;
+      let appNode = appMap.get(appKey);
+      if (!appNode) {
+        appNode = {
+          key: appKey,
+          label: `${appName} (${appId})`,
+          children: [],
+        };
+        appMap.set(appKey, appNode);
+        appRoot.children!.push(appNode);
+      }
+      appNode.children!.push({
+        key: item.key,
+        label: normalizeLeafLabel(item.label),
+      });
+      return;
+    }
+    if (item.kind === 'globalGroup') {
+      globalRoot.children!.push({
+        key: item.key,
+        label: item.label.replace(/^GlobalGroup:\s*/, ''),
+      });
+      return;
+    }
+    categoryRoot.children!.push({
+      key: item.key,
+      label: item.label.replace(/^Category:\s*/, ''),
+    });
+  });
+
+  return [appRoot, globalRoot, categoryRoot].filter(
+    (node) => (node.children || []).length > 0,
+  );
+});
+
+const candidateTreeBranchToLeaves = computed(() => {
+  const map = new Map<string, string[]>();
+  const walk = (node: CandidateTreeOption): string[] => {
+    if (!node.children?.length) return [node.key];
+    const leaves = node.children.flatMap((child) => walk(child));
+    map.set(node.key, leaves);
+    return leaves;
+  };
+  candidateTreeOptions.value.forEach((node) => {
+    walk(node);
+  });
+  return map;
+});
+
+const onCandidateTreeChecked = (keys: Array<string | number>) => {
+  const allow = new Set(parsedCandidates.value.map((item) => item.key));
+  const selected = new Set<string>();
+  keys.forEach((key) => {
+    if (typeof key !== 'string') return;
+    if (allow.has(key)) {
+      selected.add(key);
+      return;
+    }
+    const leafKeys = candidateTreeBranchToLeaves.value.get(key) || [];
+    leafKeys.forEach((leaf) => {
+      if (allow.has(leaf)) selected.add(leaf);
+    });
+  });
+  selectedCandidateKeys.value = [...selected];
+};
 
 const subsPlaceholder = `
 示例-单个应用的规则:
@@ -125,7 +230,7 @@ const subsPlaceholder = `
         mt-10px
         size="small"
         :bordered="true"
-        title="解析结果（可选导入）"
+        title="解析结果（树形可选导入）"
       >
         <div mb-8px flex justify-end gap-8px>
           <NButton size="tiny" tertiary @click="selectAllCandidates"
@@ -138,16 +243,15 @@ const subsPlaceholder = `
             >清空</NButton
           >
         </div>
-        <NCheckboxGroup v-model:value="selectedCandidateKeys">
-          <NSpace vertical>
-            <NCheckbox
-              v-for="item in candidateOptions"
-              :key="item.value"
-              :value="item.value"
-              :label="item.label"
-            />
-          </NSpace>
-        </NCheckboxGroup>
+        <NTree
+          block-line
+          checkable
+          cascade
+          expand-on-click
+          :data="candidateTreeOptions"
+          :checked-keys="selectedCandidateKeys"
+          @update:checkedKeys="onCandidateTreeChecked"
+        />
       </NCard>
       <div
         :class="{

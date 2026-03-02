@@ -161,12 +161,6 @@ export const useDeviceControlTools = () => {
             },
           });
         });
-        append({
-          key: `${prefix}:app:${app.id}:all`,
-          kind: 'app',
-          label: `App: ${appName} (${app.id}) [全部 ${groups.length} 组]`,
-          payload: { apps: [app] },
-        });
         return;
       }
       append({
@@ -361,7 +355,7 @@ export const useDeviceControlTools = () => {
         return false;
       }
       parsedCandidates.value = candidates;
-      selectedCandidateKeys.value = candidates.map((item) => item.key);
+      selectedCandidateKeys.value = [];
       parsedFingerprint.value = normalizedText;
       if (candidates.length > 1) {
         message.info(
