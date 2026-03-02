@@ -24,6 +24,7 @@ import {
 } from '@/utils/plus/url';
 import dayjs from 'dayjs';
 import pLimit from 'p-limit';
+import { dialog } from '@/utils/discrete';
 
 const router = useRouter();
 const { api, origin, serverInfo } = useDeviceApi();
@@ -240,6 +241,20 @@ const shareSnapshotImageUrl = useBatchTask(
 
 const deleteSnapshot = useBatchTask(
   async (row: Snapshot) => {
+    await new Promise((res, rej) => {
+      dialog.warning({
+        title: '删除',
+        content: '是否删除此快照？',
+        negativeText: '取消',
+        positiveText: '确认',
+        onClose: rej,
+        onEsc: rej,
+        onMaskClick: rej,
+        onNegativeClick: rej,
+        onPositiveClick: res,
+      });
+    });
+
     await api.deleteSnapshot({ id: row.id });
     message.success('快照删除成功');
     // 从本地存储中删除
@@ -268,6 +283,95 @@ watchEffect(() => {
   );
   expandedPackageNames.value = packageNames;
   expandedActivityNames.value = activityNames;
+});
+
+// 多选功能
+const checkedRowKeys = shallowRef<number[]>([]);
+const checkedSet = computed(() => new Set(checkedRowKeys.value));
+
+const getGroupSnapshotIds = (
+  group: ReturnType<typeof buildGroupedSnapshots>[0],
+) => {
+  return group.activities.flatMap((activity) =>
+    activity.snapshots.map((s) => s.id),
+  );
+};
+
+const getActivitySnapshotIds = (
+  activity: ReturnType<typeof buildGroupedSnapshots>[0]['activities'][0],
+) => {
+  return activity.snapshots.map((s) => s.id);
+};
+
+const getCheckedStats = (ids: number[]) => {
+  const checkedIds = checkedSet.value;
+  const checkedCount = ids.filter((id) => checkedIds.has(id)).length;
+  return {
+    checked: checkedCount > 0 && checkedCount === ids.length,
+    indeterminate: checkedCount > 0 && checkedCount < ids.length,
+  };
+};
+
+const setCheckedByIds = (ids: number[], checked: boolean) => {
+  if (checked) {
+    const next = new Set(checkedRowKeys.value);
+    ids.forEach((id) => next.add(id));
+    checkedRowKeys.value = [...next];
+    return;
+  }
+  const idSet = new Set(ids);
+  checkedRowKeys.value = checkedRowKeys.value.filter((id) => !idSet.has(id));
+};
+
+const toggleChecked = (id: number, checked: boolean) => {
+  if (checked) {
+    if (!checkedSet.value.has(id))
+      checkedRowKeys.value = [...checkedRowKeys.value, id];
+  } else {
+    checkedRowKeys.value = checkedRowKeys.value.filter((k) => k != id);
+  }
+};
+
+// 批量删除
+const batchDelete = useTask(async () => {
+  await new Promise((res, rej) => {
+    dialog.warning({
+      title: '删除',
+      content: `是否批量删除 ${checkedRowKeys.value.length} 个快照`,
+      negativeText: '取消',
+      positiveText: '确认',
+      onClose: rej,
+      onEsc: rej,
+      onMaskClick: rej,
+      onNegativeClick: rej,
+      onPositiveClick: res,
+    });
+  });
+
+  // 批量删除远端快照
+  await Promise.all(
+    checkedRowKeys.value.map((id) => api.deleteSnapshot({ id })),
+  );
+
+  // 从本地存储中删除
+  await Promise.all(
+    checkedRowKeys.value.map((id) =>
+      Promise.all([
+        snapshotStorage.removeItem(id),
+        screenshotStorage.removeItem(id),
+      ]),
+    ),
+  );
+
+  message.success(`成功删除 ${checkedRowKeys.value.length} 个快照`);
+
+  // 刷新快照列表
+  const result = await api.getSnapshots();
+  result.sort((a, b) => b.id - a.id);
+  snapshots.value = result;
+
+  // 清空选择
+  checkedRowKeys.value = [];
 });
 </script>
 
@@ -334,6 +438,19 @@ watchEffect(() => {
           下载所有快照
         </NTooltip>
 
+        <template v-if="checkedRowKeys.length">
+          <NButton
+            type="error"
+            :loading="batchDelete.loading"
+            @click="batchDelete.invoke"
+          >
+            批量删除 ({{ checkedRowKeys.length }})
+          </NButton>
+          <div h-full flex flex-items-center>
+            已选中 {{ checkedRowKeys.length }} 个快照
+          </div>
+        </template>
+
         <NTooltip>
           <template #trigger>
             <NButton
@@ -366,6 +483,16 @@ watchEffect(() => {
         >
           <template #header>
             <div flex items-center gap-8px>
+              <NCheckbox
+                :checked="getCheckedStats(getGroupSnapshotIds(group)).checked"
+                :indeterminate="
+                  getCheckedStats(getGroupSnapshotIds(group)).indeterminate
+                "
+                @click.stop
+                @update:checked="
+                  setCheckedByIds(getGroupSnapshotIds(group), $event)
+                "
+              />
               <NTag type="info" size="small">包名</NTag>
               <code>{{ `${group.appName} (${group.packageName})` }}</code>
               <NTag size="small">{{ group.activities.length }} Activities</NTag>
@@ -382,10 +509,23 @@ watchEffect(() => {
             >
               <template #header>
                 <div flex items-center gap-8px>
+                  <NCheckbox
+                    :checked="
+                      getCheckedStats(getActivitySnapshotIds(activity)).checked
+                    "
+                    :indeterminate="
+                      getCheckedStats(getActivitySnapshotIds(activity))
+                        .indeterminate
+                    "
+                    @click.stop
+                    @update:checked="
+                      setCheckedByIds(getActivitySnapshotIds(activity), $event)
+                    "
+                  />
                   <NTag type="success" size="small">Activity</NTag>
                   <code>{{ activity.activityId }}</code>
-                  <NTag size="small"
-                    >{{ activity.snapshots.length }} snapshots</NTag
+                  <NTag size="small">
+                    {{ activity.snapshots.length }} snapshots</NTag
                   >
                 </div>
               </template>
@@ -401,6 +541,10 @@ watchEffect(() => {
                   ]"
                 >
                   <div flex items-start gap-10px flex-wrap>
+                    <NCheckbox
+                      :checked="checkedSet.has(item.id)"
+                      @update:checked="toggleChecked(item.id, $event)"
+                    />
                     <NPopover
                       trigger="hover"
                       placement="right-start"
