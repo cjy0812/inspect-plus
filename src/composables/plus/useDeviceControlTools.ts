@@ -171,6 +171,25 @@ export const useDeviceControlTools = () => {
       return candidates;
     }
 
+    if (isRuleGroup(data)) {
+      const appHeader = await getSnapshotAppHeader();
+      append({
+        key: `root:auto-app-group:${data.key}`,
+        kind: 'app',
+        label: `App(auto): ${appHeader.name} / Group(${normalizeLabel(data.name, `key=${data.key}`)})`,
+        payload: {
+          apps: [
+            {
+              id: appHeader.id,
+              name: appHeader.name,
+              groups: [data],
+            },
+          ],
+        },
+      });
+      return candidates;
+    }
+
     if (Array.isArray(data) && data.length) {
       if (data.every((item) => isRuleApp(item))) {
         data.forEach((app) => {

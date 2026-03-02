@@ -26,36 +26,26 @@ const {
 } = useDeviceControlTools();
 
 const subsPlaceholder = `
-请输入订阅文本(JSON5/TS片段均可，支持容错清洗):
-示例1-单个应用的规则:
+示例-单个应用的规则:
 {
   id: 'cn.dxy.clinmaster',
   name: '临床决策',
   groups: [
     {
       key: 1,
-      name: '更新提示',
-      matchTime: 10000,
-      actionMaximum: 1,
-      resetMatch: 'app',
+      name: '示例',
       rules: [
         {
           fastQuery: true,
           activityIds: 'cn.dxy.clinmaster.home.MainActivity',
           matches:
-            '@[vid="iv_close"][clickable=true][visibleToUser=true] -2 [text="立即更新"]',
+            '@[vid="iv_close"] -2 [text="立即更新"]',
           snapshotUrls: 'https://i.gkd.li/i/25459821',
         },
       ],
     },
   ],
 }
-
-示例2-仅复制了 groups (无 app 头):
-[
-  { key: 1, name: '更新提示', rules: [{ matches: 'xxx' }] },
-  { key: 2, name: '弹窗', rules: [{ matches: 'yyy' }] },
-]
 `.trim();
 </script>
 
@@ -99,8 +89,8 @@ const subsPlaceholder = `
       size="small"
       closable
       class="floating-panel"
-      style="width: min(720px, 90vw)"
-      :content-style="{ maxHeight: '70vh', overflow: 'auto' }"
+      style="width: min(720px, 80vw); max-height: 73vh"
+      :content-style="{ overflow: 'auto' }"
       @close="showSubsModel = false"
     >
       <template #header>
@@ -119,14 +109,13 @@ const subsPlaceholder = `
         :disabled="updateSubs.loading"
         type="textarea"
         class="gkd_code"
-        :autosize="{ minRows: 20, maxRows: 25 }"
+        :autosize="{ minRows: 16, maxRows: 22 }"
         :placeholder="subsPlaceholder"
         aria-label="订阅文本输入框"
       />
       <NAlert mt-10px type="info" title="导入说明">
-        1) 点击“解析”可自动清洗非法 TS/残缺文本并识别多条规则。 2) 若无 app
-        头，快照页会自动补全；在 /device 页面会提示错误。 3)
-        多条规则可勾选后再“确认导入”。
+        1.点击“解析”可自动清洗非法 TS/残缺文本并识别多条规则 2.若无
+        app头,快照审查页会自动补全 3.支持 TS转JSON5 语法格式
       </NAlert>
       <NCard
         v-if="parsedCandidates.length"
@@ -146,7 +135,15 @@ const subsPlaceholder = `
           </NSpace>
         </NCheckboxGroup>
       </NCard>
-      <div mt-10px flex justify-end gap-8px>
+      <div
+        :class="{
+          'mt-10px': parsedCandidates.length,
+          'mt-5px': !parsedCandidates.length,
+        }"
+        flex
+        justify-end
+        gap-8px
+      >
         <NButton @click="showSubsModel = false">取消</NButton>
         <NButton
           :loading="parseCandidates.loading"
