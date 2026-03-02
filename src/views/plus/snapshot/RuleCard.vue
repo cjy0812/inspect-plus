@@ -485,17 +485,33 @@ function checkRule(
       (nodes) => !Array.isArray(nodes) || nodes.length === 0,
     );
     if (notIndex >= 0) {
-      const anyHitIndex = anyResults.findIndex(
-        (nodes) => Array.isArray(nodes) && nodes.length > 0,
+      // 检查 matches 数组中是否有其他选择器能够命中
+      const anyHitIndex = matchesResults.findIndex(
+        (nodes, index) =>
+          index !== notIndex && Array.isArray(nodes) && nodes.length > 0,
       );
       if (anyHitIndex >= 0) {
         return {
           success: false,
-          error: `matches[${notIndex}] 未命中，但 anyMatches[${anyHitIndex}] 可命中（建议改用 anyMatches 语义）`,
+          error: `matches[${notIndex}] 未命中，但 matches[${anyHitIndex}] 可命中（建议改用 anyMatches 语义）`,
           stage: 'execute',
           field: 'matches',
           index: notIndex,
-          node: anyResults[anyHitIndex]?.[0],
+          node: matchesResults[anyHitIndex]?.[0],
+        };
+      }
+      // 检查 anyMatches 数组中是否有选择器能够命中
+      const anyHitIndex2 = anyResults.findIndex(
+        (nodes) => Array.isArray(nodes) && nodes.length > 0,
+      );
+      if (anyHitIndex2 >= 0) {
+        return {
+          success: false,
+          error: `matches[${notIndex}] 未命中，但 anyMatches[${anyHitIndex2}] 可命中（建议改用 anyMatches 语义）`,
+          stage: 'execute',
+          field: 'matches',
+          index: notIndex,
+          node: anyResults[anyHitIndex2]?.[0],
         };
       }
       return {
@@ -720,42 +736,11 @@ const errorText = computed(() => {
   return '';
 });
 
-const targetNode = computed(() => {
-  if (parsedRuleResult.value && parsedRuleResult.value.success) {
-    return parsedRuleResult.value.node;
-  }
-  return null;
-});
-
-const errorHitNode = computed(() => {
-  const result = parsedRuleResult.value;
-  if (!result || result.success) return null;
-  return result.node ?? null;
-});
-
 const matchedRuleKeyText = computed(() => {
   const result = parsedRuleResult.value;
   if (!result || !result.success) return '';
   const key = result.meta?.matchedRuleKey;
   return Number.isInteger(key) ? `命中规则 key=${key}` : '';
-});
-
-const matchStatusTag = computed(() => {
-  const result = parsedRuleResult.value;
-  if (!result) return null;
-  if (result.success) {
-    return {
-      type: 'success' as const,
-      text: '规则命中',
-    };
-  }
-  if (result.field === 'matches' && result.error.includes('anyMatches')) {
-    return {
-      type: 'warning' as const,
-      text: 'matches 未命中，但 anyMatches 可命中',
-    };
-  }
-  return null;
 });
 
 const errorPreview = computed(() => {
@@ -805,7 +790,7 @@ const errorPreview = computed(() => {
           class="mr-6px"
           style="color: var(--accent-success-color)"
         />
-        <div>测试规则</div>
+        <div>测试规则 GKD引擎模拟器</div>
         <div :ref="onRef" flex-1 cursor-move />
         <NButton text title="最小化" @click="onUpdateShow(!show)">
           <template #icon><SvgIcon name="minus" /></template>
@@ -856,13 +841,113 @@ const errorPreview = computed(() => {
       </div>
 
       <div min-h-24px mt-4px>
-        <div v-if="matchStatusTag" mb-6px>
-          <NTag size="small" :type="matchStatusTag.type">
-            {{ matchStatusTag.text }}
-          </NTag>
+        <!-- 规则成功命中 -->
+        <div v-if="parsedRuleResult && parsedRuleResult.success">
+          <div flex items-center gap-4px>
+            <NTag type="success" size="small" round>规则命中</NTag>
+            <NButton
+              size="small"
+              :style="getNodeStyle(parsedRuleResult.node, focusNode)"
+              @click="snapshotStore.updateFocusNode(parsedRuleResult.node)"
+            >
+              {{ getNodeLabel(parsedRuleResult.node) }}
+            </NButton>
+          </div>
+          <!-- 显示命中详情 -->
+          <div
+            v-if="parsedRuleResult.matched"
+            mt-4px
+            pl-4px
+            border-l-2
+            border-gray-200
+          >
+            <div
+              v-for="(matchInfo, type) in parsedRuleResult.matched"
+              :key="type"
+              mb-2px
+            >
+              <div flex items-center gap-2px>
+                <NTag
+                  :type="type.includes('exclude') ? 'warning' : 'info'"
+                  size="small"
+                  round
+                  >{{ type }} 命中</NTag
+                >
+                <span text-12px opacity-70
+                  >{{ (matchInfo || []).length }}个选择器</span
+                >
+              </div>
+              <div
+                v-for="(item, index) in matchInfo"
+                :key="index"
+                ml-4px
+                mt-1px
+              >
+                <NTooltip trigger="hover">
+                  <template #trigger>
+                    <div text-12px gkd_code>
+                      {{ index }}: {{ item.selector }}
+                    </div>
+                  </template>
+                  <div max-w-400px whitespace-pre-wrap>{{ item.selector }}</div>
+                </NTooltip>
+              </div>
+            </div>
+          </div>
         </div>
-        <div v-if="errorText" color-red whitespace-pre>
-          {{ errorText }}
+
+        <!-- 规则未命中但有可命中的选择器 -->
+        <div
+          v-else-if="
+            parsedRuleResult &&
+            !parsedRuleResult.success &&
+            parsedRuleResult.node &&
+            parsedRuleResult.error.includes('可命中')
+          "
+        >
+          <div color-red whitespace-pre>{{ errorText }}</div>
+          <div flex items-center gap-4px mt-2px>
+            <NTag type="warning" size="small" round
+              >建议改用 anyMatches 语义</NTag
+            >
+            <NButton
+              size="small"
+              :style="getNodeStyle(parsedRuleResult.node, focusNode)"
+              @click="snapshotStore.updateFocusNode(parsedRuleResult.node)"
+            >
+              {{ getNodeLabel(parsedRuleResult.node) }}
+            </NButton>
+          </div>
+        </div>
+
+        <!-- 规则因 excludeMatches 而未命中 -->
+        <div
+          v-else-if="
+            parsedRuleResult &&
+            !parsedRuleResult.success &&
+            parsedRuleResult.node &&
+            parsedRuleResult.field &&
+            parsedRuleResult.field.includes('exclude')
+          "
+        >
+          <div color-red whitespace-pre>{{ errorText }}</div>
+          <div flex items-center gap-4px mt-2px>
+            <NTag type="warning" size="small" round
+              >{{ parsedRuleResult.field }} 排除命中</NTag
+            >
+            <NButton
+              size="small"
+              :style="getNodeStyle(parsedRuleResult.node, focusNode)"
+              @click="snapshotStore.updateFocusNode(parsedRuleResult.node)"
+            >
+              {{ getNodeLabel(parsedRuleResult.node) }}
+            </NButton>
+          </div>
+        </div>
+
+        <!-- 规则完全未命中 -->
+        <div v-else-if="parsedRuleResult && !parsedRuleResult.success">
+          <div color-red whitespace-pre>{{ errorText }}</div>
           <template v-if="diagnostics">
             <br />
             <span text-11px opacity-70>
@@ -871,26 +956,9 @@ const errorPreview = computed(() => {
             </span>
           </template>
         </div>
-        <div v-if="errorHitNode" mt-6px>
-          <NTag size="small" type="warning" mr-6px>命中节点</NTag>
-          <NButton
-            size="small"
-            :style="getNodeStyle(errorHitNode, focusNode)"
-            @click="snapshotStore.updateFocusNode(errorHitNode)"
-          >
-            {{ getNodeLabel(errorHitNode) }}
-          </NButton>
-        </div>
 
-        <NButton
-          v-else-if="targetNode"
-          size="small"
-          :style="getNodeStyle(targetNode, focusNode)"
-          @click="snapshotStore.updateFocusNode(targetNode)"
-        >
-          {{ getNodeLabel(targetNode) }}
-        </NButton>
-        <div v-if="matchedRuleKeyText" mt-6px text-12px opacity-75>
+        <!-- 显示规则 key -->
+        <div v-if="matchedRuleKeyText" mt-4px text-12px opacity-75>
           {{ matchedRuleKeyText }}
         </div>
       </div>
