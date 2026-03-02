@@ -91,6 +91,60 @@ const extractFirstStructure = (text: string): string | null => {
   return null; // 未能找到闭合结构
 };
 
+const extractDefineGkdAppArgs = (text: string): string[] => {
+  const blocks: string[] = [];
+  let cursor = 0;
+  const findCallStart = (from: number) => {
+    const fn = 'defineGkdApp';
+    let p = text.indexOf(fn, from);
+    while (p !== -1) {
+      let i = p + fn.length;
+      while (i < text.length && /\s/.test(text[i])) i++;
+      if (text[i] === '(') return { nameStart: p, openParen: i };
+      p = text.indexOf(fn, p + fn.length);
+    }
+    return null;
+  };
+  while (cursor < text.length) {
+    const call = findCallStart(cursor);
+    if (!call) break;
+    let i = call.openParen + 1;
+    let depth = 1;
+    let inStr = false;
+    let strChar = '';
+    let escaped = false;
+    for (; i < text.length; i++) {
+      const ch = text[i];
+      if (inStr) {
+        if (escaped) escaped = false;
+        else if (ch === '\\') escaped = true;
+        else if (ch === strChar) {
+          inStr = false;
+          strChar = '';
+        }
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === '`') {
+        inStr = true;
+        strChar = ch;
+        continue;
+      }
+      if (ch === '(') depth++;
+      else if (ch === ')') {
+        depth--;
+        if (depth === 0) {
+          const argText = text.substring(call.openParen + 1, i).trim();
+          if (argText) blocks.push(argText);
+          cursor = i + 1;
+          break;
+        }
+      }
+    }
+    if (i >= text.length) break;
+  }
+  return blocks;
+};
+
 /**
  * 第三步：TS 语法清洗
  * 擦除 TS 特有的类型断言，且不会引起 ESLint 报错
@@ -98,6 +152,9 @@ const extractFirstStructure = (text: string): string | null => {
 const cleanTsSyntax = (text: string): string => {
   return (
     text
+      .replace(/^\s*export\s+default\s+/, '')
+      .replace(/^\s*(const|let|var)\s+\w+\s*=\s*/, '')
+      .replace(/\)\s*;?\s*$/, '')
       // 移除 "as const"
       .replace(/\s+as\s+const\b/g, '')
       // 移除 "as Type" 或 "as Type[]"，修复了 eslint no-useless-escape 的反斜杠报错
@@ -135,6 +192,30 @@ export function tryParseJSON5Tolerant(rawText: string): {
       return { value: parsed };
     } catch {
       // fallback 到结构提取
+    }
+
+    // 2.1 兼容多个 defineGkdApp({...}) 片段
+    const appBlocks = extractDefineGkdAppArgs(fullCleanText);
+    if (appBlocks.length) {
+      try {
+        const parsedApps = appBlocks.map((block) =>
+          JSON5.parse(cleanTsSyntax(block)),
+        );
+        return { value: parsedApps.length === 1 ? parsedApps[0] : parsedApps };
+      } catch {
+        // keep fallback
+      }
+    }
+
+    // 2.2 兼容“多个顶层对象片段”输入：{...},{...}
+    try {
+      const wrapped = fullCleanText.replace(/,\s*$/, '');
+      const parsed = JSON5.parse(`[${wrapped}]`);
+      if (Array.isArray(parsed) && parsed.length > 1) {
+        return { value: parsed };
+      }
+    } catch {
+      // keep fallback
     }
 
     // 3. 尝试提取有效的 JSON 结构

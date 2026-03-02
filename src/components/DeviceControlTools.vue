@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import DraggableCard from '@/components/DraggableCard.vue';
 import { useDeviceControlTools } from '@/composables/plus/useDeviceControlTools';
-import type { TooltipProps } from 'naive-ui';
+import type { TooltipProps, TreeProps, TreeOption } from 'naive-ui';
+import { h } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -115,6 +116,31 @@ const candidateTreeBranchToLeaves = computed(() => {
   });
   return map;
 });
+
+const candidateLeafKeySet = computed(
+  () => new Set(parsedCandidates.value.map((item) => item.key)),
+);
+
+const toggleLeafByLabelClick = (key: string) => {
+  if (!candidateLeafKeySet.value.has(key)) return;
+  const next = new Set(selectedCandidateKeys.value);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  selectedCandidateKeys.value = [...next];
+};
+
+const candidateTreeNodeProps: NonNullable<TreeProps['nodeProps']> = (info) => {
+  const option = info.option as TreeOption;
+  if (Array.isArray(option.children) && option.children.length) return {};
+  const key = String(option.key ?? '');
+  if (!key) return {};
+  return {
+    onClick: (e: MouseEvent) => {
+      e.stopPropagation();
+      toggleLeafByLabelClick(key);
+    },
+  };
+};
 
 const onCandidateTreeChecked = (keys: Array<string | number>) => {
   const allow = new Set(parsedCandidates.value.map((item) => item.key));
@@ -248,6 +274,23 @@ const subsPlaceholder = `
           checkable
           cascade
           expand-on-click
+          :render-label="
+            ({ option }) =>
+              option.children?.length
+                ? option.label
+                : h(
+                    'span',
+                    {
+                      style: { cursor: 'pointer' },
+                      onClick: (e: MouseEvent) => {
+                        e.stopPropagation();
+                        toggleLeafByLabelClick(String(option.key));
+                      },
+                    },
+                    option.label as string,
+                  )
+          "
+          :node-props="candidateTreeNodeProps"
           :data="candidateTreeOptions"
           :checked-keys="selectedCandidateKeys"
           @update:checkedKeys="onCandidateTreeChecked"
