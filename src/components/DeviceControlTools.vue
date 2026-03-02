@@ -17,6 +17,9 @@ const {
   parsedCandidates,
   selectedCandidateKeys,
   candidateOptions,
+  selectAllCandidates,
+  clearCandidateSelection,
+  invertCandidateSelection,
   parseCandidates,
   updateSubs,
   showSelectorModel,
@@ -124,6 +127,17 @@ const subsPlaceholder = `
         :bordered="true"
         title="解析结果（可选导入）"
       >
+        <div mb-8px flex justify-end gap-8px>
+          <NButton size="tiny" tertiary @click="selectAllCandidates"
+            >全选</NButton
+          >
+          <NButton size="tiny" tertiary @click="invertCandidateSelection"
+            >反选</NButton
+          >
+          <NButton size="tiny" tertiary @click="clearCandidateSelection"
+            >清空</NButton
+          >
+        </div>
         <NCheckboxGroup v-model:value="selectedCandidateKeys">
           <NSpace vertical>
             <NCheckbox

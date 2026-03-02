@@ -118,26 +118,37 @@ export function normalizeLooseJsonLikeText(text: string): string {
  */
 export function tryParseJSON5Tolerant(rawText: string): {
   value?: any;
-  error?: string;
+  error?: Error;
 } {
   if (!rawText || !rawText.trim()) {
-    return { error: '输入内容为空' };
+    return { error: new Error('输入内容为空') };
   }
 
   try {
     // 1. 预处理噪音
     const noisyText = stripNoise(rawText);
+    const fullCleanText = cleanTsSyntax(noisyText);
 
-    // 2. 尝试提取有效的 JSON 结构
+    // 2. 优先尝试解析完整文本（避免只提取到首个子结构）
+    try {
+      const parsed = JSON5.parse(fullCleanText);
+      return { value: parsed };
+    } catch {
+      // fallback 到结构提取
+    }
+
+    // 3. 尝试提取有效的 JSON 结构
     const structure = extractFirstStructure(noisyText);
 
     if (!structure) {
       return {
-        error: '未能从文本中识别出任何有效的 { 对象 } 或 [ 数组 ] 结构',
+        error: new Error(
+          '未能从文本中识别出任何有效的 { 对象 } 或 [ 数组 ] 结构',
+        ),
       };
     }
 
-    // 3. 清理 TS 类型干扰并使用 JSON5 解析
+    // 4. 清理 TS 类型干扰并使用 JSON5 解析
     const finalCleanText = cleanTsSyntax(structure);
 
     try {
@@ -146,10 +157,12 @@ export function tryParseJSON5Tolerant(rawText: string): {
     } catch (parseError: any) {
       // 提供具体的解析错误位置和原因
       return {
-        error: `JSON5 解析失败: ${parseError.message}。请检查代码语法（如括号、逗号是否完整）。`,
+        error: new Error(
+          `JSON5 解析失败: ${parseError.message}。请检查代码语法（如括号、逗号是否完整）。`,
+        ),
       };
     }
   } catch (globalError: any) {
-    return { error: `解析发生未知错误: ${globalError.message}` };
+    return { error: new Error(`解析发生未知错误: ${globalError.message}`) };
   }
 }

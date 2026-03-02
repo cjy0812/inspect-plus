@@ -74,6 +74,23 @@ export const useDeviceControlTools = () => {
     })),
   );
 
+  const selectAllCandidates = () => {
+    selectedCandidateKeys.value = parsedCandidates.value.map(
+      (item) => item.key,
+    );
+  };
+
+  const clearCandidateSelection = () => {
+    selectedCandidateKeys.value = [];
+  };
+
+  const invertCandidateSelection = () => {
+    const selectedSet = new Set(selectedCandidateKeys.value);
+    selectedCandidateKeys.value = parsedCandidates.value
+      .map((item) => item.key)
+      .filter((key) => !selectedSet.has(key));
+  };
+
   watch(
     () => subsText.value,
     () => {
@@ -120,6 +137,45 @@ export const useDeviceControlTools = () => {
       candidates.push(candidate);
     const normalizeLabel = (text: unknown, fallback: string) =>
       String(text || '').trim() || fallback;
+    const appendAppCandidates = (
+      app: { id: string; name?: string; groups?: any[] },
+      prefix: string,
+    ) => {
+      const appName = normalizeLabel(app.name, app.id);
+      const groups = (Array.isArray(app.groups) ? app.groups : []).filter(
+        isRuleGroup,
+      );
+      if (groups.length) {
+        groups.forEach((group, idx) => {
+          append({
+            key: `${prefix}:app:${app.id}:group:${group.key}:${idx}`,
+            kind: 'app',
+            label: `AppGroup: ${appName} / ${normalizeLabel(group.name, `key=${group.key}`)}`,
+            payload: {
+              apps: [
+                {
+                  ...app,
+                  groups: [group],
+                },
+              ],
+            },
+          });
+        });
+        append({
+          key: `${prefix}:app:${app.id}:all`,
+          kind: 'app',
+          label: `App: ${appName} (${app.id}) [全部 ${groups.length} 组]`,
+          payload: { apps: [app] },
+        });
+        return;
+      }
+      append({
+        key: `${prefix}:app:${app.id}`,
+        kind: 'app',
+        label: `App: ${appName} (${app.id})`,
+        payload: { apps: [app] },
+      });
+    };
 
     const appendFromSubscription = (
       sub: { categories?: any[]; globalGroups?: any[]; apps?: any[] },
@@ -127,12 +183,7 @@ export const useDeviceControlTools = () => {
     ) => {
       (sub.apps || []).forEach((app: any, idx: number) => {
         if (!isRuleApp(app)) return;
-        append({
-          key: `${prefix}:app:${idx}:${app.id}`,
-          kind: 'app',
-          label: `App: ${normalizeLabel(app.name, app.id)} (${app.id})`,
-          payload: { apps: [app] },
-        });
+        appendAppCandidates(app, `${prefix}:${idx}`);
       });
       (sub.globalGroups || []).forEach((group: any, idx: number) => {
         if (!isRuleGroup(group)) return;
@@ -162,12 +213,7 @@ export const useDeviceControlTools = () => {
     }
 
     if (isRuleApp(data)) {
-      append({
-        key: `root:app:${data.id}`,
-        kind: 'app',
-        label: `App: ${normalizeLabel(data.name, data.id)} (${data.id})`,
-        payload: { apps: [data] },
-      });
+      appendAppCandidates(data, 'root');
       return candidates;
     }
 
@@ -193,12 +239,7 @@ export const useDeviceControlTools = () => {
     if (Array.isArray(data) && data.length) {
       if (data.every((item) => isRuleApp(item))) {
         data.forEach((app) => {
-          append({
-            key: `root:app:${app.id}`,
-            kind: 'app',
-            label: `App: ${normalizeLabel(app.name, app.id)} (${app.id})`,
-            payload: { apps: [app] },
-          });
+          appendAppCandidates(app, 'root');
         });
         return candidates;
       }
@@ -228,12 +269,7 @@ export const useDeviceControlTools = () => {
           return;
         }
         if (isRuleApp(item)) {
-          append({
-            key: `list-${idx}:app:${item.id}`,
-            kind: 'app',
-            label: `App: ${normalizeLabel(item.name, item.id)} (${item.id})`,
-            payload: { apps: [item] },
-          });
+          appendAppCandidates(item, `list-${idx}`);
           return;
         }
         if (isRuleGroup(item)) {
@@ -431,6 +467,9 @@ export const useDeviceControlTools = () => {
     parsedCandidates,
     selectedCandidateKeys,
     candidateOptions,
+    selectAllCandidates,
+    clearCandidateSelection,
+    invertCandidateSelection,
     parseCandidates,
     updateSubs,
     showSelectorModel,
