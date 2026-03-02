@@ -1,7 +1,7 @@
 import { watchEffect, onScopeDispose, shallowRef, type Ref } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { loadingBar } from '@/utils/discrete';
-import { useSnapshotStore } from '@/views/snapshot/snapshot';
+import { useSnapshotStore } from '@/views/plus/snapshot/snapshot';
 
 /**
  * Snapshot Plus 面板显示状态接口
