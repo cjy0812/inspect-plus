@@ -14,6 +14,10 @@ const props = withDefaults(
 const {
   showSubsModel,
   subsText,
+  parsedCandidates,
+  selectedCandidateKeys,
+  candidateOptions,
+  parseCandidates,
   updateSubs,
   showSelectorModel,
   actionOptions,
@@ -22,7 +26,7 @@ const {
 } = useDeviceControlTools();
 
 const subsPlaceholder = `
-请输入订阅文本(JSON5语法):
+请输入订阅文本(JSON5/TS片段均可，支持容错清洗):
 示例1-单个应用的规则:
 {
   id: 'cn.dxy.clinmaster',
@@ -46,6 +50,12 @@ const subsPlaceholder = `
     },
   ],
 }
+
+示例2-仅复制了 groups (无 app 头):
+[
+  { key: 1, name: '更新提示', rules: [{ matches: 'xxx' }] },
+  { key: 2, name: '弹窗', rules: [{ matches: 'yyy' }] },
+]
 `.trim();
 </script>
 
@@ -113,14 +123,44 @@ const subsPlaceholder = `
         :placeholder="subsPlaceholder"
         aria-label="订阅文本输入框"
       />
+      <NAlert mt-10px type="info" title="导入说明">
+        1) 点击“解析”可自动清洗非法 TS/残缺文本并识别多条规则。 2) 若无 app
+        头，快照页会自动补全；在 /device 页面会提示错误。 3)
+        多条规则可勾选后再“确认导入”。
+      </NAlert>
+      <NCard
+        v-if="parsedCandidates.length"
+        mt-10px
+        size="small"
+        :bordered="true"
+        title="解析结果（可选导入）"
+      >
+        <NCheckboxGroup v-model:value="selectedCandidateKeys">
+          <NSpace vertical>
+            <NCheckbox
+              v-for="item in candidateOptions"
+              :key="item.value"
+              :value="item.value"
+              :label="item.label"
+            />
+          </NSpace>
+        </NCheckboxGroup>
+      </NCard>
       <div mt-10px flex justify-end gap-8px>
         <NButton @click="showSubsModel = false">取消</NButton>
+        <NButton
+          :loading="parseCandidates.loading"
+          :disabled="updateSubs.loading"
+          @click="parseCandidates.invoke"
+        >
+          解析
+        </NButton>
         <NButton
           type="primary"
           :loading="updateSubs.loading"
           @click="updateSubs.invoke"
         >
-          确认
+          确认导入
         </NButton>
       </div>
     </NCard>
