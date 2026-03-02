@@ -149,6 +149,7 @@ const onDelete = async () => {
   });
 };
 const gkdVersionName = computed(() => {
+  if (!snapshot.value) return undefined;
   const v = getGkdAppInfo(snapshot.value).versionName;
   return v ? `GKD@${v}` : undefined;
 });
@@ -184,7 +185,7 @@ const gkdVersionName = computed(() => {
         </NTooltip>
 
         <div flex items-center gap-2px max-w-120px>
-          <NTooltip v-if="isSystem">
+          <NTooltip v-if="isSystem && snapshot">
             <template #trigger>
               <SvgIcon name="system" />
             </template>
@@ -192,9 +193,10 @@ const gkdVersionName = computed(() => {
           </NTooltip>
           <NTooltip>
             <template #trigger>
-              <div @click="copy(getAppInfo(snapshot).name)">
+              <div v-if="snapshot" @click="copy(getAppInfo(snapshot).name)">
                 {{ getAppInfo(snapshot).name }}
               </div>
+              <div v-else>-</div>
             </template>
             应用名称
           </NTooltip>
@@ -202,27 +204,36 @@ const gkdVersionName = computed(() => {
 
         <NTooltip>
           <template #trigger>
-            <div @click="copy(getAppInfo(snapshot).versionName)">
+            <div
+              v-if="snapshot"
+              @click="copy(getAppInfo(snapshot).versionName)"
+            >
               {{ getAppInfo(snapshot).versionName }}
             </div>
+            <div v-else>-</div>
           </template>
           版本名称
         </NTooltip>
 
         <NTooltip>
           <template #trigger>
-            <div @click="copy(getAppInfo(snapshot).versionCode.toString())">
+            <div
+              v-if="snapshot"
+              @click="copy(getAppInfo(snapshot).versionCode.toString())"
+            >
               {{ getAppInfo(snapshot).versionCode }}
             </div>
+            <div v-else>-</div>
           </template>
           版本代码
         </NTooltip>
 
         <NTooltip>
           <template #trigger>
-            <div @click="copy(snapshot.appId)">
+            <div v-if="snapshot" @click="copy(snapshot.appId)">
               {{ snapshot.appId }}
             </div>
+            <div v-else>-</div>
           </template>
           应用ID
         </NTooltip>
@@ -243,6 +254,7 @@ const gkdVersionName = computed(() => {
       </GapList>
       <div flex-1 />
       <ActionCard
+        v-if="snapshot"
         class="ml-8px"
         :snapshot="snapshot"
         :showPreview="false"
@@ -252,6 +264,7 @@ const gkdVersionName = computed(() => {
     <div h-1px mt-4px bg="#efeff5" />
     <div flex-1 min-h-0>
       <NTree
+        v-if="rootNode"
         ref="treeRef"
         v-model:expandedKeys="expandedKeys"
         v-model:selectedKeys="selectedKeys"

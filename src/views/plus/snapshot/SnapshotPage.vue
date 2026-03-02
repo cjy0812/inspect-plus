@@ -111,14 +111,26 @@ const {
           分享须知
         </NTooltip>
       </div>
-      <ScreenshotCard />
-      <WindowCard class="flex-1" />
+      <ScreenshotCard v-if="snapshot" />
+      <WindowCard v-if="snapshot" class="flex-1" />
     </div>
 
-    <SearchCard :show="searchShow" @updateShow="searchShow = $event" />
-    <RuleCard :show="ruleShow" @updateShow="ruleShow = $event" />
-    <AttrCard :show="attrShow" @updateShow="attrShow = $event" />
-    <OverlapCard />
+    <SearchCard
+      v-if="snapshot"
+      :show="searchShow"
+      @updateShow="searchShow = $event"
+    />
+    <RuleCard
+      v-if="snapshot"
+      :show="ruleShow"
+      @updateShow="ruleShow = $event"
+    />
+    <AttrCard
+      v-if="snapshot"
+      :show="attrShow"
+      @updateShow="attrShow = $event"
+    />
+    <OverlapCard v-if="snapshot" />
     <FullScreenDialog v-model:show="trackShow" @closed="onTrackDialogClosed">
       <TrackCard
         v-if="trackData"

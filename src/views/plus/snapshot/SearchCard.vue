@@ -47,6 +47,10 @@ const selectorResults = shallowReactive<SearchResult[]>([]);
 const expandedKeys = shallowRef<number[]>([]);
 
 const searchSelector = (text: string) => {
+  if (!rootNode.value) {
+    message.error('当前无可用节点树');
+    return;
+  }
   const selector = errorWrap(
     () => parseSelector(text),
     (e) => {
@@ -86,6 +90,10 @@ const searchSelector = (text: string) => {
 };
 
 const searchString = (text: string) => {
+  if (!rootNode.value) {
+    message.error('当前无可用节点树');
+    return;
+  }
   if (
     selectorResults.find(
       (s) => typeof s.selector == 'string' && s.selector.toString() == text,
@@ -164,6 +172,10 @@ onMounted(async () => {
 });
 
 const generateRules = errorTry(async (result: SelectorSearchResult) => {
+  if (!snapshot.value) {
+    message.error('当前无可用快照数据');
+    return;
+  }
   const imageId = snapshotImageId[snapshot.value.id];
   const importId = snapshotImportId[snapshot.value.id];
   const snapshotUrls = importId
@@ -280,11 +292,12 @@ const selectorSyntaxError = computed(() => {
 });
 
 const hasZipId = computed(() => {
+  if (!snapshot.value) return false;
   return snapshotImportId[snapshot.value.id];
 });
 
 const shareResult = (result: SearchResult) => {
-  if (!hasZipId.value) return;
+  if (!hasZipId.value || !snapshot.value) return;
   const importUrl = new URL(
     settingsStore.shareUseOfficialImportDomain
       ? getOfficialImportUrl(snapshotImportId[snapshot.value.id])
