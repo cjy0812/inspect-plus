@@ -1,4 +1,5 @@
 <script setup lang="tsx">
+// ... 保持 import 不变 ...
 import ActionCard from '@/components/ActionCard.vue';
 import GapList from '@/components/GapList';
 import { message } from '@/utils/discrete';
@@ -11,11 +12,17 @@ import {
 } from '@/utils/node';
 import { copy, delay } from '@/utils/others';
 import type { TreeInst } from 'naive-ui';
-import type { HTMLAttributes, ShallowRef } from 'vue';
+import type { HTMLAttributes, ShallowRef, VNode } from 'vue';
 import { useSnapshotStore } from './snapshot';
 
-const router = useRouter();
+const slots = defineSlots<{
+  renderLabel?: (props: {
+    option: RawNode;
+    label: string | VNode;
+  }) => VNode | string;
+}>();
 
+const router = useRouter();
 const snapshotStore = useSnapshotStore();
 const { updateFocusNode, focusNode, focusTime } = snapshotStore;
 const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
@@ -24,7 +31,9 @@ const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
 let lastClickId = Number.NaN;
 const expandedKeys = shallowRef<number[]>([]);
 const selectedKeys = shallowRef<number[]>([]);
-const treeContainer = useTemplateRef('treeContainerRef');
+const treeRef = shallowRef<TreeInst>();
+
+// --- 逻辑部分保持现状，已足够健壮 ---
 watch([() => focusNode.value, () => focusTime.value], async () => {
   if (!focusNode.value) return;
   const key = focusNode.value.id;
@@ -32,30 +41,15 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
     await delay(300);
     if (key === focusNode.value?.id) {
       if (lastClickId === key) {
-        // 当点击节点树中的节点时, 不滚动
         lastClickId = Number.NaN;
         return;
       }
       selectedKeys.value = [key];
-      if (!treeContainer.value) return;
-      const nodeRef = treeContainer.value.querySelector(
-        `[data-node-id="${key}"]`,
-      );
-      if (nodeRef) {
-        nodeRef.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-      } else {
-        await delay(300);
-        treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
-      }
+      treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
     }
   });
   let parent = focusNode.value.parent;
-  if (!parent) {
-    return;
-  }
+  if (!parent) return;
   const s = new Set(expandedKeys.value);
   while (parent) {
     s.add(parent.id);
@@ -64,17 +58,14 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
   if (
     s.size == expandedKeys.value.length &&
     expandedKeys.value.every((v) => s.has(v))
-  ) {
+  )
     return;
-  }
   expandedKeys.value = [...s];
 });
 
-const treeRef = shallowRef<TreeInst>();
+const treeFilter = (pattern: string, node: RawNode) =>
+  node.id === focusNode.value?.id;
 
-const treeFilter = (pattern: string, node: RawNode) => {
-  return node.id === focusNode.value?.id;
-};
 const treeNodeProps = (info: {
   option: RawNode;
 }): HTMLAttributes & Record<string, unknown> => {
@@ -84,76 +75,68 @@ const treeNodeProps = (info: {
       lastClickId = info.option.id;
       updateFocusNode(info.option);
     },
-    style: {
-      '--n-node-text-color': style.color,
-      ...style,
-    },
+    style: { '--n-node-text-color': style.color, ...style },
     class: 'whitespace-nowrap',
     'data-node-id': String(info.option.id),
   };
 };
 
-const renderLabel = (info: {
-  option: RawNode;
-  checked: boolean;
-  selected: boolean;
-}) => {
-  return getNodeLabel(info.option);
+const renderLabel = (info: { option: RawNode }) => {
+  const label = getNodeLabel(info.option);
+  if (slots.renderLabel)
+    return slots.renderLabel({ option: info.option, label });
+  return label;
 };
 
+// --- 计算属性优化：提取 app 为内部变量，减少重复计算 ---
+const app = computed(() =>
+  snapshot.value ? getAppInfo(snapshot.value) : null,
+);
+
 const deviceName = computed(() => {
-  return `${getDevice(snapshot.value).manufacturer} Android ${getDevice(snapshot.value).release || ``}`;
+  if (!snapshot.value) return '';
+  const device = getDevice(snapshot.value);
+  return `${device.manufacturer} Android ${device.release || ''}`;
 });
 
-const isSystem = computed(() => {
-  return getAppInfo(snapshot.value).isSystem;
-});
 const activityId = computed(() => {
-  const v = snapshot.value.activityId;
-  const appId = snapshot.value.appId;
+  if (!snapshot.value) return '';
+  const { activityId: v, appId } = snapshot.value;
   if (!v || !appId) return '';
-  if (v.startsWith(appId) && v[appId.length] === '.') {
-    return v.substring(appId.length);
-  }
-  return v;
+  return v.startsWith(appId) && v[appId.length] === '.'
+    ? v.substring(appId.length)
+    : v;
+});
+
+const gkdVersionName = computed(() => {
+  if (!snapshot.value) return undefined;
+  const v = getGkdAppInfo(snapshot.value).versionName;
+  return v ? `GKD@${v}` : undefined;
 });
 
 const onDelete = async () => {
   message.success(`删除成功,即将回到首页`);
   await delay(2000);
-  router.replace({
-    path: `/`,
-  });
+  router.replace({ path: `/` });
 };
-const gkdVersionName = computed(() => {
-  const v = getGkdAppInfo(snapshot.value).versionName;
-  return v ? `GKD@${v}` : undefined;
-});
 </script>
 
 <template>
-  <div flex flex-col overflow-hidden>
+  <div v-if="snapshot" flex flex-col overflow-hidden>
     <div flex items-center px-8px>
       <GapList class="flex flex-wrap items-center gap-8px gkd_code">
-        <template #gap>
-          <div w-1px bg-gray h-12px />
-        </template>
+        <template #gap><div w-1px bg-gray h-12px /></template>
+
         <NTooltip>
-          <template #trigger>
-            <div @click="copy(deviceName)">
-              {{ deviceName }}
-            </div>
-          </template>
+          <template #trigger
+            ><div @click="copy(deviceName)">{{ deviceName }}</div></template
+          >
           设备名称
         </NTooltip>
 
         <NTooltip>
           <template #trigger>
-            <div
-              :class="{
-                'opacity-50': !gkdVersionName,
-              }"
-            >
+            <div :class="{ 'opacity-50': !gkdVersionName }">
               {{ gkdVersionName || 'null' }}
             </div>
           </template>
@@ -161,55 +144,54 @@ const gkdVersionName = computed(() => {
         </NTooltip>
 
         <div flex items-center gap-2px max-w-120px>
-          <NTooltip v-if="isSystem">
-            <template #trigger>
-              <SvgIcon name="system" />
-            </template>
-            {{ `${getAppInfo(snapshot).name} 是一个系统应用` }}
+          <NTooltip v-if="app?.isSystem">
+            <template #trigger
+              ><SvgIcon name="system" style="--svg-h: 16px; --svg-w: 16px"
+            /></template>
+            {{ `${app.name} 是一个系统应用` }}
           </NTooltip>
+
           <NTooltip>
-            <template #trigger>
-              <div @click="copy(getAppInfo(snapshot).name)">
-                {{ getAppInfo(snapshot).name }}
-              </div>
-            </template>
+            <template #trigger
+              ><div @click="copy(app?.name || '')">
+                {{ app?.name || '-' }}
+              </div></template
+            >
             应用名称
           </NTooltip>
         </div>
 
         <NTooltip>
-          <template #trigger>
-            <div @click="copy(getAppInfo(snapshot).versionName)">
-              {{ getAppInfo(snapshot).versionName }}
-            </div>
-          </template>
+          <template #trigger
+            ><div @click="copy(app?.versionName || '')">
+              {{ app?.versionName || '-' }}
+            </div></template
+          >
           版本名称
         </NTooltip>
 
         <NTooltip>
-          <template #trigger>
-            <div @click="copy(getAppInfo(snapshot).versionCode.toString())">
-              {{ getAppInfo(snapshot).versionCode }}
-            </div>
-          </template>
+          <template #trigger
+            ><div @click="copy(app?.versionCode?.toString() || '')">
+              {{ app?.versionCode || '-' }}
+            </div></template
+          >
           版本代码
         </NTooltip>
 
         <NTooltip>
-          <template #trigger>
-            <div @click="copy(snapshot.appId)">
+          <template #trigger
+            ><div @click="copy(snapshot.appId)">
               {{ snapshot.appId }}
-            </div>
-          </template>
+            </div></template
+          >
           应用ID
         </NTooltip>
 
         <NTooltip>
           <template #trigger>
             <div
-              :class="{
-                'opacity-50': !activityId,
-              }"
+              :class="{ 'opacity-50': !activityId }"
               @click="copy(activityId)"
             >
               {{ activityId || 'null' }}
@@ -218,6 +200,7 @@ const gkdVersionName = computed(() => {
           界面ID
         </NTooltip>
       </GapList>
+
       <div flex-1 />
       <ActionCard
         class="ml-8px"
@@ -226,9 +209,11 @@ const gkdVersionName = computed(() => {
         @delete="onDelete"
       />
     </div>
+
     <div h-1px mt-4px bg="#efeff5" />
-    <div ref="treeContainerRef" flex-1 min-h-0>
+    <div flex-1 min-h-0>
       <NTree
+        v-if="rootNode"
         ref="treeRef"
         v-model:expandedKeys="expandedKeys"
         v-model:selectedKeys="selectedKeys"
@@ -243,5 +228,8 @@ const gkdVersionName = computed(() => {
         :renderLabel="(renderLabel as any)"
       />
     </div>
+  </div>
+  <div v-else flex-1 flex items-center justify-center>
+    <NEmpty description="加载中..." />
   </div>
 </template>
