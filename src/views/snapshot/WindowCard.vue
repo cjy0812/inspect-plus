@@ -125,12 +125,15 @@ const onDelete = async () => {
   <div v-if="snapshot" flex flex-col overflow-hidden>
     <div flex items-center px-8px>
       <GapList class="flex flex-wrap items-center gap-8px gkd_code">
-        <template #gap><div w-1px bg-gray h-12px /></template>
-
+        <template #gap>
+          <div w-1px bg-gray h-12px />
+        </template>
         <NTooltip>
-          <template #trigger
-            ><div @click="copy(deviceName)">{{ deviceName }}</div></template
-          >
+          <template #trigger>
+            <div @click="copy(deviceName)">
+              {{ deviceName }}
+            </div>
+          </template>
           设备名称
         </NTooltip>
 
@@ -145,46 +148,46 @@ const onDelete = async () => {
 
         <div flex items-center gap-2px max-w-120px>
           <NTooltip v-if="app?.isSystem">
-            <template #trigger
-              ><SvgIcon name="system" style="--svg-h: 16px; --svg-w: 16px"
-            /></template>
+            <template #trigger>
+              <SvgIcon name="system" style="--svg-h: 16px; --svg-w: 16px" />
+            </template>
             {{ `${app.name} 是一个系统应用` }}
           </NTooltip>
 
           <NTooltip>
-            <template #trigger
-              ><div @click="copy(app?.name || '')">
+            <template #trigger>
+              <div @click="copy(app?.name || '')">
                 {{ app?.name || '-' }}
-              </div></template
-            >
+              </div>
+            </template>
             应用名称
           </NTooltip>
         </div>
 
         <NTooltip>
-          <template #trigger
-            ><div @click="copy(app?.versionName || '')">
+          <template #trigger>
+            <div @click="copy(app?.versionName || '')">
               {{ app?.versionName || '-' }}
-            </div></template
-          >
+            </div>
+          </template>
           版本名称
         </NTooltip>
 
         <NTooltip>
-          <template #trigger
-            ><div @click="copy(app?.versionCode?.toString() || '')">
+          <template #trigger>
+            <div @click="copy(app?.versionCode?.toString() || '')">
               {{ app?.versionCode || '-' }}
-            </div></template
-          >
+            </div>
+          </template>
           版本代码
         </NTooltip>
 
         <NTooltip>
-          <template #trigger
-            ><div @click="copy(snapshot.appId)">
+          <template #trigger>
+            <div @click="copy(snapshot.appId)">
               {{ snapshot.appId }}
-            </div></template
-          >
+            </div>
+          </template>
           应用ID
         </NTooltip>
 
