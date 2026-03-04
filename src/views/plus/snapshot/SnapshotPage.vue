@@ -163,3 +163,27 @@ const {
     </div>
   </div>
 </template>
+
+<style scoped>
+.snapshot-page {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .snapshot-page {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .snapshot-sidebar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-bottom: 1px solid var(--n-border-color);
+  }
+}
+</style>

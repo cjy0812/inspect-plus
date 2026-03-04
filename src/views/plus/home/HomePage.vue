@@ -198,6 +198,38 @@ const getCheckedStats = (ids: number[]) => {
     indeterminate: checkedCount > 0 && checkedCount < ids.length,
   };
 };
+const allFilteredCheckedStats = computed(() =>
+  getCheckedStats(allFilteredSnapshotIds.value),
+);
+const groupCheckedStatsMap = computed(() => {
+  const map = new Map<string, { checked: boolean; indeterminate: boolean }>();
+  groupedSnapshots.value.forEach((group) => {
+    map.set(group.packageName, getCheckedStats(getGroupSnapshotIds(group)));
+  });
+  return map;
+});
+const activityCheckedStatsMap = computed(() => {
+  const map = new Map<string, { checked: boolean; indeterminate: boolean }>();
+  groupedSnapshots.value.forEach((group) => {
+    group.activities.forEach((activity) => {
+      map.set(
+        `${group.packageName}::${activity.activityId}`,
+        getCheckedStats(getActivitySnapshotIds(activity)),
+      );
+    });
+  });
+  return map;
+});
+const getGroupCheckedStats = (packageName: string) =>
+  groupCheckedStatsMap.value.get(packageName) ?? {
+    checked: false,
+    indeterminate: false,
+  };
+const getActivityCheckedStats = (packageName: string, activityId: string) =>
+  activityCheckedStatsMap.value.get(`${packageName}::${activityId}`) ?? {
+    checked: false,
+    indeterminate: false,
+  };
 const setCheckedByIds = (ids: number[], checked: boolean) => {
   if (checked) {
     const next = new Set(checkedRowKeys.value);
@@ -333,8 +365,8 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
         </NInputGroup>
         <NCheckbox
           v-if="allFilteredSnapshotIds.length"
-          :checked="getCheckedStats(allFilteredSnapshotIds).checked"
-          :indeterminate="getCheckedStats(allFilteredSnapshotIds).indeterminate"
+          :checked="allFilteredCheckedStats.checked"
+          :indeterminate="allFilteredCheckedStats.indeterminate"
           @update:checked="setCheckedByIds(allFilteredSnapshotIds, $event)"
         >
           {{ `全选当前结果 (${allFilteredSnapshotIds.length})` }}
@@ -466,9 +498,9 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
             <template #header>
               <div flex items-center gap-8px>
                 <NCheckbox
-                  :checked="getCheckedStats(getGroupSnapshotIds(group)).checked"
+                  :checked="getGroupCheckedStats(group.packageName).checked"
                   :indeterminate="
-                    getCheckedStats(getGroupSnapshotIds(group)).indeterminate
+                    getGroupCheckedStats(group.packageName).indeterminate
                   "
                   @click.stop
                   @update:checked="
@@ -513,12 +545,16 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
                   <div flex items-center gap-8px>
                     <NCheckbox
                       :checked="
-                        getCheckedStats(getActivitySnapshotIds(activity))
-                          .checked
+                        getActivityCheckedStats(
+                          group.packageName,
+                          activity.activityId,
+                        ).checked
                       "
                       :indeterminate="
-                        getCheckedStats(getActivitySnapshotIds(activity))
-                          .indeterminate
+                        getActivityCheckedStats(
+                          group.packageName,
+                          activity.activityId,
+                        ).indeterminate
                       "
                       @click.stop
                       @update:checked="
