@@ -324,114 +324,131 @@ const inputImportRef = shallowRef();
         </template>
       </NSpace>
       <div flex-1 />
-      <div flex gap-24px items-center pr-8px class="[--svg-h:24px]">
-        <NTooltip>
-          <template #trigger>
-            <NButton text @click="settingsDlgShow = true">
-              <SvgIcon name="settings" />
-            </NButton>
-          </template>
-          设置
-        </NTooltip>
-        <NTooltip>
-          <template #trigger>
-            <RouterLink flex to="/selector">
-              <NButton text>
-                <SvgIcon name="terminal" />
+      <slot
+        name="toolbar-right"
+        :settingsDlgShow="settingsDlgShow"
+        :importLocal="importLocal"
+        :importNetwork="importNetwork"
+        :showImportModal="showImportModal"
+      >
+        <div flex gap-24px items-center pr-8px class="[--svg-h:24px]">
+          <NTooltip>
+            <template #trigger>
+              <NButton text @click="settingsDlgShow = true">
+                <SvgIcon name="settings" />
               </NButton>
-            </RouterLink>
-          </template>
-          测试选择器
-        </NTooltip>
-        <NPopover>
-          <template #trigger>
-            <NButton text>
-              <SvgIcon name="import" />
-            </NButton>
-          </template>
-          <NSpace vertical>
-            <NTooltip placement="left">
-              <template #trigger>
-                <NButton
-                  :loading="importLocal.loading"
-                  @click="importLocal.invoke()"
-                >
-                  导入本地文件
+            </template>
+            设置
+          </NTooltip>
+          <NTooltip>
+            <template #trigger>
+              <RouterLink flex to="/selector">
+                <NButton text>
+                  <SvgIcon name="terminal" />
                 </NButton>
-              </template>
-              <div class="whitespace-nowrap">支持拖拽文件到页面任意位置</div>
-            </NTooltip>
-            <NTooltip placement="left">
-              <template #trigger>
-                <NButton
-                  :loading="importNetwork.loading"
-                  @click="showImportModal = true"
-                >
-                  导入网络文件
+              </RouterLink>
+            </template>
+            测试选择器
+          </NTooltip>
+          <NPopover>
+            <template #trigger>
+              <NButton text>
+                <SvgIcon name="import" />
+              </NButton>
+            </template>
+            <NSpace vertical>
+              <NTooltip placement="left">
+                <template #trigger>
+                  <NButton
+                    :loading="importLocal.loading"
+                    @click="importLocal.invoke()"
+                  >
+                    导入本地文件
+                  </NButton>
+                </template>
+                <div class="whitespace-nowrap">支持拖拽文件到页面任意位置</div>
+              </NTooltip>
+              <NTooltip placement="left">
+                <template #trigger>
+                  <NButton
+                    :loading="importNetwork.loading"
+                    @click="showImportModal = true"
+                  >
+                    导入网络文件
+                  </NButton>
+                </template>
+                <div class="whitespace-nowrap">
+                  支持任意位置粘贴(Ctrl+V)文本触发导入
+                </div>
+              </NTooltip>
+            </NSpace>
+          </NPopover>
+          <NTooltip>
+            <template #trigger>
+              <RouterLink flex to="/device">
+                <NButton text>
+                  <SvgIcon name="device" />
                 </NButton>
-              </template>
-              <div class="whitespace-nowrap">
-                支持任意位置粘贴(Ctrl+V)文本触发导入
-              </div>
-            </NTooltip>
-          </NSpace>
-        </NPopover>
-        <NTooltip>
-          <template #trigger>
-            <RouterLink flex to="/device">
-              <NButton text>
-                <SvgIcon name="device" />
-              </NButton>
-            </RouterLink>
-          </template>
-          连接设备
-        </NTooltip>
-        <NTooltip>
-          <template #trigger>
-            <a
-              flex
-              href="https://github.com/orgs/gkd-kit/discussions"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <NButton text>
-                <SvgIcon name="discussion" />
-              </NButton>
-            </a>
-          </template>
-          讨论交流
-        </NTooltip>
-        <NTooltip>
-          <template #trigger>
-            <a
-              flex
-              href="https://github.com/gkd-kit/inspect"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <NButton text>
-                <SvgIcon name="github" />
-              </NButton>
-            </a>
-          </template>
-          Github
-        </NTooltip>
-      </div>
+              </RouterLink>
+            </template>
+            连接设备
+          </NTooltip>
+          <NTooltip>
+            <template #trigger>
+              <a
+                flex
+                href="https://github.com/orgs/gkd-kit/discussions"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <NButton text>
+                  <SvgIcon name="discussion" />
+                </NButton>
+              </a>
+            </template>
+            讨论交流
+          </NTooltip>
+          <NTooltip>
+            <template #trigger>
+              <a
+                flex
+                href="https://github.com/gkd-kit/inspect"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <NButton text>
+                  <SvgIcon name="github" />
+                </NButton>
+              </a>
+            </template>
+            Github
+          </NTooltip>
+        </div>
+      </slot>
     </div>
-    <NDataTable
-      v-model:checkedRowKeys="checkedRowKeys"
-      striped
-      virtualScroll
-      :data="filterSnapshots"
+    <slot
+      name="content"
+      :checkedRowKeys="checkedRowKeys"
+      :filterSnapshots="filterSnapshots"
       :columns="columns"
-      :scrollX="1800"
-      :rowKey="(r:Snapshot)=>r.id"
-      size="small"
-      class="flex-1"
-      flex-height
       :loading="loading"
-      @update:sorter="handleSorterChange"
-    />
+      :handleSorterChange="handleSorterChange"
+    >
+      <NDataTable
+        v-model:checkedRowKeys="checkedRowKeys"
+        striped
+        virtualScroll
+        :data="filterSnapshots"
+        :columns="columns"
+        :scrollX="1800"
+        :rowKey="(r: Snapshot) => r.id"
+        size="small"
+        class="flex-1"
+        flex-height
+        :loading="loading"
+        @update:sorter="handleSorterChange"
+      />
+    </slot>
   </div>
   <NModal
     :show="showImportModal"
@@ -491,4 +508,5 @@ const inputImportRef = shallowRef();
       <div>打开快照页面自动生成分享链接(请确保不含隐私)</div>
     </div>
   </NModal>
+  <slot name="extra-modals" />
 </template>

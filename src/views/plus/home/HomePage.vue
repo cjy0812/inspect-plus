@@ -2,6 +2,7 @@
 import ActionCard from '@/components/ActionCard.vue';
 import DeviceControlTools from '@/components/DeviceControlTools.vue';
 import SettingsModal from '@/components/SettingsModal.vue';
+import { useHomeSnapshotData } from '@/composables/plus/useHomeSnapshotData';
 import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 import { toValidURL } from '@/utils/check';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
@@ -15,12 +16,7 @@ import {
 import { importFromLocal, importFromNetwork } from '@/utils/import';
 import { getAppInfo, getDevice } from '@/utils/node';
 import { filterQuery, getDragEventFiles } from '@/utils/others';
-import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
-import {
-  screenshotStorage,
-  shallowSnapshotStorage,
-  snapshotStorage,
-} from '@/utils/snapshot';
+import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
 import { getImagUrl, getImportUrl } from '@/utils/url';
 import {
@@ -33,42 +29,13 @@ const route = useRoute();
 const router = useRouter();
 const { settingsStore, snapshotImportTime, snapshotViewedTime } =
   useStorageStore();
-
-const snapshots = shallowRef<Snapshot[]>([]);
-const loading = shallowRef(true);
-const updateSnapshots = async () => {
-  loading.value = true;
-  snapshots.value = (await shallowSnapshotStorage.getAllItems()).reverse();
-  checkedRowKeys.value = [];
-  loading.value = false;
-};
-onMounted(updateSnapshots);
-
-const filterOption = shallowReactive({
-  query: '',
-  actualQuery: '',
-  updateQuery: () => {
-    filterOption.actualQuery = filterOption.query.trim();
-    checkedRowKeys.value = [];
-  },
-});
-
-const filteredSnapshots = computed(() => {
-  const query = filterOption.actualQuery;
-  return snapshots.value.filter((s) => {
-    if (!query) return true;
-    return (
-      (getAppInfo(s).name || '').includes(query) ||
-      (s.appId || '').includes(query) ||
-      (s.appInfo?.id || '').includes(query) ||
-      (s.activityId || '').includes(query)
-    );
-  });
-});
-
-const groupedSnapshots = computed(() =>
-  buildGroupedSnapshots(filteredSnapshots.value, snapshotImportTime),
-);
+const {
+  loading,
+  updateSnapshots,
+  filterOption,
+  filteredSnapshots,
+  groupedSnapshots,
+} = useHomeSnapshotData(snapshotImportTime);
 
 const snapshotDisplayLimit = 50;
 const expandedActivitySnapshotKeys = shallowRef<string[]>([]);
@@ -178,6 +145,11 @@ useEventListener(document.body, 'paste', (e) => {
 });
 
 const checkedRowKeys = shallowRef<number[]>([]);
+const baseUpdateQuery = filterOption.updateQuery;
+filterOption.updateQuery = () => {
+  baseUpdateQuery();
+  checkedRowKeys.value = [];
+};
 const checkedSet = computed(() => new Set(checkedRowKeys.value));
 const allFilteredSnapshotIds = computed(() =>
   filteredSnapshots.value.map((s) => s.id),

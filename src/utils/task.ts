@@ -1,5 +1,14 @@
 import { delay } from './others';
 
+type PrimitiveType =
+  | string
+  | number
+  | boolean
+  | bigint
+  | symbol
+  | null
+  | undefined;
+
 export const useTask = <T extends (...args: any[]) => Promise<void>>(
   fn: T,
   miniInterval = 0,

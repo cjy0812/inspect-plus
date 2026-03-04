@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import DeviceControlTools from '@/components/DeviceControlTools.vue';
 import SettingsModal from '@/components/SettingsModal.vue';
+import { useDeviceSnapshotData } from '@/composables/plus/useDeviceSnapshotData';
 import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
-import { useDeviceApi } from '@/utils/api';
 import { message } from '@/utils/discrete';
-import { errorWrap } from '@/utils/error';
 import {
   exportSnapshotAsImportId,
   exportSnapshotAsImage,
@@ -13,7 +12,6 @@ import {
   exportSnapshotAsZip,
 } from '@/utils/export';
 import { getAppInfo, getDevice } from '@/utils/node';
-import { delay } from '@/utils/others';
 import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
 import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 import { useBatchTask, useTask } from '@/utils/task';
@@ -25,61 +23,19 @@ import {
 import dayjs from 'dayjs';
 import pLimit from 'p-limit';
 import { dialog } from '@/utils/discrete';
-
 const router = useRouter();
-const { api, origin, serverInfo } = useDeviceApi();
 const { settingsStore, snapshotImportTime, snapshotViewedTime } =
   useStorageStore();
-const link = useStorage('device_link', '');
 const settingsDlgShow = shallowRef(false);
-
-const normalizeDeviceUrl = (input: string): string | null => {
-  const raw = input.trim();
-  if (!raw) return null;
-  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
-  return errorWrap(
-    () => {
-      const url = new URL(withProtocol);
-      if (!url.port) url.port = '8888';
-      return url.origin;
-    },
-    () => null,
-  );
-};
-
-const connect = useTask(async () => {
-  const normalized = normalizeDeviceUrl(link.value);
-  if (!normalized) {
-    message.error('非法设备地址');
-    return;
-  }
-  origin.value = normalized;
-  link.value = normalized;
-  serverInfo.value = await api.getServerInfo();
-});
-
-const serverTitle = computed(() => {
-  if (!serverInfo.value) return '未连接设备';
-  const d = serverInfo.value.device;
-  const g = serverInfo.value.gkdAppInfo;
-  return `${d.manufacturer} Android${d.release} - GKD${g.versionName}`;
-});
-
-onMounted(async () => {
-  await delay(500);
-  if (normalizeDeviceUrl(link.value)) {
-    connect.invoke();
-  }
-});
-
-const snapshots = shallowRef<Snapshot[]>([]);
-watchEffect(async () => {
-  if (!serverInfo.value) return;
-  document.title = serverTitle.value;
-  const result = await api.getSnapshots();
-  result.sort((a, b) => b.id - a.id);
-  snapshots.value = result;
-});
+const {
+  api,
+  serverInfo,
+  link,
+  connect,
+  serverTitle,
+  snapshots,
+  refreshSnapshots,
+} = useDeviceSnapshotData();
 
 const captureSnapshot = useTask(async () => {
   const snapshot = await api.captureSnapshot();
@@ -87,41 +43,44 @@ const captureSnapshot = useTask(async () => {
   await snapshotStorage.setItem(snapshot.id, snapshot);
   await screenshotStorage.setItem(snapshot.id, screenshot);
   message.success('捕获并保存快照成功');
-  const result = await api.getSnapshots();
-  result.sort((a, b) => b.id - a.id);
-  snapshots.value = result;
+  await refreshSnapshots();
 });
 
 const downloadAllSnapshot = useTask(async () => {
-  const snapshotIds = (await api.getSnapshots()).map((s) => s.id);
+  const snapshotIds = (await api.getSnapshots()).map((s: Snapshot) => s.id);
   const existSnapshotIds = new Set(
     (await screenshotStorage.keys()).map((s) => parseInt(s)),
   );
   const unimportSnapshotIds = snapshotIds.filter(
-    (k) => !existSnapshotIds.has(k),
+    (k: number) => !existSnapshotIds.has(k),
   );
-  if (unimportSnapshotIds.length == 0) {
+  if (unimportSnapshotIds.length === 0) {
     message.success('没有新记录可导入');
     return;
   }
+
   let okCount = 0;
   const limit = pLimit(3);
   await Promise.all(
-    unimportSnapshotIds.map((snapshotId) =>
+    unimportSnapshotIds.map((snapshotId: number) =>
       limit(async () => {
         const [newSnapshot, newScreenshot] = await Promise.all([
           api.getSnapshot({ id: snapshotId }),
           api.getScreenshot({ id: snapshotId }),
         ] as const);
-        if (!newSnapshot.nodes) return;
-        await Promise.all([
-          snapshotStorage.setItem(snapshotId, newSnapshot),
-          screenshotStorage.setItem(snapshotId, newScreenshot),
-        ]);
-        okCount++;
+
+        // 无有效节点的快照不写入本地，也不计入成功数
+        if (newSnapshot.nodes) {
+          await Promise.all([
+            snapshotStorage.setItem(snapshotId, newSnapshot),
+            screenshotStorage.setItem(snapshotId, newScreenshot),
+          ]);
+          okCount++;
+        }
       }),
     ),
   );
+
   message.success(`导入${okCount}条新记录`);
 });
 
@@ -261,9 +220,7 @@ const deleteSnapshot = useBatchTask(
     await snapshotStorage.removeItem(row.id);
     await screenshotStorage.removeItem(row.id);
     // 刷新快照列表
-    const result = await api.getSnapshots();
-    result.sort((a, b) => b.id - a.id);
-    snapshots.value = result;
+    await refreshSnapshots();
   },
   (r) => r.id,
 );
@@ -366,9 +323,7 @@ const batchDelete = useTask(async () => {
   message.success(`成功删除 ${checkedRowKeys.value.length} 个快照`);
 
   // 刷新快照列表
-  const result = await api.getSnapshots();
-  result.sort((a, b) => b.id - a.id);
-  snapshots.value = result;
+  await refreshSnapshots();
 
   // 清空选择
   checkedRowKeys.value = [];

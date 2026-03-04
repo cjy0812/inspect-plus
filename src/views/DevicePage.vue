@@ -417,32 +417,49 @@ const placeholder = `
         </div>
       </NInputGroup>
       <template v-if="serverInfo">
-        <NButton
-          :loading="captureSnapshot.loading"
-          @click="captureSnapshot.invoke"
+        <slot
+          name="server-actions"
+          :captureSnapshot="captureSnapshot"
+          :downloadAllSnapshot="downloadAllSnapshot"
+          :showSubsModel="showSubsModel"
+          :showSelectorModel="showSelectorModel"
         >
-          捕获快照
-        </NButton>
-        <NButton
-          :loading="downloadAllSnapshot.loading"
-          @click="downloadAllSnapshot.invoke"
-        >
-          下载所有快照
-        </NButton>
-        <NButton @click="showSubsModel = true"> 修改内存订阅 </NButton>
-        <NButton @click="showSelectorModel = true"> 执行选择器 </NButton>
+          <NButton
+            :loading="captureSnapshot.loading"
+            @click="captureSnapshot.invoke"
+          >
+            捕获快照
+          </NButton>
+          <NButton
+            :loading="downloadAllSnapshot.loading"
+            @click="downloadAllSnapshot.invoke"
+          >
+            下载所有快照
+          </NButton>
+          <NButton @click="showSubsModel = true"> 修改内存订阅 </NButton>
+          <NButton @click="showSelectorModel = true"> 执行选择器 </NButton>
+        </slot>
       </template>
     </div>
-    <NDataTable
-      striped
-      flex-height
-      :data="snapshots"
+    <slot
+      name="content"
+      :snapshots="snapshots"
       :columns="columns"
       :pagination="pagination"
-      size="small"
-      class="flex-1"
-      :scrollX="1200"
-      @update:sorter="handleSorterChange"
-    />
+      :handleSorterChange="handleSorterChange"
+    >
+      <NDataTable
+        striped
+        flex-height
+        :data="snapshots"
+        :columns="columns"
+        :pagination="pagination"
+        size="small"
+        class="flex-1"
+        :scrollX="1200"
+        @update:sorter="handleSorterChange"
+      />
+    </slot>
   </div>
+  <slot name="extra-modals" />
 </template>
