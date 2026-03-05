@@ -2348,6 +2348,146 @@ index 0000000..26509d7
 +    execSelector,
 +  };
 +};
+diff --git a/src/composables/plus/useDeviceSnapshotData.ts b/src/composables/plus/useDeviceSnapshotData.ts
+new file mode 100644
+index 0000000..24b6f34
+--- /dev/null
++++ b/src/composables/plus/useDeviceSnapshotData.ts
+@@ -0,0 +1,76 @@
++import { computed, onMounted, shallowRef, watchEffect } from 'vue';
++import { useDeviceApi } from '@/utils/api';
++import { message } from '@/utils/discrete';
++import { errorWrap } from '@/utils/error';
++import { delay } from '@/utils/others';
++import { useTask } from '@/utils/task';
++
++export function useDeviceSnapshotData(): any {
++  const { api, origin, serverInfo } = useDeviceApi();
++  const link = useStorage('device_link', '');
++
++  const normalizeDeviceUrl = (input: string): string | null => {
++    const raw = input.trim();
++    if (!raw) return null;
++    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
++    return errorWrap(
++      () => {
++        const url = new URL(withProtocol);
++        if (!url.port) url.port = '8888';
++        return url.origin;
++      },
++      () => null,
++    );
++  };
++
++  const connect = useTask(async () => {
++    const normalized = normalizeDeviceUrl(link.value);
++    if (!normalized) {
++      message.error('非法设备地址');
++      return;
++    }
++    origin.value = normalized;
++    link.value = normalized;
++    serverInfo.value = await api.getServerInfo();
++  });
++
++  const serverTitle = computed(() => {
++    if (!serverInfo.value) return '未连接设备';
++    const d = serverInfo.value.device;
++    const g = serverInfo.value.gkdAppInfo;
++    return `${d.manufacturer} Android${d.release} - GKD${g.versionName}`;
++  });
++
++  onMounted(async () => {
++    await delay(500);
++    if (normalizeDeviceUrl(link.value)) {
++      connect.invoke();
++    }
++  });
++
++  const snapshots = shallowRef<Snapshot[]>([]);
++  const refreshSnapshots = async () => {
++    if (!serverInfo.value) return;
++    const result = await api.getSnapshots();
++    result.sort((a, b) => b.id - a.id);
++    snapshots.value = result;
++  };
++
++  watchEffect(async () => {
++    if (!serverInfo.value) return;
++    document.title = serverTitle.value;
++    await refreshSnapshots();
++  });
++
++  return {
++    api,
++    origin,
++    serverInfo,
++    link,
++    connect,
++    serverTitle,
++    snapshots,
++    refreshSnapshots,
++    normalizeDeviceUrl,
++  };
++}
+diff --git a/src/composables/plus/useHomeSnapshotData.ts b/src/composables/plus/useHomeSnapshotData.ts
+new file mode 100644
+index 0000000..0c4ea16
+--- /dev/null
++++ b/src/composables/plus/useHomeSnapshotData.ts
+@@ -0,0 +1,52 @@
++import { getAppInfo } from '@/utils/node';
++import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
++import { shallowSnapshotStorage } from '@/utils/snapshot';
++
++export function useHomeSnapshotData(
++  snapshotImportTime: Record<number, number>,
++) {
++  const snapshots = shallowRef<Snapshot[]>([]);
++  const loading = shallowRef(true);
++
++  const updateSnapshots = async () => {
++    loading.value = true;
++    snapshots.value = (await shallowSnapshotStorage.getAllItems()).reverse();
++    loading.value = false;
++  };
++
++  const filterOption = shallowReactive({
++    query: '',
++    actualQuery: '',
++    updateQuery: () => {
++      filterOption.actualQuery = filterOption.query.trim();
++    },
++  });
++
++  const filteredSnapshots = computed(() => {
++    const query = filterOption.actualQuery;
++    return snapshots.value.filter((s) => {
++      if (!query) return true;
++      return (
++        (getAppInfo(s).name || '').includes(query) ||
++        (s.appId || '').includes(query) ||
++        (s.appInfo?.id || '').includes(query) ||
++        (s.activityId || '').includes(query)
++      );
++    });
++  });
++
++  const groupedSnapshots = computed(() =>
++    buildGroupedSnapshots(filteredSnapshots.value, snapshotImportTime),
++  );
++
++  onMounted(updateSnapshots);
++
++  return {
++    snapshots,
++    loading,
++    updateSnapshots,
++    filterOption,
++    filteredSnapshots,
++    groupedSnapshots,
++  };
++}
 diff --git a/src/composables/plus/usePreviewCache.ts b/src/composables/plus/usePreviewCache.ts
 new file mode 100644
 index 0000000..a85d9e7
@@ -3498,10 +3638,10 @@ index 0000000..8ea71a8
 +
 +export const discreteAppTheme = shallowRef<GlobalTheme | null>(null);
 diff --git a/src/types/global.d.ts b/src/types/global.d.ts
-index 5a2d938..ebdc7c9 100644
+index 5a2d938..b355a45 100644
 --- a/src/types/global.d.ts
 +++ b/src/types/global.d.ts
-@@ -1,161 +1,176 @@
+@@ -1,161 +1,175 @@
 -type PrimitiveType = boolean | string | number | null | undefined;
 -
 -interface RpcError {
@@ -3795,8 +3935,7 @@ index 5a2d938..ebdc7c9 100644
 +    key: number;
 +    selector: import('@/utils/selector').ResolvedSelector;
 +    nodes: RawNode[];
-+    // 修复这里的泛型参数
-+    results: import('@gkd-kit/selector').QueryResult<RawNode>;
++    results: import('@gkd-kit/selector').QueryResult<RawNode>[];
 +  }
 +
 +  interface StringSearchResult {
@@ -5088,20 +5227,357 @@ index 54b7da7..787574e 100644
 +    })
 +    .filter((item): item is readonly [string, SVGSVGElement] => !!item),
  );
+diff --git a/src/utils/task.ts b/src/utils/task.ts
+index 8029e5c..d14f165 100644
+--- a/src/utils/task.ts
++++ b/src/utils/task.ts
+@@ -1,5 +1,14 @@
+ import { delay } from './others';
+ 
++type PrimitiveType =
++  | string
++  | number
++  | boolean
++  | bigint
++  | symbol
++  | null
++  | undefined;
++
+ export const useTask = <T extends (...args: any[]) => Promise<void>>(
+   fn: T,
+   miniInterval = 0,
+diff --git a/src/views/DevicePage.vue b/src/views/DevicePage.vue
+index 50696ab..b9f6787 100644
+--- a/src/views/DevicePage.vue
++++ b/src/views/DevicePage.vue
+@@ -417,32 +417,49 @@ const placeholder = `
+         </div>
+       </NInputGroup>
+       <template v-if="serverInfo">
+-        <NButton
+-          :loading="captureSnapshot.loading"
+-          @click="captureSnapshot.invoke"
++        <slot
++          name="server-actions"
++          :captureSnapshot="captureSnapshot"
++          :downloadAllSnapshot="downloadAllSnapshot"
++          :showSubsModel="showSubsModel"
++          :showSelectorModel="showSelectorModel"
+         >
+-          捕获快照
+-        </NButton>
+-        <NButton
+-          :loading="downloadAllSnapshot.loading"
+-          @click="downloadAllSnapshot.invoke"
+-        >
+-          下载所有快照
+-        </NButton>
+-        <NButton @click="showSubsModel = true"> 修改内存订阅 </NButton>
+-        <NButton @click="showSelectorModel = true"> 执行选择器 </NButton>
++          <NButton
++            :loading="captureSnapshot.loading"
++            @click="captureSnapshot.invoke"
++          >
++            捕获快照
++          </NButton>
++          <NButton
++            :loading="downloadAllSnapshot.loading"
++            @click="downloadAllSnapshot.invoke"
++          >
++            下载所有快照
++          </NButton>
++          <NButton @click="showSubsModel = true"> 修改内存订阅 </NButton>
++          <NButton @click="showSelectorModel = true"> 执行选择器 </NButton>
++        </slot>
+       </template>
+     </div>
+-    <NDataTable
+-      striped
+-      flex-height
+-      :data="snapshots"
++    <slot
++      name="content"
++      :snapshots="snapshots"
+       :columns="columns"
+       :pagination="pagination"
+-      size="small"
+-      class="flex-1"
+-      :scrollX="1200"
+-      @update:sorter="handleSorterChange"
+-    />
++      :handleSorterChange="handleSorterChange"
++    >
++      <NDataTable
++        striped
++        flex-height
++        :data="snapshots"
++        :columns="columns"
++        :pagination="pagination"
++        size="small"
++        class="flex-1"
++        :scrollX="1200"
++        @update:sorter="handleSorterChange"
++      />
++    </slot>
+   </div>
++  <slot name="extra-modals" />
+ </template>
+diff --git a/src/views/home/HomePage.vue b/src/views/home/HomePage.vue
+index fa915bc..683f4a1 100644
+--- a/src/views/home/HomePage.vue
++++ b/src/views/home/HomePage.vue
+@@ -324,114 +324,131 @@ const inputImportRef = shallowRef();
+         </template>
+       </NSpace>
+       <div flex-1 />
+-      <div flex gap-24px items-center pr-8px class="[--svg-h:24px]">
+-        <NTooltip>
+-          <template #trigger>
+-            <NButton text @click="settingsDlgShow = true">
+-              <SvgIcon name="settings" />
+-            </NButton>
+-          </template>
+-          设置
+-        </NTooltip>
+-        <NTooltip>
+-          <template #trigger>
+-            <RouterLink flex to="/selector">
+-              <NButton text>
+-                <SvgIcon name="terminal" />
++      <slot
++        name="toolbar-right"
++        :settingsDlgShow="settingsDlgShow"
++        :importLocal="importLocal"
++        :importNetwork="importNetwork"
++        :showImportModal="showImportModal"
++      >
++        <div flex gap-24px items-center pr-8px class="[--svg-h:24px]">
++          <NTooltip>
++            <template #trigger>
++              <NButton text @click="settingsDlgShow = true">
++                <SvgIcon name="settings" />
+               </NButton>
+-            </RouterLink>
+-          </template>
+-          测试选择器
+-        </NTooltip>
+-        <NPopover>
+-          <template #trigger>
+-            <NButton text>
+-              <SvgIcon name="import" />
+-            </NButton>
+-          </template>
+-          <NSpace vertical>
+-            <NTooltip placement="left">
+-              <template #trigger>
+-                <NButton
+-                  :loading="importLocal.loading"
+-                  @click="importLocal.invoke()"
+-                >
+-                  导入本地文件
+-                </NButton>
+-              </template>
+-              <div class="whitespace-nowrap">支持拖拽文件到页面任意位置</div>
+-            </NTooltip>
+-            <NTooltip placement="left">
+-              <template #trigger>
+-                <NButton
+-                  :loading="importNetwork.loading"
+-                  @click="showImportModal = true"
+-                >
+-                  导入网络文件
++            </template>
++            设置
++          </NTooltip>
++          <NTooltip>
++            <template #trigger>
++              <RouterLink flex to="/selector">
++                <NButton text>
++                  <SvgIcon name="terminal" />
+                 </NButton>
+-              </template>
+-              <div class="whitespace-nowrap">
+-                支持任意位置粘贴(Ctrl+V)文本触发导入
+-              </div>
+-            </NTooltip>
+-          </NSpace>
+-        </NPopover>
+-        <NTooltip>
+-          <template #trigger>
+-            <RouterLink flex to="/device">
+-              <NButton text>
+-                <SvgIcon name="device" />
+-              </NButton>
+-            </RouterLink>
+-          </template>
+-          连接设备
+-        </NTooltip>
+-        <NTooltip>
+-          <template #trigger>
+-            <a
+-              flex
+-              href="https://github.com/orgs/gkd-kit/discussions"
+-              target="_blank"
+-              rel="noopener noreferrer"
+-            >
+-              <NButton text>
+-                <SvgIcon name="discussion" />
+-              </NButton>
+-            </a>
+-          </template>
+-          讨论交流
+-        </NTooltip>
+-        <NTooltip>
+-          <template #trigger>
+-            <a
+-              flex
+-              href="https://github.com/gkd-kit/inspect"
+-              target="_blank"
+-              rel="noopener noreferrer"
+-            >
++              </RouterLink>
++            </template>
++            测试选择器
++          </NTooltip>
++          <NPopover>
++            <template #trigger>
+               <NButton text>
+-                <SvgIcon name="github" />
++                <SvgIcon name="import" />
+               </NButton>
+-            </a>
+-          </template>
+-          Github
+-        </NTooltip>
+-      </div>
++            </template>
++            <NSpace vertical>
++              <NTooltip placement="left">
++                <template #trigger>
++                  <NButton
++                    :loading="importLocal.loading"
++                    @click="importLocal.invoke()"
++                  >
++                    导入本地文件
++                  </NButton>
++                </template>
++                <div class="whitespace-nowrap">支持拖拽文件到页面任意位置</div>
++              </NTooltip>
++              <NTooltip placement="left">
++                <template #trigger>
++                  <NButton
++                    :loading="importNetwork.loading"
++                    @click="showImportModal = true"
++                  >
++                    导入网络文件
++                  </NButton>
++                </template>
++                <div class="whitespace-nowrap">
++                  支持任意位置粘贴(Ctrl+V)文本触发导入
++                </div>
++              </NTooltip>
++            </NSpace>
++          </NPopover>
++          <NTooltip>
++            <template #trigger>
++              <RouterLink flex to="/device">
++                <NButton text>
++                  <SvgIcon name="device" />
++                </NButton>
++              </RouterLink>
++            </template>
++            连接设备
++          </NTooltip>
++          <NTooltip>
++            <template #trigger>
++              <a
++                flex
++                href="https://github.com/orgs/gkd-kit/discussions"
++                target="_blank"
++                rel="noopener noreferrer"
++              >
++                <NButton text>
++                  <SvgIcon name="discussion" />
++                </NButton>
++              </a>
++            </template>
++            讨论交流
++          </NTooltip>
++          <NTooltip>
++            <template #trigger>
++              <a
++                flex
++                href="https://github.com/gkd-kit/inspect"
++                target="_blank"
++                rel="noopener noreferrer"
++              >
++                <NButton text>
++                  <SvgIcon name="github" />
++                </NButton>
++              </a>
++            </template>
++            Github
++          </NTooltip>
++        </div>
++      </slot>
+     </div>
+-    <NDataTable
+-      v-model:checkedRowKeys="checkedRowKeys"
+-      striped
+-      virtualScroll
+-      :data="filterSnapshots"
++    <slot
++      name="content"
++      :checkedRowKeys="checkedRowKeys"
++      :filterSnapshots="filterSnapshots"
+       :columns="columns"
+-      :scrollX="1800"
+-      :rowKey="(r:Snapshot)=>r.id"
+-      size="small"
+-      class="flex-1"
+-      flex-height
+       :loading="loading"
+-      @update:sorter="handleSorterChange"
+-    />
++      :handleSorterChange="handleSorterChange"
++    >
++      <NDataTable
++        v-model:checkedRowKeys="checkedRowKeys"
++        striped
++        virtualScroll
++        :data="filterSnapshots"
++        :columns="columns"
++        :scrollX="1800"
++        :rowKey="(r: Snapshot) => r.id"
++        size="small"
++        class="flex-1"
++        flex-height
++        :loading="loading"
++        @update:sorter="handleSorterChange"
++      />
++    </slot>
+   </div>
+   <NModal
+     :show="showImportModal"
+@@ -491,4 +508,5 @@ const inputImportRef = shallowRef();
+       <div>打开快照页面自动生成分享链接(请确保不含隐私)</div>
+     </div>
+   </NModal>
++  <slot name="extra-modals" />
+ </template>
 diff --git a/src/views/plus/DevicePage.vue b/src/views/plus/DevicePage.vue
 new file mode 100644
-index 0000000..03d469e
+index 0000000..161fec8
 --- /dev/null
 +++ b/src/views/plus/DevicePage.vue
-@@ -0,0 +1,707 @@
+@@ -0,0 +1,662 @@
 +<script setup lang="ts">
 +import DeviceControlTools from '@/components/DeviceControlTools.vue';
 +import SettingsModal from '@/components/SettingsModal.vue';
++import { useDeviceSnapshotData } from '@/composables/plus/useDeviceSnapshotData';
 +import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 +import { showTextDLg, waitShareAgree } from '@/utils/dialog';
-+import { useDeviceApi } from '@/utils/api';
 +import { message } from '@/utils/discrete';
-+import { errorWrap } from '@/utils/error';
 +import {
 +  exportSnapshotAsImportId,
 +  exportSnapshotAsImage,
@@ -5109,7 +5585,6 @@ index 0000000..03d469e
 +  exportSnapshotAsZip,
 +} from '@/utils/export';
 +import { getAppInfo, getDevice } from '@/utils/node';
-+import { delay } from '@/utils/others';
 +import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
 +import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 +import { useBatchTask, useTask } from '@/utils/task';
@@ -5121,61 +5596,19 @@ index 0000000..03d469e
 +import dayjs from 'dayjs';
 +import pLimit from 'p-limit';
 +import { dialog } from '@/utils/discrete';
-+
 +const router = useRouter();
-+const { api, origin, serverInfo } = useDeviceApi();
 +const { settingsStore, snapshotImportTime, snapshotViewedTime } =
 +  useStorageStore();
-+const link = useStorage('device_link', '');
 +const settingsDlgShow = shallowRef(false);
-+
-+const normalizeDeviceUrl = (input: string): string | null => {
-+  const raw = input.trim();
-+  if (!raw) return null;
-+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
-+  return errorWrap(
-+    () => {
-+      const url = new URL(withProtocol);
-+      if (!url.port) url.port = '8888';
-+      return url.origin;
-+    },
-+    () => null,
-+  );
-+};
-+
-+const connect = useTask(async () => {
-+  const normalized = normalizeDeviceUrl(link.value);
-+  if (!normalized) {
-+    message.error('非法设备地址');
-+    return;
-+  }
-+  origin.value = normalized;
-+  link.value = normalized;
-+  serverInfo.value = await api.getServerInfo();
-+});
-+
-+const serverTitle = computed(() => {
-+  if (!serverInfo.value) return '未连接设备';
-+  const d = serverInfo.value.device;
-+  const g = serverInfo.value.gkdAppInfo;
-+  return `${d.manufacturer} Android${d.release} - GKD${g.versionName}`;
-+});
-+
-+onMounted(async () => {
-+  await delay(500);
-+  if (normalizeDeviceUrl(link.value)) {
-+    connect.invoke();
-+  }
-+});
-+
-+const snapshots = shallowRef<Snapshot[]>([]);
-+watchEffect(async () => {
-+  if (!serverInfo.value) return;
-+  document.title = serverTitle.value;
-+  const result = await api.getSnapshots();
-+  result.sort((a, b) => b.id - a.id);
-+  snapshots.value = result;
-+});
++const {
++  api,
++  serverInfo,
++  link,
++  connect,
++  serverTitle,
++  snapshots,
++  refreshSnapshots,
++} = useDeviceSnapshotData();
 +
 +const captureSnapshot = useTask(async () => {
 +  const snapshot = await api.captureSnapshot();
@@ -5183,41 +5616,44 @@ index 0000000..03d469e
 +  await snapshotStorage.setItem(snapshot.id, snapshot);
 +  await screenshotStorage.setItem(snapshot.id, screenshot);
 +  message.success('捕获并保存快照成功');
-+  const result = await api.getSnapshots();
-+  result.sort((a, b) => b.id - a.id);
-+  snapshots.value = result;
++  await refreshSnapshots();
 +});
 +
 +const downloadAllSnapshot = useTask(async () => {
-+  const snapshotIds = (await api.getSnapshots()).map((s) => s.id);
++  const snapshotIds = (await api.getSnapshots()).map((s: Snapshot) => s.id);
 +  const existSnapshotIds = new Set(
 +    (await screenshotStorage.keys()).map((s) => parseInt(s)),
 +  );
 +  const unimportSnapshotIds = snapshotIds.filter(
-+    (k) => !existSnapshotIds.has(k),
++    (k: number) => !existSnapshotIds.has(k),
 +  );
-+  if (unimportSnapshotIds.length == 0) {
++  if (unimportSnapshotIds.length === 0) {
 +    message.success('没有新记录可导入');
 +    return;
 +  }
++
 +  let okCount = 0;
 +  const limit = pLimit(3);
 +  await Promise.all(
-+    unimportSnapshotIds.map((snapshotId) =>
++    unimportSnapshotIds.map((snapshotId: number) =>
 +      limit(async () => {
 +        const [newSnapshot, newScreenshot] = await Promise.all([
 +          api.getSnapshot({ id: snapshotId }),
 +          api.getScreenshot({ id: snapshotId }),
 +        ] as const);
-+        if (!newSnapshot.nodes) return;
-+        await Promise.all([
-+          snapshotStorage.setItem(snapshotId, newSnapshot),
-+          screenshotStorage.setItem(snapshotId, newScreenshot),
-+        ]);
-+        okCount++;
++
++        // 无有效节点的快照不写入本地，也不计入成功数
++        if (newSnapshot.nodes) {
++          await Promise.all([
++            snapshotStorage.setItem(snapshotId, newSnapshot),
++            screenshotStorage.setItem(snapshotId, newScreenshot),
++          ]);
++          okCount++;
++        }
 +      }),
 +    ),
 +  );
++
 +  message.success(`导入${okCount}条新记录`);
 +});
 +
@@ -5357,9 +5793,7 @@ index 0000000..03d469e
 +    await snapshotStorage.removeItem(row.id);
 +    await screenshotStorage.removeItem(row.id);
 +    // 刷新快照列表
-+    const result = await api.getSnapshots();
-+    result.sort((a, b) => b.id - a.id);
-+    snapshots.value = result;
++    await refreshSnapshots();
 +  },
 +  (r) => r.id,
 +);
@@ -5462,9 +5896,7 @@ index 0000000..03d469e
 +  message.success(`成功删除 ${checkedRowKeys.value.length} 个快照`);
 +
 +  // 刷新快照列表
-+  const result = await api.getSnapshots();
-+  result.sort((a, b) => b.id - a.id);
-+  snapshots.value = result;
++  await refreshSnapshots();
 +
 +  // 清空选择
 +  checkedRowKeys.value = [];
@@ -5829,14 +6261,15 @@ index 0000000..069128b
 +</template>
 diff --git a/src/views/plus/home/HomePage.vue b/src/views/plus/home/HomePage.vue
 new file mode 100644
-index 0000000..504f255
+index 0000000..6271dd3
 --- /dev/null
 +++ b/src/views/plus/home/HomePage.vue
-@@ -0,0 +1,832 @@
+@@ -0,0 +1,804 @@
 +<script setup lang="ts">
 +import ActionCard from '@/components/ActionCard.vue';
 +import DeviceControlTools from '@/components/DeviceControlTools.vue';
 +import SettingsModal from '@/components/SettingsModal.vue';
++import { useHomeSnapshotData } from '@/composables/plus/useHomeSnapshotData';
 +import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 +import { toValidURL } from '@/utils/check';
 +import { showTextDLg, waitShareAgree } from '@/utils/dialog';
@@ -5850,12 +6283,7 @@ index 0000000..504f255
 +import { importFromLocal, importFromNetwork } from '@/utils/import';
 +import { getAppInfo, getDevice } from '@/utils/node';
 +import { filterQuery, getDragEventFiles } from '@/utils/others';
-+import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
-+import {
-+  screenshotStorage,
-+  shallowSnapshotStorage,
-+  snapshotStorage,
-+} from '@/utils/snapshot';
++import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 +import { useTask } from '@/utils/task';
 +import { getImagUrl, getImportUrl } from '@/utils/url';
 +import {
@@ -5868,42 +6296,13 @@ index 0000000..504f255
 +const router = useRouter();
 +const { settingsStore, snapshotImportTime, snapshotViewedTime } =
 +  useStorageStore();
-+
-+const snapshots = shallowRef<Snapshot[]>([]);
-+const loading = shallowRef(true);
-+const updateSnapshots = async () => {
-+  loading.value = true;
-+  snapshots.value = (await shallowSnapshotStorage.getAllItems()).reverse();
-+  checkedRowKeys.value = [];
-+  loading.value = false;
-+};
-+onMounted(updateSnapshots);
-+
-+const filterOption = shallowReactive({
-+  query: '',
-+  actualQuery: '',
-+  updateQuery: () => {
-+    filterOption.actualQuery = filterOption.query.trim();
-+    checkedRowKeys.value = [];
-+  },
-+});
-+
-+const filteredSnapshots = computed(() => {
-+  const query = filterOption.actualQuery;
-+  return snapshots.value.filter((s) => {
-+    if (!query) return true;
-+    return (
-+      (getAppInfo(s).name || '').includes(query) ||
-+      (s.appId || '').includes(query) ||
-+      (s.appInfo?.id || '').includes(query) ||
-+      (s.activityId || '').includes(query)
-+    );
-+  });
-+});
-+
-+const groupedSnapshots = computed(() =>
-+  buildGroupedSnapshots(filteredSnapshots.value, snapshotImportTime),
-+);
++const {
++  loading,
++  updateSnapshots,
++  filterOption,
++  filteredSnapshots,
++  groupedSnapshots,
++} = useHomeSnapshotData(snapshotImportTime);
 +
 +const snapshotDisplayLimit = 50;
 +const expandedActivitySnapshotKeys = shallowRef<string[]>([]);
@@ -6013,6 +6412,11 @@ index 0000000..504f255
 +});
 +
 +const checkedRowKeys = shallowRef<number[]>([]);
++const baseUpdateQuery = filterOption.updateQuery;
++filterOption.updateQuery = () => {
++  baseUpdateQuery();
++  checkedRowKeys.value = [];
++};
 +const checkedSet = computed(() => new Set(checkedRowKeys.value));
 +const allFilteredSnapshotIds = computed(() =>
 +  filteredSnapshots.value.map((s) => s.id),
