@@ -99,7 +99,7 @@ const renderLabel = (info: {
     {
       style: meta.self
         ? // 在部分字体下 700 不明显，这里用轻微描边增强“加粗可见性”
-          'font-weight:700 !important;text-shadow:0.35px 0 currentColor,-0.35px 0 currentColor;'
+          'font-weight:700 !important;text-shadow:0.2px 0 currentColor,-0.2px 0 currentColor;'
         : undefined,
     },
     label,
@@ -167,6 +167,11 @@ const gkdVersionName = computed(() => {
   if (!snapshot.value) return undefined;
   const v = getGkdAppInfo(snapshot.value).versionName;
   return v ? `GKD@${v}` : undefined;
+});
+const appVersionCodeText = computed(() => {
+  if (!snapshot.value) return '';
+  const versionCode = getAppInfo(snapshot.value)?.versionCode;
+  return versionCode == null ? '' : String(versionCode);
 });
 </script>
 
@@ -236,11 +241,8 @@ const gkdVersionName = computed(() => {
 
         <NTooltip>
           <template #trigger>
-            <div
-              v-if="snapshot"
-              @click="copy(getAppInfo(snapshot).versionCode.toString())"
-            >
-              {{ getAppInfo(snapshot).versionCode }}
+            <div v-if="snapshot" @click="copy(appVersionCodeText)">
+              {{ appVersionCodeText || '-' }}
             </div>
             <div v-else>-</div>
           </template>

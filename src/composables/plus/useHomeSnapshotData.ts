@@ -12,7 +12,14 @@ export function useHomeSnapshotData(
   const updateSnapshots = async () => {
     try {
       loading.value = true;
-      snapshots.value = (await shallowSnapshotStorage.getAllItems()).reverse();
+      const items = await shallowSnapshotStorage.getAllItems();
+      items.sort((a, b) => {
+        const at = snapshotImportTime[a.id] ?? a.id;
+        const bt = snapshotImportTime[b.id] ?? b.id;
+        if (bt !== at) return bt - at;
+        return b.id - a.id;
+      });
+      snapshots.value = items;
     } finally {
       loading.value = false;
     }

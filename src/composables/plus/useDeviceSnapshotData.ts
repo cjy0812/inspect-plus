@@ -19,7 +19,7 @@ interface UseDeviceSnapshotDataReturn {
   };
   serverTitle: ComputedRef<string>;
   snapshots: ShallowRef<Snapshot[]>;
-  refreshSnapshots: (run?: number, currentRun?: number) => Promise<void>;
+  refreshSnapshots: () => Promise<void>;
   normalizeDeviceUrl: (input: string) => string | null;
 }
 
@@ -50,6 +50,7 @@ export function useDeviceSnapshotData(): UseDeviceSnapshotDataReturn {
     }
     origin.value = normalized;
     link.value = normalized;
+    latestSnapshotRun++;
     serverInfo.value = undefined as any;
     snapshots.value = [];
     try {
@@ -76,11 +77,13 @@ export function useDeviceSnapshotData(): UseDeviceSnapshotDataReturn {
     }
   });
 
-  const refreshSnapshots = async (run?: number, currentRun?: number) => {
+  let latestSnapshotRun = 0;
+  const refreshSnapshots = async () => {
+    const runId = ++latestSnapshotRun;
     if (!serverInfo.value) return;
     const result = await api.getSnapshots();
     result.sort((a, b) => b.id - a.id);
-    if (run != null && currentRun != null && run !== currentRun) return;
+    if (runId !== latestSnapshotRun) return;
     snapshots.value = result;
   };
 
@@ -95,10 +98,11 @@ export function useDeviceSnapshotData(): UseDeviceSnapshotDataReturn {
       });
       document.title = serverTitle.value;
       if (!value) {
+        latestSnapshotRun++;
         snapshots.value = [];
         return;
       }
-      await refreshSnapshots(run, currentRun);
+      await refreshSnapshots();
       if (cancelled || run !== currentRun) return;
     },
     { immediate: true },
