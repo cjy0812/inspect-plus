@@ -187,7 +187,11 @@ const gkdVersionName = computed(() => {
         <div flex items-center gap-2px max-w-120px>
           <NTooltip v-if="isSystem && snapshot">
             <template #trigger>
-              <SvgIcon name="system" />
+              <SvgIcon
+                name="system"
+                style="--svg-h: 16px; --svg-w: 16px"
+                class="text-yellow-600"
+              />
             </template>
             {{ `${getAppInfo(snapshot).name} 是一个系统应用` }}
           </NTooltip>
