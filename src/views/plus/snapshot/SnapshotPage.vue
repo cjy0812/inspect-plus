@@ -24,6 +24,7 @@ const {
   settingsDlgShow,
   openSettings,
   onTrackDialogClosed,
+  openBlurEditor,
 } = usesnapshot();
 </script>
 
@@ -80,6 +81,14 @@ const {
             /></NButton>
           </template>
           测试规则
+        </NTooltip>
+        <NTooltip placement="right">
+          <template #trigger>
+            <NButton text @click="openBlurEditor">
+              <SvgIcon name="Photo-edit" />
+            </NButton>
+          </template>
+          编辑图片
         </NTooltip>
         <div />
         <NTooltip placement="right">

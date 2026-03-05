@@ -107,6 +107,59 @@ export const useSnapshotStore = createSharedComposable(() => {
     }
     return undefined;
   });
+  const maskedScreenshotUrl = shallowRef<string>();
+  const showRegenerateTip = shallowRef(false);
+  const revokeMaskedScreenshotUrl = () => {
+    if (maskedScreenshotUrl.value?.startsWith('blob:')) {
+      URL.revokeObjectURL(maskedScreenshotUrl.value);
+    }
+  };
+  const resetBlurredScreenshot = () => {
+    revokeMaskedScreenshotUrl();
+    maskedScreenshotUrl.value = undefined;
+    showRegenerateTip.value = false;
+  };
+  const invalidateShareLinks = () => {
+    if (!snapshotId.value) return;
+    const sid = snapshotId.value;
+    Object.entries(importSnapshotId).forEach(([k, v]) => {
+      if (v === sid) delete importSnapshotId[k];
+    });
+    if (snapshotImageId[sid]) delete snapshotImageId[sid];
+    if (snapshotImportId[sid]) delete snapshotImportId[sid];
+  };
+  const applyBlurredScreenshot = async (url: string) => {
+    revokeMaskedScreenshotUrl();
+    maskedScreenshotUrl.value = url;
+    if (snapshotId.value) {
+      try {
+        const editedBuffer = await fetch(url).then((r) => r.arrayBuffer());
+        await screenshotStorage.setItem(snapshotId.value, editedBuffer);
+        screenshot.value = editedBuffer;
+        // 持久化成功后切回底层截图，避免临时 URL 生命周期问题
+        resetBlurredScreenshot();
+      } catch {
+        // 转存失败时，保留当前遮罩预览，至少保证用户可见结果
+      }
+    }
+    invalidateShareLinks();
+    showRegenerateTip.value = true;
+  };
+  const dismissRegenerateTip = () => {
+    showRegenerateTip.value = false;
+  };
+  const displayScreenshotUrl = computed(
+    () => maskedScreenshotUrl.value || screenshotUrl.value,
+  );
+  watch(
+    () => screenshotUrl.value,
+    () => {
+      resetBlurredScreenshot();
+    },
+  );
+  onScopeDispose(() => {
+    resetBlurredScreenshot();
+  });
   const redirected = shallowRef(false);
   const update = useTask(async (id: number | undefined) => {
     redirected.value = false;
@@ -223,6 +276,14 @@ export const useSnapshotStore = createSharedComposable(() => {
 
   const trackShow = shallowRef(false);
   const trackData = shallowRef<TrackCardProps>();
+  const blurEditorShow = shallowRef(false);
+  const openBlurEditor = () => {
+    if (!displayScreenshotUrl.value) return;
+    blurEditorShow.value = true;
+  };
+  const closeBlurEditor = () => {
+    blurEditorShow.value = false;
+  };
   const showTrack = (
     selector: ResolvedSelector,
     result: QueryResult<RawNode>,
@@ -240,6 +301,9 @@ export const useSnapshotStore = createSharedComposable(() => {
     snapshot,
     rootNode,
     screenshotUrl,
+    maskedScreenshotUrl,
+    displayScreenshotUrl,
+    showRegenerateTip,
     loading,
     redirected,
     importId,
@@ -254,6 +318,12 @@ export const useSnapshotStore = createSharedComposable(() => {
     trackData,
     trackShow,
     showTrack,
+    blurEditorShow,
+    openBlurEditor,
+    closeBlurEditor,
+    applyBlurredScreenshot,
+    resetBlurredScreenshot,
+    dismissRegenerateTip,
   };
 });
 
