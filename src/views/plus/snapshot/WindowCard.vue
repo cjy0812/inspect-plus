@@ -94,11 +94,26 @@ const renderLabel = (info: {
   if (!meta?.has) {
     return label;
   }
+  const labelNode = h(
+    'span',
+    {
+      style: meta.self
+        ? // 在部分字体下 700 不明显，这里用轻微描边增强“加粗可见性”
+          'font-weight:700 !important;text-shadow:0.35px 0 currentColor,-0.35px 0 currentColor;'
+        : undefined,
+    },
+    label,
+  );
   return h(
     'span',
-    { style: { display: 'inline-flex', alignItems: 'center' } },
+    {
+      style: {
+        display: 'inline-flex',
+        alignItems: 'center',
+      },
+    },
     [
-      label,
+      labelNode,
       h(SvgIcon, {
         name: 'ok',
         class: 'quickfind-icon',
