@@ -320,7 +320,7 @@ const shareResult = (result: SearchResult) => {
     v-slot="{ onRef }"
     :initialValue="{
       top: 40,
-      right: Math.max(315, 12 * vw + 135),
+      right: Math.max(348, 12 * vw + 135),
       width: Math.max(480, gkdWidth * 0.3),
     }"
     :minWidth="300"
