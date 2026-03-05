@@ -130,8 +130,7 @@ declare global {
     key: number;
     selector: import('@/utils/selector').ResolvedSelector;
     nodes: RawNode[];
-    // 修复这里的泛型参数
-    results: import('@gkd-kit/selector').QueryResult<RawNode>;
+    results: import('@gkd-kit/selector').QueryResult<RawNode>[];
   }
 
   interface StringSearchResult {

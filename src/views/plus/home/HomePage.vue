@@ -2,6 +2,7 @@
 import ActionCard from '@/components/ActionCard.vue';
 import DeviceControlTools from '@/components/DeviceControlTools.vue';
 import SettingsModal from '@/components/SettingsModal.vue';
+import { useHomeSnapshotData } from '@/composables/plus/useHomeSnapshotData';
 import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 import { toValidURL } from '@/utils/check';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
@@ -15,12 +16,7 @@ import {
 import { importFromLocal, importFromNetwork } from '@/utils/import';
 import { getAppInfo, getDevice } from '@/utils/node';
 import { filterQuery, getDragEventFiles } from '@/utils/others';
-import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
-import {
-  screenshotStorage,
-  shallowSnapshotStorage,
-  snapshotStorage,
-} from '@/utils/snapshot';
+import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
 import { getImagUrl, getImportUrl } from '@/utils/url';
 import {
@@ -33,42 +29,13 @@ const route = useRoute();
 const router = useRouter();
 const { settingsStore, snapshotImportTime, snapshotViewedTime } =
   useStorageStore();
-
-const snapshots = shallowRef<Snapshot[]>([]);
-const loading = shallowRef(true);
-const updateSnapshots = async () => {
-  loading.value = true;
-  snapshots.value = (await shallowSnapshotStorage.getAllItems()).reverse();
-  checkedRowKeys.value = [];
-  loading.value = false;
-};
-onMounted(updateSnapshots);
-
-const filterOption = shallowReactive({
-  query: '',
-  actualQuery: '',
-  updateQuery: () => {
-    filterOption.actualQuery = filterOption.query.trim();
-    checkedRowKeys.value = [];
-  },
-});
-
-const filteredSnapshots = computed(() => {
-  const query = filterOption.actualQuery;
-  return snapshots.value.filter((s) => {
-    if (!query) return true;
-    return (
-      (getAppInfo(s).name || '').includes(query) ||
-      (s.appId || '').includes(query) ||
-      (s.appInfo?.id || '').includes(query) ||
-      (s.activityId || '').includes(query)
-    );
-  });
-});
-
-const groupedSnapshots = computed(() =>
-  buildGroupedSnapshots(filteredSnapshots.value, snapshotImportTime),
-);
+const {
+  loading,
+  updateSnapshots,
+  filterOption,
+  filteredSnapshots,
+  groupedSnapshots,
+} = useHomeSnapshotData(snapshotImportTime);
 
 const snapshotDisplayLimit = 50;
 const expandedActivitySnapshotKeys = shallowRef<string[]>([]);
@@ -178,6 +145,11 @@ useEventListener(document.body, 'paste', (e) => {
 });
 
 const checkedRowKeys = shallowRef<number[]>([]);
+const baseUpdateQuery = filterOption.updateQuery;
+filterOption.updateQuery = () => {
+  baseUpdateQuery();
+  checkedRowKeys.value = [];
+};
 const checkedSet = computed(() => new Set(checkedRowKeys.value));
 const allFilteredSnapshotIds = computed(() =>
   filteredSnapshots.value.map((s) => s.id),
@@ -198,6 +170,38 @@ const getCheckedStats = (ids: number[]) => {
     indeterminate: checkedCount > 0 && checkedCount < ids.length,
   };
 };
+const allFilteredCheckedStats = computed(() =>
+  getCheckedStats(allFilteredSnapshotIds.value),
+);
+const groupCheckedStatsMap = computed(() => {
+  const map = new Map<string, { checked: boolean; indeterminate: boolean }>();
+  groupedSnapshots.value.forEach((group) => {
+    map.set(group.packageName, getCheckedStats(getGroupSnapshotIds(group)));
+  });
+  return map;
+});
+const activityCheckedStatsMap = computed(() => {
+  const map = new Map<string, { checked: boolean; indeterminate: boolean }>();
+  groupedSnapshots.value.forEach((group) => {
+    group.activities.forEach((activity) => {
+      map.set(
+        `${group.packageName}::${activity.activityId}`,
+        getCheckedStats(getActivitySnapshotIds(activity)),
+      );
+    });
+  });
+  return map;
+});
+const getGroupCheckedStats = (packageName: string) =>
+  groupCheckedStatsMap.value.get(packageName) ?? {
+    checked: false,
+    indeterminate: false,
+  };
+const getActivityCheckedStats = (packageName: string, activityId: string) =>
+  activityCheckedStatsMap.value.get(`${packageName}::${activityId}`) ?? {
+    checked: false,
+    indeterminate: false,
+  };
 const setCheckedByIds = (ids: number[], checked: boolean) => {
   if (checked) {
     const next = new Set(checkedRowKeys.value);
@@ -333,8 +337,8 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
         </NInputGroup>
         <NCheckbox
           v-if="allFilteredSnapshotIds.length"
-          :checked="getCheckedStats(allFilteredSnapshotIds).checked"
-          :indeterminate="getCheckedStats(allFilteredSnapshotIds).indeterminate"
+          :checked="allFilteredCheckedStats.checked"
+          :indeterminate="allFilteredCheckedStats.indeterminate"
           @update:checked="setCheckedByIds(allFilteredSnapshotIds, $event)"
         >
           {{ `全选当前结果 (${allFilteredSnapshotIds.length})` }}
@@ -466,9 +470,9 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
             <template #header>
               <div flex items-center gap-8px>
                 <NCheckbox
-                  :checked="getCheckedStats(getGroupSnapshotIds(group)).checked"
+                  :checked="getGroupCheckedStats(group.packageName).checked"
                   :indeterminate="
-                    getCheckedStats(getGroupSnapshotIds(group)).indeterminate
+                    getGroupCheckedStats(group.packageName).indeterminate
                   "
                   @click.stop
                   @update:checked="
@@ -513,12 +517,16 @@ const { previewUrlMap, previewLoadingMap, previewErrorMap, ensurePreview } =
                   <div flex items-center gap-8px>
                     <NCheckbox
                       :checked="
-                        getCheckedStats(getActivitySnapshotIds(activity))
-                          .checked
+                        getActivityCheckedStats(
+                          group.packageName,
+                          activity.activityId,
+                        ).checked
                       "
                       :indeterminate="
-                        getCheckedStats(getActivitySnapshotIds(activity))
-                          .indeterminate
+                        getActivityCheckedStats(
+                          group.packageName,
+                          activity.activityId,
+                        ).indeterminate
                       "
                       @click.stop
                       @update:checked="

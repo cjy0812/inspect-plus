@@ -171,6 +171,9 @@ watch(pagination, resetColWidth);
 
 const showSubsModel = shallowRef(false);
 const subsText = shallowRef(``);
+const openSubsModal = () => {
+  showSubsModel.value = true;
+};
 const updateSubs = useTask(async () => {
   const data = errorWrap(() => JSON5.parse(subsText.value.trim()));
   if (!data) return;
@@ -200,6 +203,9 @@ const updateSubs = useTask(async () => {
 });
 
 const showSelectorModel = shallowRef(false);
+const openSelectorModal = () => {
+  showSelectorModel.value = true;
+};
 
 const actionOptions: {
   value?: string;
@@ -417,32 +423,51 @@ const placeholder = `
         </div>
       </NInputGroup>
       <template v-if="serverInfo">
-        <NButton
-          :loading="captureSnapshot.loading"
-          @click="captureSnapshot.invoke"
+        <slot
+          name="server-actions"
+          :captureSnapshot="captureSnapshot"
+          :downloadAllSnapshot="downloadAllSnapshot"
+          :showSubsModel="showSubsModel"
+          :showSelectorModel="showSelectorModel"
+          :openSubsModal="openSubsModal"
+          :openSelectorModal="openSelectorModal"
         >
-          捕获快照
-        </NButton>
-        <NButton
-          :loading="downloadAllSnapshot.loading"
-          @click="downloadAllSnapshot.invoke"
-        >
-          下载所有快照
-        </NButton>
-        <NButton @click="showSubsModel = true"> 修改内存订阅 </NButton>
-        <NButton @click="showSelectorModel = true"> 执行选择器 </NButton>
+          <NButton
+            :loading="captureSnapshot.loading"
+            @click="captureSnapshot.invoke"
+          >
+            捕获快照
+          </NButton>
+          <NButton
+            :loading="downloadAllSnapshot.loading"
+            @click="downloadAllSnapshot.invoke"
+          >
+            下载所有快照
+          </NButton>
+          <NButton @click="openSubsModal"> 修改内存订阅 </NButton>
+          <NButton @click="openSelectorModal"> 执行选择器 </NButton>
+        </slot>
       </template>
     </div>
-    <NDataTable
-      striped
-      flex-height
-      :data="snapshots"
+    <slot
+      name="content"
+      :snapshots="snapshots"
       :columns="columns"
       :pagination="pagination"
-      size="small"
-      class="flex-1"
-      :scrollX="1200"
-      @update:sorter="handleSorterChange"
-    />
+      :handleSorterChange="handleSorterChange"
+    >
+      <NDataTable
+        striped
+        flex-height
+        :data="snapshots"
+        :columns="columns"
+        :pagination="pagination"
+        size="small"
+        class="flex-1"
+        :scrollX="1200"
+        @update:sorter="handleSorterChange"
+      />
+    </slot>
   </div>
+  <slot name="extra-modals" />
 </template>
