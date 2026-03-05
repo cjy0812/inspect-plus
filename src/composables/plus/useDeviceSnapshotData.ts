@@ -1,11 +1,29 @@
+import { useStorage } from '@vueuse/core';
 import { computed, onMounted, shallowRef, watch } from 'vue';
+import type { ComputedRef, ShallowRef } from 'vue';
 import { useDeviceApi } from '@/utils/api';
 import { message } from '@/utils/discrete';
 import { errorWrap } from '@/utils/error';
 import { delay } from '@/utils/others';
 import { useTask } from '@/utils/task';
 
-export function useDeviceSnapshotData(): any {
+type DeviceApiContext = ReturnType<typeof useDeviceApi>;
+interface UseDeviceSnapshotDataReturn {
+  api: DeviceApiContext['api'];
+  origin: DeviceApiContext['origin'];
+  serverInfo: DeviceApiContext['serverInfo'];
+  link: ReturnType<typeof useStorage<string>>;
+  connect: {
+    readonly loading: boolean;
+    invoke: () => Promise<void>;
+  };
+  serverTitle: ComputedRef<string>;
+  snapshots: ShallowRef<Snapshot[]>;
+  refreshSnapshots: (run?: number, currentRun?: number) => Promise<void>;
+  normalizeDeviceUrl: (input: string) => string | null;
+}
+
+export function useDeviceSnapshotData(): UseDeviceSnapshotDataReturn {
   const { api, origin, serverInfo } = useDeviceApi();
   const link = useStorage('device_link', '');
   const snapshots = shallowRef<Snapshot[]>([]);
@@ -48,7 +66,7 @@ export function useDeviceSnapshotData(): any {
     if (!serverInfo.value) return '未连接设备';
     const d = serverInfo.value.device;
     const g = serverInfo.value.gkdAppInfo;
-    return `${d.manufacturer} Android${d.release} - GKD${g.versionName}`;
+    return `${d.manufacturer} Android${d.release} - GKD${g?.versionName ?? '未知版本'}`;
   });
 
   onMounted(async () => {

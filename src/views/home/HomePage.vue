@@ -174,9 +174,6 @@ const textImportValue = shallowRef(``);
 const openImportModal = () => {
   showImportModal.value = true;
 };
-const openImportNetwork = () => {
-  showImportModal.value = true;
-};
 const openImportLocal = (files?: File[]) => {
   importLocal.invoke(files);
 };
@@ -347,7 +344,6 @@ const setCheckedRowKeys = (keys: number[]) => {
         :showImportModal="showImportModal"
         :openSettings="openSettings"
         :openImportLocal="openImportLocal"
-        :openImportNetwork="openImportNetwork"
         :openImportModal="openImportModal"
       >
         <div flex gap-24px items-center pr-8px class="[--svg-h:24px]">
