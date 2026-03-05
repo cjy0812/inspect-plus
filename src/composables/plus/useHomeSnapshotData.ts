@@ -9,9 +9,12 @@ export function useHomeSnapshotData(
   const loading = shallowRef(true);
 
   const updateSnapshots = async () => {
-    loading.value = true;
-    snapshots.value = (await shallowSnapshotStorage.getAllItems()).reverse();
-    loading.value = false;
+    try {
+      loading.value = true;
+      snapshots.value = (await shallowSnapshotStorage.getAllItems()).reverse();
+    } finally {
+      loading.value = false;
+    }
   };
 
   const filterOption = shallowReactive({

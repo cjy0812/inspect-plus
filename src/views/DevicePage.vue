@@ -171,6 +171,9 @@ watch(pagination, resetColWidth);
 
 const showSubsModel = shallowRef(false);
 const subsText = shallowRef(``);
+const openSubsModal = () => {
+  showSubsModel.value = true;
+};
 const updateSubs = useTask(async () => {
   const data = errorWrap(() => JSON5.parse(subsText.value.trim()));
   if (!data) return;
@@ -200,6 +203,9 @@ const updateSubs = useTask(async () => {
 });
 
 const showSelectorModel = shallowRef(false);
+const openSelectorModal = () => {
+  showSelectorModel.value = true;
+};
 
 const actionOptions: {
   value?: string;
@@ -423,6 +429,8 @@ const placeholder = `
           :downloadAllSnapshot="downloadAllSnapshot"
           :showSubsModel="showSubsModel"
           :showSelectorModel="showSelectorModel"
+          :openSubsModal="openSubsModal"
+          :openSelectorModal="openSelectorModal"
         >
           <NButton
             :loading="captureSnapshot.loading"
@@ -436,8 +444,8 @@ const placeholder = `
           >
             下载所有快照
           </NButton>
-          <NButton @click="showSubsModel = true"> 修改内存订阅 </NButton>
-          <NButton @click="showSelectorModel = true"> 执行选择器 </NButton>
+          <NButton @click="openSubsModal"> 修改内存订阅 </NButton>
+          <NButton @click="openSelectorModal"> 执行选择器 </NButton>
         </slot>
       </template>
     </div>

@@ -171,6 +171,15 @@ const handleSorterChange = (sorter: SortState) => {
 mtimeCol.sortOrder = `descend`;
 const showImportModal = shallowRef(false);
 const textImportValue = shallowRef(``);
+const openImportModal = () => {
+  showImportModal.value = true;
+};
+const openImportNetwork = () => {
+  showImportModal.value = true;
+};
+const openImportLocal = (files?: File[]) => {
+  importLocal.invoke(files);
+};
 const importNetwork = useTask(async () => {
   const urls = textImportValue.value
     .trim()
@@ -256,8 +265,14 @@ const batchShareZipUrl = useTask(async () => {
 });
 
 const settingsDlgShow = shallowRef(false);
+const openSettings = () => {
+  settingsDlgShow.value = true;
+};
 
 const inputImportRef = shallowRef();
+const setCheckedRowKeys = (keys: number[]) => {
+  checkedRowKeys.value = keys;
+};
 </script>
 <template>
   <div flex flex-col p-10px gap-10px page-size>
@@ -330,11 +345,15 @@ const inputImportRef = shallowRef();
         :importLocal="importLocal"
         :importNetwork="importNetwork"
         :showImportModal="showImportModal"
+        :openSettings="openSettings"
+        :openImportLocal="openImportLocal"
+        :openImportNetwork="openImportNetwork"
+        :openImportModal="openImportModal"
       >
         <div flex gap-24px items-center pr-8px class="[--svg-h:24px]">
           <NTooltip>
             <template #trigger>
-              <NButton text @click="settingsDlgShow = true">
+              <NButton text @click="openSettings">
                 <SvgIcon name="settings" />
               </NButton>
             </template>
@@ -372,7 +391,7 @@ const inputImportRef = shallowRef();
                 <template #trigger>
                   <NButton
                     :loading="importNetwork.loading"
-                    @click="showImportModal = true"
+                    @click="openImportModal"
                   >
                     导入网络文件
                   </NButton>
@@ -429,6 +448,7 @@ const inputImportRef = shallowRef();
     <slot
       name="content"
       :checkedRowKeys="checkedRowKeys"
+      :setCheckedRowKeys="setCheckedRowKeys"
       :filterSnapshots="filterSnapshots"
       :columns="columns"
       :loading="loading"

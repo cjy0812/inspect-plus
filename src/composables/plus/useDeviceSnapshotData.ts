@@ -1,4 +1,4 @@
-import { computed, onMounted, shallowRef, watchEffect } from 'vue';
+import { computed, onMounted, shallowRef, watch } from 'vue';
 import { useDeviceApi } from '@/utils/api';
 import { message } from '@/utils/discrete';
 import { errorWrap } from '@/utils/error';
@@ -8,6 +8,7 @@ import { useTask } from '@/utils/task';
 export function useDeviceSnapshotData(): any {
   const { api, origin, serverInfo } = useDeviceApi();
   const link = useStorage('device_link', '');
+  const snapshots = shallowRef<Snapshot[]>([]);
 
   const normalizeDeviceUrl = (input: string): string | null => {
     const raw = input.trim();
@@ -31,7 +32,16 @@ export function useDeviceSnapshotData(): any {
     }
     origin.value = normalized;
     link.value = normalized;
-    serverInfo.value = await api.getServerInfo();
+    serverInfo.value = undefined as any;
+    snapshots.value = [];
+    try {
+      serverInfo.value = await api.getServerInfo();
+    } catch (e: any) {
+      serverInfo.value = undefined as any;
+      snapshots.value = [];
+      message.error(e?.message || '连接设备失败');
+      throw e;
+    }
   });
 
   const serverTitle = computed(() => {
@@ -48,19 +58,33 @@ export function useDeviceSnapshotData(): any {
     }
   });
 
-  const snapshots = shallowRef<Snapshot[]>([]);
-  const refreshSnapshots = async () => {
+  const refreshSnapshots = async (run?: number, currentRun?: number) => {
     if (!serverInfo.value) return;
     const result = await api.getSnapshots();
     result.sort((a, b) => b.id - a.id);
+    if (run != null && currentRun != null && run !== currentRun) return;
     snapshots.value = result;
   };
 
-  watchEffect(async () => {
-    if (!serverInfo.value) return;
-    document.title = serverTitle.value;
-    await refreshSnapshots();
-  });
+  let currentRun = 0;
+  watch(
+    serverInfo,
+    async (value, _oldValue, onInvalidate) => {
+      const run = ++currentRun;
+      let cancelled = false;
+      onInvalidate(() => {
+        cancelled = true;
+      });
+      document.title = serverTitle.value;
+      if (!value) {
+        snapshots.value = [];
+        return;
+      }
+      await refreshSnapshots(run, currentRun);
+      if (cancelled || run !== currentRun) return;
+    },
+    { immediate: true },
+  );
 
   return {
     api,
