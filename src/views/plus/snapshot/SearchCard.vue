@@ -18,7 +18,8 @@ import {
 } from '@gkd-kit/selector';
 import dayjs from 'dayjs';
 import * as base64url from 'universal-base64url';
-import type { ShallowRef } from 'vue';
+import { defineComponent, h, resolveComponent } from 'vue';
+import type { PropType, ShallowRef } from 'vue';
 import JSON5 from 'json5';
 import { useSnapshotStore } from './snapshot';
 
@@ -45,6 +46,120 @@ const searchTextLazy = useDebounce(searchText, 220);
 
 const selectorResults = shallowReactive<SearchResult[]>([]);
 const expandedKeys = shallowRef<number[]>([]);
+
+type FastQueryMeta = { support: boolean; local: boolean };
+
+const FastQueryIndicator = defineComponent({
+  name: 'FastQueryIndicator',
+  props: {
+    meta: {
+      type: Object as PropType<FastQueryMeta | null>,
+      default: null,
+    },
+  },
+  setup(props) {
+    return () => {
+      if (!props.meta) return null;
+      const color = props.meta.support
+        ? props.meta.local
+          ? '#facc15'
+          : '#22c55e'
+        : '#ef4444';
+      const text = props.meta.support
+        ? props.meta.local
+          ? '局部快速查询'
+          : '支持快速查询'
+        : '不满足快查';
+      const Tooltip = resolveComponent('NTooltip');
+      const Svg = resolveComponent('SvgIcon');
+      return h(
+        Tooltip,
+        {
+          trigger: 'hover',
+          placement: 'top',
+          class: 'fast-query-indicator-wrap',
+        },
+        {
+          trigger: () =>
+            h(Svg, {
+              name: props.meta!.support ? 'ok' : 'warn',
+              class: 'fast-query-indicator',
+              style: {
+                color,
+                '--svg-w': '16px',
+                '--svg-h': '16px',
+              },
+            }),
+          default: () => text,
+        },
+      );
+    };
+  },
+});
+
+const getFastQuerySupport = (result: SearchResult) => {
+  // 1) 选择器需存在可快速查询的语法 (fastQueryList)
+  if (!result.gkd || !result.selector.fastQueryList.length) return false;
+  const { fastQueryList } = result.selector;
+
+  // 2) 必须有“任意一个匹配上下文中的节点”具备快查能力 (属性面板的勾)
+  const resultsArray = Array.isArray(result.results)
+    ? result.results
+    : Array.from(
+        result.results as unknown as Iterable<{
+          context: { toArray: () => RawNode[] };
+        }>,
+      );
+
+  const canFastQueryNode = (node: RawNode) => {
+    // ID / VID 快查：要求 quickFind 或 idQf，且属性值被 fastQuery 命中
+    const idOk =
+      (node.quickFind || node.idQf) &&
+      node.attr.id &&
+      fastQueryList.some(
+        (query) =>
+          query instanceof FastQuery.Id && query.acceptText(node.attr.id!),
+      );
+    const vidOk =
+      (node.quickFind || node.idQf) &&
+      node.attr.vid &&
+      fastQueryList.some(
+        (query) =>
+          query instanceof FastQuery.Vid && query.acceptText(node.attr.vid!),
+      );
+    // Text 快查：要求 quickFind 或 textQf
+    const textOk =
+      (node.quickFind || node.textQf) &&
+      node.attr.text &&
+      fastQueryList.some(
+        (query) =>
+          query instanceof FastQuery.Text && query.acceptText(node.attr.text!),
+      );
+    return idOk || vidOk || textOk;
+  };
+
+  return resultsArray.some((r) =>
+    r.context.toArray().some((node) => canFastQueryNode(node)),
+  );
+};
+
+const isLocalFastQuery = (result: SearchResult) => {
+  if (!result.gkd) return false;
+  // 仅当存在 <<n 时视为“局部快速查询”
+  return result.selector.source.includes('<<');
+};
+
+const selectorResultsView = computed(() =>
+  selectorResults.map((result) => ({
+    result,
+    meta: result.gkd
+      ? {
+          support: getFastQuerySupport(result),
+          local: isLocalFastQuery(result),
+        }
+      : null,
+  })),
+);
 
 const searchSelector = (text: string, skipDuplicateCheck: boolean = false) => {
   if (!rootNode.value) {
@@ -445,38 +560,40 @@ const shareResult = (result: SearchResult) => {
       <div p-5px />
       <NCollapse v-model:expandedNames="expandedKeys">
         <NCollapseItem
-          v-for="(result, index) in selectorResults"
+          v-for="({ result, meta: fqMeta }, index) in selectorResultsView"
           :key="result.key"
           :name="result.key"
         >
           <template #header>
-            <span
-              v-if="result.nodes.length > 1"
-              underline
-              leading-20px
-              decoration-1
-              m-r-4px
-              gkd_code
-              title="查询数量"
-            >
-              {{ result.nodes.length }}
-            </span>
-            <span
-              break-all
-              px-4px
-              leading-20px
-              class="snapshot-token"
-              gkd_code
-              :title="result.gkd ? `选择器` : `搜索字符`"
-            >
-              <SelectorText
-                v-if="result.gkd"
-                :node="result.selector.ast"
-                :source="result.selector.source"
-              />
-              <template v-else>{{ result.selector }}</template>
-            </span>
-            <span pl-4px />
+            <div class="selector-header">
+              <span
+                v-if="result.nodes.length > 1"
+                underline
+                leading-20px
+                decoration-1
+                m-r-4px
+                gkd_code
+                title="查询数量"
+              >
+                {{ result.nodes.length }}
+              </span>
+              <span
+                break-all
+                px-4px
+                leading-20px
+                class="snapshot-token"
+                gkd_code
+                :title="result.gkd ? `选择器` : `搜索字符`"
+              >
+                <SelectorText
+                  v-if="result.gkd"
+                  :node="result.selector.ast"
+                  :source="result.selector.source"
+                />
+                <template v-else>{{ result.selector }}</template>
+              </span>
+              <span pl-4px />
+            </div>
           </template>
           <template #header-extra>
             <NButtonGroup>
@@ -516,39 +633,51 @@ const shareResult = (result: SearchResult) => {
               <template
                 v-if="!result.gkd || result.selector.connectKeys.length === 0"
               >
-                <NButton
+                <span
                   v-for="resultNode in result.nodes"
                   :key="resultNode.id"
-                  size="small"
-                  :style="getNodeStyle(resultNode, focusNode)"
-                  @click="updateFocusNode(resultNode)"
+                  class="node-fastquery-wrap"
                 >
-                  {{ getNodeLabel(resultNode) }}
-                </NButton>
-              </template>
-              <template v-else>
-                <NButtonGroup v-for="(resultNode, i) in result.nodes" :key="i">
-                  <NButton
-                    size="small"
-                    @click="
-                      snapshotStore.showTrack(
-                        result.selector,
-                        (result.results as any)[i],
-                      )
-                    "
-                  >
-                    <NIcon>
-                      <SvgIcon name="path" />
-                    </NIcon>
-                  </NButton>
                   <NButton
                     size="small"
                     :style="getNodeStyle(resultNode, focusNode)"
                     @click="updateFocusNode(resultNode)"
                   >
-                    {{ getNodeLabel(resultNode) }}
+                    <span>{{ getNodeLabel(resultNode) }}</span>
                   </NButton>
-                </NButtonGroup>
+                  <FastQueryIndicator :meta="fqMeta" />
+                </span>
+              </template>
+              <template v-else>
+                <span
+                  v-for="(resultNode, i) in result.nodes"
+                  :key="i"
+                  class="node-fastquery-wrap"
+                >
+                  <NButtonGroup>
+                    <NButton
+                      size="small"
+                      @click="
+                        snapshotStore.showTrack(
+                          result.selector,
+                          (result.results as any)[i],
+                        )
+                      "
+                    >
+                      <NIcon>
+                        <SvgIcon name="path" />
+                      </NIcon>
+                    </NButton>
+                    <NButton
+                      size="small"
+                      :style="getNodeStyle(resultNode, focusNode)"
+                      @click="updateFocusNode(resultNode)"
+                    >
+                      <span>{{ getNodeLabel(resultNode) }}</span>
+                    </NButton>
+                  </NButtonGroup>
+                  <FastQueryIndicator :meta="fqMeta" />
+                </span>
               </template>
             </div>
             <div un="h-10px" />
@@ -565,5 +694,21 @@ const shareResult = (result: SearchResult) => {
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     'Courier New', monospace;
   resize: none;
+}
+
+.selector-header {
+  display: flex;
+  align-items: center;
+}
+
+.node-fastquery-wrap {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 6px;
+}
+
+.fast-query-indicator-wrap {
+  display: inline-flex;
+  align-items: center;
 }
 </style>
