@@ -131,6 +131,7 @@ declare global {
     selector: import('@/utils/selector').ResolvedSelector;
     nodes: RawNode[];
     results: import('@gkd-kit/selector').QueryResult<RawNode>[];
+    fastQueryMeta?: { support: boolean; local: boolean } | null;
   }
 
   interface StringSearchResult {
@@ -138,6 +139,7 @@ declare global {
     key: number;
     selector: string;
     nodes: RawNode[];
+    fastQueryMeta?: { support: boolean; local: boolean } | null;
   }
 
   type SearchResult = SelectorSearchResult | StringSearchResult;

@@ -149,18 +149,6 @@ const isLocalFastQuery = (result: SearchResult) => {
   return result.selector.source.includes('<<');
 };
 
-const selectorResultsView = computed(() =>
-  selectorResults.map((result) => ({
-    result,
-    meta: result.gkd
-      ? {
-          support: getFastQuerySupport(result),
-          local: isLocalFastQuery(result),
-        }
-      : null,
-  })),
-);
-
 const searchSelector = (text: string, skipDuplicateCheck: boolean = false) => {
   if (!rootNode.value) {
     message.error('当前无可用节点树, 请尝试刷新页面');
@@ -195,13 +183,18 @@ const searchSelector = (text: string, skipDuplicateCheck: boolean = false) => {
     return;
   }
   message.success(`选择到 ${resultsArray.length} 个节点`);
-  selectorResults.unshift({
+  const result: SelectorSearchResult = {
     selector,
     nodes: resultsArray.map((r) => r.target),
     results: resultsArray as any,
     key: Date.now(),
     gkd: true,
-  });
+  };
+  result.fastQueryMeta = {
+    support: getFastQuerySupport(result),
+    local: isLocalFastQuery(result),
+  };
+  selectorResults.unshift(result);
   return resultsArray.length;
 };
 
@@ -237,6 +230,7 @@ const searchString = (text: string) => {
     selector: text,
     nodes: results,
     key: Date.now(),
+    fastQueryMeta: null,
   });
   return results.length;
 };
@@ -560,7 +554,7 @@ const shareResult = (result: SearchResult) => {
       <div p-5px />
       <NCollapse v-model:expandedNames="expandedKeys">
         <NCollapseItem
-          v-for="({ result, meta: fqMeta }, index) in selectorResultsView"
+          v-for="(result, index) in selectorResults"
           :key="result.key"
           :name="result.key"
         >
@@ -645,7 +639,7 @@ const shareResult = (result: SearchResult) => {
                   >
                     <span>{{ getNodeLabel(resultNode) }}</span>
                   </NButton>
-                  <FastQueryIndicator :meta="fqMeta" />
+                  <FastQueryIndicator :meta="result.fastQueryMeta ?? null" />
                 </span>
               </template>
               <template v-else>
@@ -676,7 +670,7 @@ const shareResult = (result: SearchResult) => {
                       <span>{{ getNodeLabel(resultNode) }}</span>
                     </NButton>
                   </NButtonGroup>
-                  <FastQueryIndicator :meta="fqMeta" />
+                  <FastQueryIndicator :meta="result.fastQueryMeta ?? null" />
                 </span>
               </template>
             </div>
