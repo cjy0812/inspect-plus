@@ -22,6 +22,10 @@ import { defineComponent, h, resolveComponent } from 'vue';
 import type { PropType, ShallowRef } from 'vue';
 import JSON5 from 'json5';
 import { useSnapshotStore } from './snapshot';
+import {
+  buildFastQueryMeta,
+  type FastQueryMeta,
+} from '@/composables/plus/useFastQueryIndicator';
 
 withDefaults(
   defineProps<{
@@ -46,8 +50,6 @@ const searchTextLazy = useDebounce(searchText, 220);
 
 const selectorResults = shallowReactive<SearchResult[]>([]);
 const expandedKeys = shallowRef<number[]>([]);
-
-type FastQueryMeta = { support: boolean; local: boolean };
 
 const FastQueryIndicator = defineComponent({
   name: 'FastQueryIndicator',
@@ -97,58 +99,6 @@ const FastQueryIndicator = defineComponent({
   },
 });
 
-const getFastQuerySupport = (result: SearchResult) => {
-  // 1) 选择器需存在可快速查询的语法 (fastQueryList)
-  if (!result.gkd || !result.selector.fastQueryList.length) return false;
-  const { fastQueryList } = result.selector;
-
-  // 2) 必须有“任意一个匹配上下文中的节点”具备快查能力 (属性面板的勾)
-  const resultsArray = Array.isArray(result.results)
-    ? result.results
-    : Array.from(
-        result.results as unknown as Iterable<{
-          context: { toArray: () => RawNode[] };
-        }>,
-      );
-
-  const canFastQueryNode = (node: RawNode) => {
-    // ID / VID 快查：要求 quickFind 或 idQf，且属性值被 fastQuery 命中
-    const idOk =
-      (node.quickFind || node.idQf) &&
-      node.attr.id &&
-      fastQueryList.some(
-        (query) =>
-          query instanceof FastQuery.Id && query.acceptText(node.attr.id!),
-      );
-    const vidOk =
-      (node.quickFind || node.idQf) &&
-      node.attr.vid &&
-      fastQueryList.some(
-        (query) =>
-          query instanceof FastQuery.Vid && query.acceptText(node.attr.vid!),
-      );
-    // Text 快查：要求 quickFind 或 textQf
-    const textOk =
-      (node.quickFind || node.textQf) &&
-      node.attr.text &&
-      fastQueryList.some(
-        (query) =>
-          query instanceof FastQuery.Text && query.acceptText(node.attr.text!),
-      );
-    return idOk || vidOk || textOk;
-  };
-
-  return resultsArray.some((r) =>
-    r.context.toArray().some((node) => canFastQueryNode(node)),
-  );
-};
-
-const isLocalFastQuery = (result: SearchResult) => {
-  if (!result.gkd) return false;
-  // 仅当存在 <<n 时视为“局部快速查询”
-  return result.selector.source.includes('<<');
-};
-
 const searchSelector = (text: string, skipDuplicateCheck: boolean = false) => {
   if (!rootNode.value) {
     message.error('当前无可用节点树, 请尝试刷新页面');
@@ -190,10 +140,7 @@ const searchSelector = (text: string, skipDuplicateCheck: boolean = false) => {
     key: Date.now(),
     gkd: true,
   };
-  result.fastQueryMeta = {
-    support: getFastQuerySupport(result),
-    local: isLocalFastQuery(result),
-  };
+  result.fastQueryMeta = buildFastQueryMeta(result);
   selectorResults.unshift(result);
   return resultsArray.length;
 };

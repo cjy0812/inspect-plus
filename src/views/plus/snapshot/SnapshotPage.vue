@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import BaseSnapshotPage from '@/views/snapshot/SnapshotPage.vue';
 import DeviceControlTools from '@/components/DeviceControlTools.vue';
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import SettingsModal from '@/components/SettingsModal.vue';
@@ -13,9 +14,6 @@ import WindowCard from './WindowCard.vue';
 
 const {
   snapshot,
-  rootNode,
-  loading,
-  redirected,
   trackData,
   trackShow,
   searchShow,
@@ -29,8 +27,8 @@ const {
 </script>
 
 <template>
-  <template v-if="snapshot && rootNode">
-    <div page-size flex gap-5px class="snapshot-page">
+  <BaseSnapshotPage>
+    <template #sidebar>
       <div py-12px flex flex-col items-center gap-16px class="snapshot-sidebar">
         <NTooltip placement="right">
           <template #trigger>
@@ -50,35 +48,35 @@ const {
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="openSettings"
-              ><SvgIcon name="settings"
-            /></NButton>
+            <NButton text @click="openSettings">
+              <SvgIcon name="settings" />
+            </NButton>
           </template>
           设置
         </NTooltip>
         <div />
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="searchShow = !searchShow"
-              ><SvgIcon name="search-list"
-            /></NButton>
+            <NButton text @click="searchShow = !searchShow">
+              <SvgIcon name="search-list" />
+            </NButton>
           </template>
           搜索面板
         </NTooltip>
         <DeviceControlTools />
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="attrShow = !attrShow"
-              ><SvgIcon name="prop"
-            /></NButton>
+            <NButton text @click="attrShow = !attrShow">
+              <SvgIcon name="prop" />
+            </NButton>
           </template>
           属性面板
         </NTooltip>
         <NTooltip placement="right">
           <template #trigger>
-            <NButton text @click="ruleShow = !ruleShow"
-              ><SvgIcon name="test"
-            /></NButton>
+            <NButton text @click="ruleShow = !ruleShow">
+              <SvgIcon name="test" />
+            </NButton>
           </template>
           测试规则
         </NTooltip>
@@ -120,57 +118,55 @@ const {
           分享须知
         </NTooltip>
       </div>
+    </template>
+
+    <template #screenshot-card>
       <ScreenshotCard v-if="snapshot" />
+    </template>
+    <template #window-card>
       <WindowCard v-if="snapshot" class="flex-1" />
-    </div>
+    </template>
 
-    <SearchCard
-      v-if="snapshot"
-      :show="searchShow"
-      @updateShow="searchShow = $event"
-    />
-    <RuleCard
-      v-if="snapshot"
-      :show="ruleShow"
-      @updateShow="ruleShow = $event"
-    />
-    <AttrCard
-      v-if="snapshot"
-      :show="attrShow"
-      @updateShow="attrShow = $event"
-    />
-    <OverlapCard v-if="snapshot" />
-    <FullScreenDialog v-model:show="trackShow" @closed="onTrackDialogClosed">
-      <TrackCard
-        v-if="trackData"
-        class="snapshot-floating-panel snapshot-window window-anim"
-        v-bind="trackData"
-        @close="trackShow = false"
+    <template #search-card>
+      <SearchCard
+        v-if="snapshot"
+        :show="searchShow"
+        @updateShow="searchShow = $event"
       />
-    </FullScreenDialog>
+    </template>
+    <template #rule-card>
+      <RuleCard
+        v-if="snapshot"
+        :show="ruleShow"
+        @updateShow="ruleShow = $event"
+      />
+    </template>
+    <template #attr-card>
+      <AttrCard
+        v-if="snapshot"
+        :show="attrShow"
+        @updateShow="attrShow = $event"
+      />
+    </template>
+    <template #overlap-card>
+      <OverlapCard v-if="snapshot" />
+    </template>
 
-    <SettingsModal v-model:show="settingsDlgShow" />
-  </template>
-  <div
-    v-else-if="!loading && !redirected"
-    page-size
-    pt-80px
-    flex
-    flex-col
-    items-center
-    justify-center
-  >
-    <div mb-8px>
-      <span>快照数据缺失</span>
-      <a
-        href="https://gkd.li/guide/snapshot#share-note"
-        target="_blank"
-        referrerpolicy="no-referrer"
-      >
-        分享须知
-      </a>
-    </div>
-  </div>
+    <template #track-dialog>
+      <FullScreenDialog v-model:show="trackShow" @closed="onTrackDialogClosed">
+        <TrackCard
+          v-if="trackData"
+          class="snapshot-floating-panel snapshot-window window-anim"
+          v-bind="trackData"
+          @close="trackShow = false"
+        />
+      </FullScreenDialog>
+    </template>
+
+    <template #extra-modals>
+      <SettingsModal v-model:show="settingsDlgShow" />
+    </template>
+  </BaseSnapshotPage>
 </template>
 
 <style scoped>

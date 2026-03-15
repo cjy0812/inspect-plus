@@ -50,3 +50,4 @@ auto-import-components.d.ts
 
 # GitHub Copilot Instructions
 .github/copilot-instructions.md
+mem.diff

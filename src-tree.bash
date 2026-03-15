@@ -20,6 +20,7 @@ C:\Users\cjy08\Documents\GitHub\inspect-plus\src
 │     ├──minus.svg
 │     ├──ok.svg
 │     ├──path.svg
+│     ├──Photo-edit.svg
 │     ├──prop.svg
 │     ├──search-list.svg
 │     ├──search.svg
@@ -35,6 +36,7 @@ C:\Users\cjy08\Documents\GitHub\inspect-plus\src
 │  │  └──snapshot
 │  │     ├──AttrNameCell.vue
 │  │     ├──AttrValueCell.vue
+│  │     ├──PrivacyBlurEditor.vue
 │  │     └──SelectorTestCard.vue
 │  ├──ActionCard.vue
 │  ├──BodyScrollbar.vue
@@ -53,6 +55,7 @@ C:\Users\cjy08\Documents\GitHub\inspect-plus\src
 │  └──plus
 │     ├──useDeviceControlTools.ts
 │     ├──useDeviceSnapshotData.ts
+│     ├──useFastQueryIndicator.ts
 │     ├──useHomeSnapshotData.ts
 │     ├──usePreviewCache.ts
 │     ├──usesnapshot.ts
