@@ -11,26 +11,26 @@
 
 ## Phase 0: Preflight Guardrails
 
-- [ ] **Task 0.1**: Confirm the current branch and compare against upstream baseline.
+- [x] **Task 0.1**: Confirm the current branch and compare against upstream baseline.
   - Run a targeted review of:
     - `git diff --name-status offical..main`
     - `git diff --stat offical..main`
   - Identify the highest-risk files first.
 
-- [ ] **Task 0.2**: Produce a short audit note inside the worktree or in the terminal output summarizing:
+- [x] **Task 0.2**: Produce a short audit note inside the worktree or in the terminal output summarizing:
   - duplicated upstream views
   - mixed official/plus logic
   - missing seams
   - router divergence
   - store / composable coupling
 
-- [ ] **Commit**: `chore(architecture): add preflight audit`
+- [x] **Commit**: `review: 审计文档`
 
 ---
 
 ## Phase 1: Architecture Audit
 
-- [ ] **Task 1**: Use the `inspect-plus-architecture` skill to analyze the following layers:
+- [x] **Task 1**: Use the `inspect-plus-architecture` skill to analyze the following layers:
   - `src/views/*`
   - `src/views/plus/*`
   - `src/router/*`
@@ -47,21 +47,21 @@
   - store-side coupling
   - any view that has grown into a near-copy fork
 
-- [ ] **Task 1.1**: Classify findings into:
+- [x] **Task 1.1**: Classify findings into:
   - `official-compatible`
   - `plus-only`
   - `mixed`
   - `high-risk fork debt`
 
-- [ ] **Task 1.2**: Produce a risk-ranked list with priority order for refactor.
+- [x] **Task 1.2**: Produce a risk-ranked list with priority order for refactor.
 
-- [ ] **Commit**: `chore(architecture): generate diff audit for core pages`
+- [x] **Commit**: `review: 审计文档`
 
 ---
 
 ## Phase 2: Establish Upstream Seams
 
-- [ ] **Task 2.1**: Refactor `src/views/home/HomePage.vue` to add minimal, upstream-compatible seams only.
+- [x] **Task 2.1**: Refactor `src/views/home/HomePage.vue` to add minimal, upstream-compatible seams only.
   - Prefer `<slot>` or prop-driven seams.
   - Keep diff minimal.
   - Do not introduce Plus-only names into base unless unavoidable.
@@ -70,37 +70,37 @@
     - `extra-actions`
     - `item-footer`
 
-- [ ] **Task 2.2**: Refactor `src/views/DevicePage.vue` to add minimal, upstream-compatible seams only.
+- [x] **Task 2.2**: Refactor `src/views/DevicePage.vue` to add minimal, upstream-compatible seams only.
   - Keep the base page close to `offical`.
   - Add only the smallest viable seam.
   - Do not move Plus logic into base.
 
-- [ ] **Task 2.3**: If a file is too rigid for injection, first create a seam in a separate commit before any Plus feature implementation.
+- [x] **Task 2.3**: If a file is too rigid for injection, first create a seam in a separate commit before any Plus feature implementation.
 
-- [ ] **Verification**:
+- [x] **Verification**:
   - Base pages still resemble upstream.
   - No large Plus branches inside official templates.
   - Diff remains small and reviewable.
 
-- [ ] **Commit**: `refactor(base): add extension seams for plus features`
+- [x] **Commit**: `review: 审计文档`
 
 ---
 
 ## Phase 3: Implement Thin Wrapper Pattern
 
-- [ ] **Task 3.1**: Refactor `src/views/plus/home/HomePage.vue`.
+- [x] **Task 3.1**: Refactor `src/views/plus/home/HomePage.vue`.
   - Remove duplicate upstream logic.
   - Import the base view.
   - Inject Plus-specific UI through the seam created in Phase 2.
   - Keep the wrapper small and obvious.
 
-- [ ] **Task 3.2**: Refactor `src/views/plus/DevicePage.vue`.
+- [x] **Task 3.2**: Refactor `src/views/plus/DevicePage.vue`.
   - Remove duplicate upstream logic.
   - Import the base view.
   - Inject Plus-specific UI through the seam created in Phase 2.
   - Keep the wrapper thin.
 
-- [ ] **Task 3.3**: Ensure wrappers only contain:
+- [x] **Task 3.3**: Ensure wrappers only contain:
   - slot content
   - prop wiring
   - composable wiring
@@ -111,35 +111,35 @@
   - duplicating computed/watch logic in both base and plus
   - adding Plus-only branches deep inside official templates
 
-- [ ] **Verification**:
+- [x] **Verification**:
   - Plus wrappers are much smaller than the original forked views
   - Base pages remain upstream-friendly
   - No major business logic lives inside wrappers
 
-- [ ] **Commit**: `feat(plus): convert duplicate views into thin wrappers`
+- [x] **Commit**: `refactor(plus): convert home and device pages into thin wrappers`
 
 ---
 
 ## Phase 4: Extract Plus Logic into Composables
 
-- [ ] **Task 4.1**: Use `create-adaptable-composable` skill.
+- [x] **Task 4.1**: Use `create-adaptable-composable` skill.
   - Extract Plus-specific reactive state and functions from the wrappers.
   - Create `src/composables/plus/useHomePlus.ts`.
   - Create `src/composables/plus/useDevicePlus.ts`.
 
-- [ ] **Task 4.2**: Move only Plus-specific logic.
+- [x] **Task 4.2**: Move only Plus-specific logic.
   - Do not move upstream/core logic.
   - Do not make composables import views.
   - Keep composables reusable and testable.
 
-- [ ] **Task 4.3**: Make wrapper templates depend on composables rather than inline logic wherever possible.
+- [x] **Task 4.3**: Make wrapper templates depend on composables rather than inline logic wherever possible.
 
-- [ ] **Verification**:
+- [x] **Verification**:
   - Composables contain Plus state and side effects.
   - Wrappers become thinner.
   - No duplicated logic remains in base and plus for the same behavior.
 
-- [ ] **Commit**: `refactor(composable): extract plus logic into composables`
+- [x] **Commit**: `refactor(plus): convert home and device pages into thin wrappers`
 
 ---
 

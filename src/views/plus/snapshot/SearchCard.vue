@@ -1,31 +1,23 @@
 <script setup lang="ts">
 import DraggableCard from '@/components/DraggableCard.vue';
 import SelectorText from '@/components/SelectorText.vue';
+import FastQueryIndicator from '@/components/plus/snapshot/FastQueryIndicator.vue';
+import SelectorSyntaxPreview from '@/components/plus/snapshot/SelectorSyntaxPreview.vue';
+import { useSearchCardPlus } from '@/composables/plus/useSearchCardPlus';
 import { message } from '@/utils/discrete';
 import { errorTry, errorWrap } from '@/utils/error';
 import { getAppInfo, getNodeLabel, getNodeStyle } from '@/utils/node';
 import { buildEmptyFn, copy } from '@/utils/others';
 import { parseSelector, wasmLoadTask } from '@/utils/selector';
 import { gkdWidth, vw } from '@/utils/size';
-import { getImagUrl, getImportUrl } from '@/utils/url';
-import { getOfficialImportUrl } from '@/utils/plus/url';
-import {
-  AstNode,
-  FastQuery,
-  GkdException,
-  Selector,
-  SyntaxException,
-} from '@gkd-kit/selector';
+import { getImagUrl } from '@/utils/url';
+import { FastQuery, GkdException } from '@gkd-kit/selector';
 import dayjs from 'dayjs';
 import * as base64url from 'universal-base64url';
-import { defineComponent, h, resolveComponent } from 'vue';
-import type { PropType, ShallowRef } from 'vue';
+import type { ShallowRef } from 'vue';
 import JSON5 from 'json5';
 import { useSnapshotStore } from './snapshot';
-import {
-  buildFastQueryMeta,
-  type FastQueryMeta,
-} from '@/composables/plus/useFastQueryIndicator';
+import { buildFastQueryMeta } from '@/composables/plus/useFastQueryIndicator';
 
 withDefaults(
   defineProps<{
@@ -38,7 +30,7 @@ withDefaults(
 );
 
 const route = useRoute();
-const { settingsStore, snapshotImportId, snapshotImageId } = useStorageStore();
+const { snapshotImportId, snapshotImageId } = useStorageStore();
 
 const snapshotStore = useSnapshotStore();
 const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
@@ -46,57 +38,18 @@ const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
 const { focusNode, updateFocusNode } = snapshotStore;
 
 const searchText = shallowRef(``);
-const searchTextLazy = useDebounce(searchText, 220);
-
 const selectorResults = shallowReactive<SearchResult[]>([]);
 const expandedKeys = shallowRef<number[]>([]);
-
-const FastQueryIndicator = defineComponent({
-  name: 'FastQueryIndicator',
-  props: {
-    meta: {
-      type: Object as PropType<FastQueryMeta | null>,
-      default: null,
-    },
-  },
-  setup(props) {
-    return () => {
-      if (!props.meta) return null;
-      const color = props.meta.support
-        ? props.meta.local
-          ? '#facc15'
-          : '#22c55e'
-        : '#ef4444';
-      const text = props.meta.support
-        ? props.meta.local
-          ? '局部快速查询'
-          : '支持快速查询'
-        : '不满足快查';
-      const Tooltip = resolveComponent('NTooltip');
-      const Svg = resolveComponent('SvgIcon');
-      return h(
-        Tooltip,
-        {
-          trigger: 'hover',
-          placement: 'top',
-          class: 'fast-query-indicator-wrap',
-        },
-        {
-          trigger: () =>
-            h(Svg, {
-              name: props.meta!.support ? 'ok' : 'warn',
-              class: 'fast-query-indicator',
-              style: {
-                color,
-                '--svg-w': '16px',
-                '--svg-h': '16px',
-              },
-            }),
-          default: () => text,
-        },
-      );
-    };
-  },
+const enableSearchBySelector = shallowRef(true);
+const {
+  selectorSyntaxText,
+  selectorSyntaxAst,
+  selectorSyntaxError,
+  handleTextareaKeyDown,
+  resolveImportUrl,
+} = useSearchCardPlus({
+  searchText,
+  enableSearchBySelector,
 });
 
 const searchSelector = (text: string, skipDuplicateCheck: boolean = false) => {
@@ -207,13 +160,6 @@ const searchBySelector = errorTry(() => {
   refreshExpandedKeys();
 });
 
-const handleTextareaKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    searchBySelector();
-  }
-};
-
 onMounted(async () => {
   await wasmLoadTask;
   let count = 0;
@@ -258,11 +204,7 @@ const generateRules = errorTry(async (result: SelectorSearchResult) => {
   }
   const imageId = snapshotImageId[snapshot.value.id];
   const importId = snapshotImportId[snapshot.value.id];
-  const snapshotUrls = importId
-    ? settingsStore.shareUseOfficialImportDomain
-      ? getOfficialImportUrl(importId)
-      : getImportUrl(importId)
-    : undefined;
+  const snapshotUrls = importId ? resolveImportUrl(importId) : undefined;
   const exampleUrls = imageId ? getImagUrl(imageId) : undefined;
 
   const s = result.selector;
@@ -313,64 +255,6 @@ const generateRules = errorTry(async (result: SelectorSearchResult) => {
   copy(JSON5.stringify(rule, undefined, 2));
 });
 
-const enableSearchBySelector = shallowRef(true);
-const selectorSyntaxText = computed(() => {
-  if (!enableSearchBySelector.value) return '';
-  return searchTextLazy.value.trim();
-});
-
-const selectorSyntaxResult = computed(() => {
-  const text = selectorSyntaxText.value;
-  if (!text) return;
-  try {
-    return Selector.Companion.parseAst(text);
-  } catch (e) {
-    return e as GkdException;
-  }
-});
-
-const selectorSyntaxAst = computed(() => {
-  if (selectorSyntaxResult.value instanceof AstNode) {
-    return selectorSyntaxResult.value;
-  }
-  return undefined;
-});
-
-const selectorSyntaxError = computed(() => {
-  const result = selectorSyntaxResult.value;
-  const text = selectorSyntaxText.value;
-  if (result instanceof SyntaxException) {
-    const hasErrorChar = result.index < text.length;
-    const eofLike =
-      !hasErrorChar || /expect\s+eof/i.test(result.outMessage || '');
-    return {
-      isEof: eofLike,
-      headText: text.substring(0, result.index),
-      errorText: hasErrorChar
-        ? text.substring(result.index, result.index + 1)
-        : '',
-      tailText: hasErrorChar ? text.substring(result.index + 1) : '',
-      message: result.outMessage,
-    };
-  }
-  if (result && !(result instanceof AstNode)) {
-    const msg =
-      typeof (result as any).outMessage == 'string'
-        ? (result as any).outMessage
-        : typeof (result as any).message == 'string'
-          ? (result as any).message
-          : '';
-    return {
-      isEof: /expect\s+eof/i.test(msg),
-      headText: '',
-      errorText: '',
-      tailText: '',
-      message: msg,
-    };
-  }
-  return undefined;
-});
-
 const hasZipId = computed(() => {
   if (!snapshot.value) return false;
   return snapshotImportId[snapshot.value.id];
@@ -379,9 +263,7 @@ const hasZipId = computed(() => {
 const shareResult = (result: SearchResult) => {
   if (!hasZipId.value || !snapshot.value) return;
   const importUrl = new URL(
-    settingsStore.shareUseOfficialImportDomain
-      ? getOfficialImportUrl(snapshotImportId[snapshot.value.id])
-      : getImportUrl(snapshotImportId[snapshot.value.id]),
+    resolveImportUrl(snapshotImportId[snapshot.value.id]),
   );
   if (typeof result.selector == 'object') {
     importUrl.searchParams.set(
@@ -437,7 +319,7 @@ const shareResult = (result: SearchResult) => {
           :placeholder="enableSearchBySelector ? `请输入选择器` : `请输入字符`"
           :autosize="{ minRows: 1, maxRows: 6 }"
           :inputProps="{ class: 'selector-textarea' }"
-          @keydown="handleTextareaKeyDown"
+          @keydown="handleTextareaKeyDown($event, searchBySelector)"
         />
         <NButton @click="searchBySelector">
           <template #icon>
@@ -445,59 +327,12 @@ const shareResult = (result: SearchResult) => {
           </template>
         </NButton>
       </NInputGroup>
-
-      <div
-        v-if="enableSearchBySelector && selectorSyntaxText"
-        mt-6px
-        mb-8px
-        p-4px
-        gkd_code
-        transition-colors
-        class="selector-ast-view"
-        :class="selectorSyntaxError ? `selector-ast-view-error` : ``"
-      >
-        <div v-if="selectorSyntaxAst" overflow-x-scroll scrollbar-hidden>
-          <SelectorText
-            :source="selectorSyntaxText"
-            :node="selectorSyntaxAst"
-          />
-        </div>
-        <span v-else-if="selectorSyntaxError" whitespace-pre-wrap>
-          <span v-if="selectorSyntaxError.headText">{{
-            selectorSyntaxError.headText
-          }}</span>
-          <span bg-red relative>
-            <span v-if="selectorSyntaxError.errorText">{{
-              selectorSyntaxError.errorText
-            }}</span>
-            <span v-else pl-20px />
-            <div
-              absolute
-              left-0
-              right-0
-              top--12px
-              flex
-              flex-col
-              items-center
-              animate-bounce
-              pointer-events-none
-            >
-              <SvgIcon name="arrow" class="selector-error-arrow" />
-            </div>
-          </span>
-          <span v-if="selectorSyntaxError.tailText">{{
-            selectorSyntaxError.tailText
-          }}</span>
-        </span>
-      </div>
-      <div
-        v-if="selectorSyntaxError && !selectorSyntaxError.isEof"
-        p-4px
-        gkd_code
-        class="selector-error-box"
-      >
-        {{ selectorSyntaxError.message }}
-      </div>
+      <SelectorSyntaxPreview
+        :enable-search-by-selector="enableSearchBySelector"
+        :syntax-text="selectorSyntaxText"
+        :syntax-ast="selectorSyntaxAst"
+        :syntax-error="selectorSyntaxError"
+      />
       <div p-5px />
       <NCollapse v-model:expandedNames="expandedKeys">
         <NCollapseItem

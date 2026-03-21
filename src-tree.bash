@@ -33,10 +33,16 @@ C:\Users\cjy08\Documents\GitHub\inspect-plus\src
 │     └──warn.svg
 ├──components
 │  ├──plus
+│  │  ├──device
+│  │  │  └──DeviceSnapshotGroups.vue
+│  │  ├──home
+│  │  │  └──HomeSnapshotGroups.vue
 │  │  └──snapshot
 │  │     ├──AttrNameCell.vue
 │  │     ├──AttrValueCell.vue
+│  │     ├──FastQueryIndicator.vue
 │  │     ├──PrivacyBlurEditor.vue
+│  │     ├──SelectorSyntaxPreview.vue
 │  │     └──SelectorTestCard.vue
 │  ├──ActionCard.vue
 │  ├──BodyScrollbar.vue
@@ -54,10 +60,13 @@ C:\Users\cjy08\Documents\GitHub\inspect-plus\src
 ├──composables
 │  └──plus
 │     ├──useDeviceControlTools.ts
+│     ├──useDevicePlus.ts
 │     ├──useDeviceSnapshotData.ts
 │     ├──useFastQueryIndicator.ts
+│     ├──useHomePlus.ts
 │     ├──useHomeSnapshotData.ts
 │     ├──usePreviewCache.ts
+│     ├──useSearchCardPlus.ts
 │     ├──usesnapshot.ts
 │     ├──useSnapshotPlus.ts
 │     ├──useTheme.ts
