@@ -135,8 +135,9 @@
 [查看源码运行指南](./docs/structure.md)
 
 ## 🎉感谢以下项目
-
 - [gkd-kit/inspect](https://github.com/gkd-kit/inspect) 原项目
+- [Vuejs-ai/skills](https://github.com/vuejs-ai/skills) ai技能库(Vue)
+  
 
 ## 🥇感谢以下开发者的贡献
 

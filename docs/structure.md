@@ -34,6 +34,11 @@
 
 在浏览器中打开 `http://localhost:8444` 即可查看项目运行效果。
 
+## Skills
+
+- Vuejs-ai
+  `https://github.com/vuejs-ai/skills`
+  
 ## 在线部署指南
 
 ### 部署到 Cloudflare Pages
