@@ -137,15 +137,16 @@
 ## 🎉感谢以下项目
 - [gkd-kit/inspect](https://github.com/gkd-kit/inspect) 原项目
 - [Vuejs-ai/skills](https://github.com/vuejs-ai/skills) ai技能库(Vue)
+- [sanyuan-skills](https://github.com/sanyuan0704/sanyuan-skills) ai技能库(代码审查/skillDev/教学)
   
-
 ## 🥇感谢以下开发者的贡献
 
-- [CodeX](https://chatgpt.com/codex) AI高阶构思项目
-- [Trae](https:///www.trae.ai) AI重复性劳动
-- [Gemini](https://gemini.google.com/) AI辅助指导
-- [deepSeek](https://chat.deepseek.com/) 提供代码解释帮助
-- [Doubao-Seed-Code] 自动化指令操作执行
+### AI
+  - [CodeX](https://chatgpt.com/codex) AI高阶构思项目
+  - [Trae](https:///www.trae.ai) AI重复性劳动
+  - [Gemini](https://gemini.google.com/) AI辅助指导
+  - [deepSeek](https://chat.deepseek.com/) 提供代码解释帮助
+  - [Doubao-Seed-Code] 自动化指令操作执行
 
 ## 📈Star History
 

@@ -38,6 +38,9 @@
 
 - Vuejs-ai
   `https://github.com/vuejs-ai/skills`
+- 
+sanyuan-skills
+  `https://github.com/sanyuan0704/sanyuan-skills`
   
 ## 在线部署指南
 
