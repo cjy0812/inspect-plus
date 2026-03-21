@@ -455,6 +455,7 @@ const placeholder = `
       :columns="columns"
       :pagination="pagination"
       :handleSorterChange="handleSorterChange"
+      :refreshSnapshots="refreshSnapshots"
     >
       <NDataTable
         striped

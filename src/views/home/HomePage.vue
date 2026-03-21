@@ -446,9 +446,11 @@ const setCheckedRowKeys = (keys: number[]) => {
       :checkedRowKeys="checkedRowKeys"
       :setCheckedRowKeys="setCheckedRowKeys"
       :filterSnapshots="filterSnapshots"
+      :filterOption="filterOption"
       :columns="columns"
       :loading="loading"
       :handleSorterChange="handleSorterChange"
+      :updateSnapshots="updateSnapshots"
     >
       <NDataTable
         v-model:checkedRowKeys="checkedRowKeys"
