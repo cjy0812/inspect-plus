@@ -40,6 +40,17 @@ const serverTitle = computed(() => {
   const g = serverInfo.value.gkdAppInfo;
   return `${d.manufacturer} Android${d.release} - GKD${g?.versionName ?? '未知版本'}`;
 });
+const showSubsModel = shallowRef(false);
+const subsText = shallowRef(``);
+
+let latestSnapshotRun = 0;
+const refreshSnapshots = async () => {
+  const runId = ++latestSnapshotRun;
+  const result = await api.getSnapshots();
+  if (runId !== latestSnapshotRun) return;
+  result.sort((a, b) => b.id - a.id);
+  snapshots.value = result;
+};
 
 onMounted(async () => {
   await delay(500);
@@ -48,18 +59,36 @@ onMounted(async () => {
   }
 });
 
-watchEffect(async () => {
-  if (!serverInfo.value) {
-    document.title = '未连接设备';
-    snapshots.value = [];
-    return;
-  }
-  document.title = serverTitle.value;
-  const result = await api.getSnapshots();
-  result.sort((a, b) => b.id - a.id);
-  snapshots.value = result;
-  subsText.value = '';
-});
+watch(
+  serverInfo,
+  async (info, _prev, onInvalidate) => {
+    let invalidated = false;
+    onInvalidate(() => {
+      invalidated = true;
+      latestSnapshotRun++;
+    });
+    if (!info) {
+      latestSnapshotRun++;
+      subsText.value = '';
+      snapshots.value = [];
+      document.title = '未连接设备';
+      return;
+    }
+    document.title = serverTitle.value;
+    try {
+      await refreshSnapshots();
+      if (!invalidated) {
+        subsText.value = '';
+      }
+    } catch (error) {
+      if (!invalidated) {
+        snapshots.value = [];
+        message.error(error instanceof Error ? error.message : '刷新快照失败');
+      }
+    }
+  },
+  { immediate: true },
+);
 
 const captureSnapshot = useTask(async () => {
   const snapshot = await api.captureSnapshot();
@@ -67,9 +96,7 @@ const captureSnapshot = useTask(async () => {
   await snapshotStorage.setItem(snapshot.id, snapshot);
   await screenshotStorage.setItem(snapshot.id, screenshot);
   message.success(`捕获并保存快照成功`);
-  const result = await api.getSnapshots();
-  result.sort((a, b) => b.id - a.id);
-  snapshots.value = result;
+  await refreshSnapshots();
 });
 const downloadAllSnapshot = useTask(async () => {
   const snapshotIds = (await api.getSnapshots()).map((s) => s.id);
@@ -133,6 +160,8 @@ const previewSnapshot = useBatchTask(
         name: 'snapshot',
         params: { snapshotId: row.id },
       }).href,
+      '_blank',
+      'noopener,noreferrer',
     );
   },
   (r) => r.id,
@@ -181,8 +210,6 @@ const pagination = shallowReactive<PaginationProps>({
 });
 watch(pagination, resetColWidth);
 
-const showSubsModel = shallowRef(false);
-const subsText = shallowRef(``);
 const openSubsModal = () => {
   showSubsModel.value = true;
 };
