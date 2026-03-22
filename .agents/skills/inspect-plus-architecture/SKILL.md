@@ -131,6 +131,39 @@ Type augmentation rule:
 2. Do not use fragile deep relative imports to reach official files from Plus folders.
 3. Keep file names and import case exact.
 
+## Browser testing workflow
+
+When validating `inspect-plus` in a real browser, use the same setup every time.
+
+1. Prefer connect-before-launch.
+   - Before using `chrome-devtools-mcp`, check whether `http://127.0.0.1:9222/json/version` is reachable.
+   - If it is reachable, reuse the existing Chrome instance.
+   - If it is not reachable, start Chrome with:
+     - `D:\Chrome\Chrome.exe --remote-debugging-port=9222 --user-data-dir="D:\Chrome\UserData" --profile-directory="Default"`
+2. Keep MCP in browserUrl mode.
+   - `chrome-devtools-mcp` should connect to `http://127.0.0.1:9222`
+   - Do not switch back to launching Chrome via MCP unless the user explicitly asks for that mode.
+3. Start the app before testing pages.
+   - Run `pnpm dev`
+   - Wait until Vite reports a local URL or the page is reachable in the browser.
+4. Use a fixed smoke-test route order.
+   - `/`
+   - `/device`
+   - `/selector`
+   - `/svg`
+5. For each tested page, always do both:
+   - capture a page snapshot
+   - inspect console messages
+6. Report only meaningful failures as page issues.
+   - Functional/runtime problems such as Vue warnings, missing props, blank pages, failed navigation, and uncaught errors are real findings.
+   - Ignore Vite hot-update noise unless it blocks testing.
+   - Accessibility issues such as missing `id` or `name` should be reported separately from runtime failures.
+7. If browser testing fails, debug in this order:
+   - Is `http://127.0.0.1:9222/json/version` reachable?
+   - Is Codex configured with `--browserUrl=http://127.0.0.1:9222`?
+   - Was Chrome started with the project-standard remote debugging command?
+   - Does the MCP session need to be restarted after config changes?
+
 ## Review checklist
 
 Before finishing a refactor, verify:
