@@ -11,7 +11,7 @@ import {
   getNodeStyle,
 } from '@/utils/node';
 import { copy, delay } from '@/utils/others';
-import type { TreeInst } from 'naive-ui';
+import type { TreeInst, TreeOption, TreeProps } from 'naive-ui';
 import type { HTMLAttributes, ShallowRef, VNode } from 'vue';
 import { useSnapshotStore } from './snapshot';
 
@@ -32,6 +32,10 @@ let lastClickId = Number.NaN;
 const expandedKeys = shallowRef<number[]>([]);
 const selectedKeys = shallowRef<number[]>([]);
 const treeRef = shallowRef<TreeInst>();
+const toRawNode = (option: TreeOption): RawNode => option as RawNode;
+const rootTreeData = computed<TreeOption[]>(() =>
+  rootNode.value ? [rootNode.value as TreeOption] : [],
+);
 
 // --- 逻辑部分保持现状，已足够健壮 ---
 watch([() => focusNode.value, () => focusTime.value], async () => {
@@ -63,28 +67,29 @@ watch([() => focusNode.value, () => focusTime.value], async () => {
   expandedKeys.value = [...s];
 });
 
-const treeFilter = (pattern: string, node: RawNode) =>
-  node.id === focusNode.value?.id;
+const treeFilter: NonNullable<TreeProps['filter']> = (_pattern, node) =>
+  toRawNode(node).id === focusNode.value?.id;
 
-const treeNodeProps = (info: {
-  option: RawNode;
+const treeNodeProps: NonNullable<TreeProps['nodeProps']> = ({
+  option,
 }): HTMLAttributes & Record<string, unknown> => {
-  const style = getNodeStyle(info.option, focusNode.value);
+  const rawNode = toRawNode(option);
+  const style = getNodeStyle(rawNode, focusNode.value);
   return {
     onClick: () => {
-      lastClickId = info.option.id;
-      updateFocusNode(info.option);
+      lastClickId = rawNode.id;
+      updateFocusNode(rawNode);
     },
     style: { '--n-node-text-color': style.color, ...style },
     class: 'whitespace-nowrap',
-    'data-node-id': String(info.option.id),
+    'data-node-id': String(rawNode.id),
   };
 };
 
-const renderLabel = (info: { option: RawNode }) => {
-  const label = getNodeLabel(info.option);
-  if (slots.renderLabel)
-    return slots.renderLabel({ option: info.option, label });
+const renderLabel: NonNullable<TreeProps['renderLabel']> = ({ option }) => {
+  const rawNode = toRawNode(option);
+  const label = getNodeLabel(rawNode);
+  if (slots.renderLabel) return slots.renderLabel({ option: rawNode, label });
   return label;
 };
 
@@ -229,10 +234,10 @@ const onDelete = async () => {
         showLine
         blockLine
         keyField="id"
-        :data="[rootNode as any]"
-        :filter="(treeFilter as any)"
-        :nodeProps="(treeNodeProps as any)"
-        :renderLabel="(renderLabel as any)"
+        :data="rootTreeData"
+        :filter="treeFilter"
+        :nodeProps="treeNodeProps"
+        :renderLabel="renderLabel"
       />
     </div>
   </div>

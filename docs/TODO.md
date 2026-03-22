@@ -15,7 +15,7 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
   - [x] Replace high-risk `any` in `src/views/plus/snapshot/SearchCard.vue`
   - [x] Replace remaining high-risk `any` in `src/views/plus/snapshot/RuleCard.vue`
   - [x] Replace remaining high-risk `any` in `src/composables/plus/useDeviceControlTools.ts`
-  - [ ] Replace tree prop casts in `src/views/snapshot/WindowCard.vue` and `src/views/plus/snapshot/WindowCard.vue`
+  - [x] Replace tree prop casts in `src/views/snapshot/WindowCard.vue` and `src/views/plus/snapshot/WindowCard.vue`
 - [ ] Tests
   - [ ] Add wrapper contract tests for `HomePage` / `DevicePage`
   - [ ] Add parser tests for `RuleCard` / `useDeviceControlTools`
@@ -45,10 +45,14 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
   - [x] Remove `any`-based result plumbing from `src/views/plus/snapshot/SearchCard.vue`
   - [x] Remove `any` from `src/views/plus/snapshot/RuleCard.vue`
   - [x] Remove `any` from `src/composables/plus/useDeviceControlTools.ts`
+- [x] Tighten WindowCard tree typing
+  - [x] Remove `as any` tree prop casts from `src/views/snapshot/WindowCard.vue`
+  - [x] Remove `as any` tree prop casts from `src/views/plus/snapshot/WindowCard.vue`
+  - [x] Align both files on `TreeProps` / `TreeOption`-based signatures
 
 ## Next recommended order
 
-1. Replace tree prop casts in `WindowCard` base/plus pair
-2. Continue reducing duplicated logic between base and plus `SearchCard` / `WindowCard`
-3. Add the first wrapper contract tests before further seam work
-4. Continue seam-first cleanup for `snapshot.ts`
+1. Continue reducing duplicated logic between base and plus `SearchCard` / `WindowCard`
+2. Add the first wrapper contract tests before further seam work
+3. Continue seam-first cleanup for `snapshot.ts`
+4. Split the next large Plus-only block out of `RuleCard.vue` or `useDeviceControlTools.ts`
