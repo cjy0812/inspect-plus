@@ -86,6 +86,8 @@ C:\Users\cjy08\Documents\GitHub\inspect-plus\src
 │  ├──index.scss
 │  └──var.scss
 ├──types
+│  ├──plus
+│  │  └──index.d.ts
 │  ├──auto-import-components.d.ts
 │  ├──auto-import.d.ts
 │  ├──global.d.ts

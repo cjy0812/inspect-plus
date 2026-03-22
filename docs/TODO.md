@@ -218,15 +218,15 @@
     - broken slot wiring
     - stale state
 
-- [ ] **Task 7.2**: Verify the most important user flows still work:
+- [x] **Task 7.2**: Verify the most important user flows still work:
   - Home page
   - Device page
   - Snapshot-related flows
   - Plus-specific injected UI
 
-- [ ] **Task 7.3**: If a bug requires a large structural change, stop and create a seam-first refactor instead of patching deeply inside a forked view.
+- [x] **Task 7.3**: If a bug requires a large structural change, stop and create a seam-first refactor instead of patching deeply inside a forked view.
 
-- [ ] **Verification**:
+- [x] **Verification**:
   - No TypeScript errors
   - No runtime regressions
   - Key pages render correctly
@@ -238,9 +238,9 @@
 
 ## Phase 8: Architecture Documentation
 
-- [ ] **Task 8.1**: Generate `docs/architecture.md`.
+- [x] **Task 8.1**: Generate `docs/architecture.md`.
 
-- [ ] **Task 8.2**: Document the following clearly:
+- [x] **Task 8.2**: Document the following clearly:
   - Base Layer
   - Plus Wrapper Layer
   - Extension Seams
@@ -249,12 +249,12 @@
   - Conflict Minimization Rules
   - High-risk files to avoid mirroring
 
-- [ ] **Task 8.3**: Include a short maintenance guide:
+- [x] **Task 8.3**: Include a short maintenance guide:
   - how to add a new Plus feature
   - how to decide base vs plus placement
   - how to avoid upstream merge pain
 
-- [ ] **Verification**:
+- [x] **Verification**:
   - Documentation matches actual code structure
   - New contributors can follow the architecture without guesswork
 
