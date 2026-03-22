@@ -25,9 +25,12 @@ const snapshots = shallowRef<Snapshot[]>([]);
 const loading = shallowRef(true);
 const updateSnapshots = async () => {
   loading.value = true;
-  snapshots.value = (await shallowSnapshotStorage.getAllItems()).reverse();
-  checkedRowKeys.value = [];
-  loading.value = false;
+  try {
+    snapshots.value = (await shallowSnapshotStorage.getAllItems()).reverse();
+    checkedRowKeys.value = [];
+  } finally {
+    loading.value = false;
+  }
 };
 onMounted(updateSnapshots);
 const filterOption = shallowReactive({

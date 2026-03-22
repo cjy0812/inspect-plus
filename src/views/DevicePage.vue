@@ -15,6 +15,7 @@ import JSON5 from 'json5';
 const router = useRouter();
 const { api, origin, serverInfo } = useDeviceApi();
 const link = useStorage(`device_link`, ``);
+const snapshots = shallowRef<Snapshot[]>([]);
 const connect = useTask(async () => {
   if (!link.value) return;
   origin.value = errorWrap(
@@ -22,14 +23,22 @@ const connect = useTask(async () => {
     () => `非法设备地址`,
   ).origin;
   link.value = origin.value;
-  serverInfo.value = await api.getServerInfo();
+  serverInfo.value = undefined;
+  snapshots.value = [];
+  try {
+    serverInfo.value = await api.getServerInfo();
+  } catch (e) {
+    serverInfo.value = undefined;
+    snapshots.value = [];
+    throw e;
+  }
 });
 
 const serverTitle = computed(() => {
   if (!serverInfo.value) return '未连接设备';
   const d = serverInfo.value.device;
   const g = serverInfo.value.gkdAppInfo;
-  return `${d.manufacturer} Android${d.release} - GKD${g.versionName}`;
+  return `${d.manufacturer} Android${d.release} - GKD${g?.versionName ?? '未知版本'}`;
 });
 
 onMounted(async () => {
@@ -39,9 +48,12 @@ onMounted(async () => {
   }
 });
 
-const snapshots = shallowRef<Snapshot[]>([]);
 watchEffect(async () => {
-  if (!serverInfo.value) return;
+  if (!serverInfo.value) {
+    document.title = '未连接设备';
+    snapshots.value = [];
+    return;
+  }
   document.title = serverTitle.value;
   const result = await api.getSnapshots();
   result.sort((a, b) => b.id - a.id);

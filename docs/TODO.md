@@ -208,7 +208,7 @@
 
 ## Phase 7: Bug Squashing and Sanity Checks
 
-- [ ] **Task 7.1**: Use `vue-debug-guides` skill.
+- [x] **Task 7.1**: Use `vue-debug-guides` skill.
   - Run type checks.
   - Fix runtime errors introduced during the refactor.
   - Focus on:
