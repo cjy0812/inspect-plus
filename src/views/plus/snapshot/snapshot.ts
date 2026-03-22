@@ -10,6 +10,8 @@ import { toFixedNumber, toInteger } from '@/utils/others';
 import type { ResolvedSelector } from '@/utils/selector';
 import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
+import { message } from '@/utils/discrete';
+import { screenshotBackupStorage } from '@/utils/plus/screenshotBackup';
 import type { QueryResult } from '@gkd-kit/selector';
 
 if (import.meta.hot) {
@@ -100,7 +102,7 @@ export const useSnapshotStore = createSharedComposable(() => {
   const screenshot = shallowRef<ArrayBuffer>();
   const { url: screenshotUrl } = useArrayBufferObjectUrl(screenshot);
   const maskedScreenshotUrl = shallowRef<string>();
-  const showRegenerateTip = shallowRef(false);
+  const hasPreviousScreenshot = shallowRef(false);
   const revokeMaskedScreenshotUrl = () => {
     if (maskedScreenshotUrl.value?.startsWith('blob:')) {
       URL.revokeObjectURL(maskedScreenshotUrl.value);
@@ -112,7 +114,6 @@ export const useSnapshotStore = createSharedComposable(() => {
   };
   const resetBlurredScreenshot = () => {
     clearMaskedScreenshotPreview();
-    showRegenerateTip.value = false;
   };
   const invalidateShareLinks = () => {
     if (!snapshotId.value) return;
@@ -126,9 +127,21 @@ export const useSnapshotStore = createSharedComposable(() => {
   const applyBlurredScreenshot = async (url: string) => {
     revokeMaskedScreenshotUrl();
     maskedScreenshotUrl.value = url;
+    const shouldWarnRegenerate =
+      !!snapshotId.value &&
+      (Object.values(importSnapshotId).includes(snapshotId.value) ||
+        !!snapshotImageId[snapshotId.value] ||
+        !!snapshotImportId[snapshotId.value]);
     if (snapshotId.value) {
       try {
         const editedBuffer = await fetch(url).then((r) => r.arrayBuffer());
+        if (screenshot.value) {
+          await screenshotBackupStorage.setItem(
+            snapshotId.value,
+            screenshot.value.slice(0),
+          );
+          hasPreviousScreenshot.value = true;
+        }
         await screenshotStorage.setItem(snapshotId.value, editedBuffer);
         screenshot.value = editedBuffer;
         // 持久化成功后切回底层截图，避免临时 URL 生命周期问题
@@ -138,10 +151,26 @@ export const useSnapshotStore = createSharedComposable(() => {
       }
     }
     invalidateShareLinks();
-    showRegenerateTip.value = true;
+    if (shouldWarnRegenerate) {
+      message.warning(
+        '图片已编辑：如你之前已经生成过链接，请重新生成链接后再分享。',
+      );
+    }
   };
-  const dismissRegenerateTip = () => {
-    showRegenerateTip.value = false;
+  const restorePreviousScreenshot = async () => {
+    if (!snapshotId.value || !hasPreviousScreenshot.value) return;
+    const backup = await screenshotBackupStorage.getItem(snapshotId.value);
+    if (!backup) {
+      hasPreviousScreenshot.value = false;
+      return;
+    }
+    await screenshotStorage.setItem(snapshotId.value, backup);
+    screenshot.value = backup;
+    await screenshotBackupStorage.removeItem(snapshotId.value);
+    hasPreviousScreenshot.value = false;
+    clearMaskedScreenshotPreview();
+    invalidateShareLinks();
+    message.success('已恢复到编辑前截图');
   };
   const displayScreenshotUrl = computed(
     () => maskedScreenshotUrl.value || screenshotUrl.value,
@@ -161,6 +190,7 @@ export const useSnapshotStore = createSharedComposable(() => {
     if (!id) {
       snapshot.value = undefined;
       screenshot.value = undefined;
+      hasPreviousScreenshot.value = false;
       return;
     }
     await Promise.all([
@@ -169,6 +199,9 @@ export const useSnapshotStore = createSharedComposable(() => {
       }),
       screenshotStorage.getItem(id).then((r) => {
         screenshot.value = r || undefined;
+      }),
+      screenshotBackupStorage.hasItem(id).then((r) => {
+        hasPreviousScreenshot.value = r;
       }),
     ]);
     if (!snapshot.value) {
@@ -298,7 +331,7 @@ export const useSnapshotStore = createSharedComposable(() => {
     screenshotUrl,
     maskedScreenshotUrl,
     displayScreenshotUrl,
-    showRegenerateTip,
+    hasPreviousScreenshot,
     loading,
     redirected,
     importId,
@@ -317,8 +350,8 @@ export const useSnapshotStore = createSharedComposable(() => {
     openBlurEditor,
     closeBlurEditor,
     applyBlurredScreenshot,
+    restorePreviousScreenshot,
     resetBlurredScreenshot,
-    dismissRegenerateTip,
   };
 });
 

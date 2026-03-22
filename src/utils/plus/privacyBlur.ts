@@ -1,6 +1,6 @@
 import { FabricObject, StaticCanvas } from 'fabric';
 
-export type PrivacyObjectKind = 'brush' | 'blur' | 'rect' | 'text';
+export type PrivacyObjectKind = 'brush' | 'blur' | 'rect' | 'text' | 'arrow';
 
 export const PRIVACY_OBJECT_KIND = 'privacyObjectKind';
 

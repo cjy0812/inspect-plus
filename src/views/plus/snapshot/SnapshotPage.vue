@@ -23,6 +23,8 @@ const {
   openSettings,
   onTrackDialogClosed,
   openBlurEditor,
+  hasPreviousScreenshot,
+  restorePreviousScreenshot,
 } = usesnapshot();
 </script>
 
@@ -87,6 +89,18 @@ const {
             </NButton>
           </template>
           编辑图片
+        </NTooltip>
+        <NTooltip placement="right">
+          <template #trigger>
+            <NButton
+              text
+              :disabled="!hasPreviousScreenshot"
+              @click="restorePreviousScreenshot"
+            >
+              <SvgIcon name="CacheSub" />
+            </NButton>
+          </template>
+          恢复到编辑前
         </NTooltip>
         <div />
         <NTooltip placement="right">

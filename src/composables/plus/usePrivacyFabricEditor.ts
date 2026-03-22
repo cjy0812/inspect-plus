@@ -1,11 +1,13 @@
 import {
   Canvas,
   IText,
+  Path,
   PencilBrush,
   Rect,
   type FabricObject,
   type Point,
 } from 'fabric';
+import { createGaussianBlurCanvas } from '@/utils/plus/privacyBlur';
 import {
   PRIVACY_OBJECT_KIND,
   buildBlurPreviewCanvas,
@@ -22,7 +24,10 @@ export type PrivacyToolMode =
   | 'eraser'
   | 'blur'
   | 'rect'
+  | 'arrow'
   | 'text';
+
+type ToolbarOrientation = 'row' | 'column';
 
 type StageRect = {
   left: number;
@@ -41,6 +46,40 @@ const DEFAULT_STAGE_RECT: StageRect = {
   top: 0,
   width: 1,
   height: 1,
+};
+
+const createSvgStrokePath = (points: Point[]) => {
+  if (!points.length) return '';
+  if (points.length === 1) {
+    const point = points[0];
+    return `M ${point.x} ${point.y} L ${point.x + 0.01} ${point.y + 0.01}`;
+  }
+  return points
+    .map((point, index) =>
+      index === 0 ? `M ${point.x} ${point.y}` : `L ${point.x} ${point.y}`,
+    )
+    .join(' ');
+};
+
+const drawStrokePoints = (
+  ctx: CanvasRenderingContext2D,
+  points: Point[],
+  width: number,
+  strokeStyle: string,
+) => {
+  if (!points.length) return;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = width;
+  ctx.strokeStyle = strokeStyle;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  points.slice(1).forEach((point) => {
+    ctx.lineTo(point.x, point.y);
+  });
+  ctx.stroke();
+  ctx.restore();
 };
 
 export const usePrivacyFabricEditor = (options: {
@@ -62,19 +101,23 @@ export const usePrivacyFabricEditor = (options: {
   const brushColor = shallowRef('#6ee7ff');
   const rectColor = shallowRef('#ffe066');
   const textColor = shallowRef('#ffffff');
+  const toolbarOffset = shallowRef({ x: 0, y: 0 });
 
   const stageRect = shallowRef<StageRect>(DEFAULT_STAGE_RECT);
   const naturalSize = shallowRef({ width: 0, height: 0 });
   const isReady = shallowRef(false);
   const canUndo = shallowRef(false);
   const canRedo = shallowRef(false);
+  const toolbarOrientation = computed<ToolbarOrientation>(() => {
+    return stageRect.value.width > stageRect.value.height ? 'row' : 'column';
+  });
 
   const cursorStyle = computed(() => {
     switch (toolMode.value) {
       case 'text':
         return 'text';
       case 'eraser':
-        return 'not-allowed';
+        return 'crosshair';
       case 'select':
         return 'move';
       default:
@@ -91,31 +134,69 @@ export const usePrivacyFabricEditor = (options: {
   }));
 
   const toolbarStyle = computed(() => {
-    const width = 236;
-    const gap = 10;
+    const gap = 12;
+    const isRow = toolbarOrientation.value === 'row';
+    const width = isRow
+      ? Math.min(
+          window.innerWidth - 16,
+          Math.max(420, Math.min(820, stageRect.value.width + 120)),
+        )
+      : 96;
+    const height = isRow
+      ? 56
+      : Math.min(
+          window.innerHeight - 16,
+          Math.max(280, stageRect.value.height),
+        );
+    const baseLeft = isRow
+      ? Math.min(
+          Math.max(8, stageRect.value.left),
+          Math.max(8, window.innerWidth - width - 8),
+        )
+      : (() => {
+          const preferRight =
+            stageRect.value.left + stageRect.value.width + gap;
+          if (preferRight + width <= window.innerWidth - 8) return preferRight;
+          return Math.max(8, stageRect.value.left - width - gap);
+        })();
+    const baseTop = isRow
+      ? (() => {
+          const preferTop = stageRect.value.top + stageRect.value.height + gap;
+          const fallbackTop = stageRect.value.top - height - gap;
+          return preferTop + height <= window.innerHeight - 8
+            ? preferTop
+            : Math.max(8, fallbackTop);
+        })()
+      : Math.min(
+          Math.max(8, stageRect.value.top),
+          Math.max(8, window.innerHeight - height - 8),
+        );
     const left = Math.min(
-      window.innerWidth - width - 8,
-      Math.max(8, stageRect.value.left + stageRect.value.width + gap),
+      Math.max(8, baseLeft + toolbarOffset.value.x),
+      Math.max(8, window.innerWidth - width - 8),
     );
     const top = Math.min(
-      Math.max(8, stageRect.value.top),
-      Math.max(8, window.innerHeight - 330),
+      Math.max(8, baseTop + toolbarOffset.value.y),
+      Math.max(8, window.innerHeight - height - 8),
     );
     return {
       left: `${left}px`,
       top: `${top}px`,
       width: `${width}px`,
+      maxHeight: `${height}px`,
     };
   });
 
   const activeSliderLabel = computed(() => {
     switch (toolMode.value) {
       case 'brush':
-      case 'eraser':
         return '笔刷大小';
+      case 'eraser':
+        return '橡皮宽度';
       case 'blur':
         return '高斯半径';
       case 'rect':
+      case 'arrow':
         return '矩形线宽';
       case 'text':
         return '文字大小';
@@ -133,6 +214,7 @@ export const usePrivacyFabricEditor = (options: {
         case 'blur':
           return blurSize.value;
         case 'rect':
+        case 'arrow':
           return rectWidth.value;
         case 'text':
           return textSize.value;
@@ -150,6 +232,7 @@ export const usePrivacyFabricEditor = (options: {
           blurSize.value = value;
           break;
         case 'rect':
+        case 'arrow':
           rectWidth.value = value;
           break;
         case 'text':
@@ -169,6 +252,7 @@ export const usePrivacyFabricEditor = (options: {
       case 'blur':
         return { min: 8, max: 48, step: 1 };
       case 'rect':
+      case 'arrow':
         return { min: 1, max: 8, step: 1 };
       case 'text':
         return { min: 12, max: 42, step: 1 };
@@ -177,16 +261,66 @@ export const usePrivacyFabricEditor = (options: {
     }
   });
 
+  const showColorControl = computed(() => {
+    return (
+      toolMode.value === 'brush' ||
+      toolMode.value === 'rect' ||
+      toolMode.value === 'arrow' ||
+      toolMode.value === 'text'
+    );
+  });
+
+  const activeColorValue = computed({
+    get: () => {
+      switch (toolMode.value) {
+        case 'brush':
+          return brushColor.value;
+        case 'rect':
+        case 'arrow':
+          return rectColor.value;
+        case 'text':
+          return textColor.value;
+        default:
+          return brushColor.value;
+      }
+    },
+    set: (value: string) => {
+      switch (toolMode.value) {
+        case 'brush':
+          brushColor.value = value;
+          break;
+        case 'rect':
+        case 'arrow':
+          rectColor.value = value;
+          break;
+        case 'text':
+          textColor.value = value;
+          break;
+      }
+    },
+  });
+
   let fabricCanvas: Canvas | undefined;
   let sourceImage: HTMLImageElement | undefined;
   let blurredPreviewCanvas: HTMLCanvasElement | undefined;
+  let blurredSourceCanvas: HTMLCanvasElement | undefined;
+  let blurredSourceRadius = 0;
   let resizeObserver: ResizeObserver | undefined;
   let rectDraft: Rect | undefined;
   let rectStart: Point | undefined;
-  let blurPreviewFrame = 0;
+  let arrowDraft: Path | undefined;
+  let arrowStart: Point | undefined;
+  let drawingPoints: Point[] = [];
+  let activeDrawMode: 'blur' | 'eraser' | undefined;
+  let toolbarDragState:
+    | { startX: number; startY: number; originX: number; originY: number }
+    | undefined;
+  let previewFrame = 0;
+  let previewBuildFrame = 0;
   let blurPreviewRun = 0;
   let isLoadingHistory = false;
   let isCommittingHistory = false;
+  let settingsCommitTimer: ReturnType<typeof setTimeout> | undefined;
   let history: string[] = [];
   let historyIndex = -1;
   const boundTextObjects = new WeakSet<FabricObject>();
@@ -252,12 +386,69 @@ export const usePrivacyFabricEditor = (options: {
 
   const applyBlurPreview = (canvas?: HTMLCanvasElement) => {
     blurredPreviewCanvas = canvas;
+    renderPreviewLayer();
+  };
+
+  const getBlurredSourceCanvas = () => {
+    if (!sourceImage) return undefined;
+    if (
+      !blurredSourceCanvas ||
+      blurredSourceRadius !== blurSize.value ||
+      blurredSourceCanvas.width !== naturalSize.value.width ||
+      blurredSourceCanvas.height !== naturalSize.value.height
+    ) {
+      blurredSourceCanvas = createGaussianBlurCanvas(
+        sourceImage,
+        naturalSize.value.width,
+        naturalSize.value.height,
+        blurSize.value,
+      );
+      blurredSourceRadius = blurSize.value;
+    }
+    return blurredSourceCanvas;
+  };
+
+  const renderLiveBlurPoints = (
+    ctx: CanvasRenderingContext2D,
+    points: Point[],
+  ) => {
+    if (points.length < 2) return;
+    const blurredSource = getBlurredSourceCanvas();
+    if (!blurredSource) return;
+    const temp = document.createElement('canvas');
+    temp.width = naturalSize.value.width;
+    temp.height = naturalSize.value.height;
+    const tempCtx = temp.getContext('2d');
+    if (!tempCtx) return;
+    tempCtx.drawImage(blurredSource, 0, 0);
+    tempCtx.globalCompositeOperation = 'destination-in';
+    drawStrokePoints(tempCtx, points, blurSize.value, '#ffffff');
+    tempCtx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(temp, 0, 0);
+  };
+
+  const renderLiveEraserPoints = (
+    ctx: CanvasRenderingContext2D,
+    points: Point[],
+  ) => {
+    if (points.length < 2) return;
+    drawStrokePoints(ctx, points, brushSize.value, 'rgba(110,231,255,0.34)');
+  };
+
+  const renderPreviewLayer = () => {
     const target = blurCanvasRef.value;
     if (!target) return;
     const ctx = target.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, target.width, target.height);
-    if (canvas) ctx.drawImage(canvas, 0, 0);
+    if (blurredPreviewCanvas) ctx.drawImage(blurredPreviewCanvas, 0, 0);
+    if (activeDrawMode === 'blur') {
+      renderLiveBlurPoints(ctx, drawingPoints);
+      return;
+    }
+    if (activeDrawMode === 'eraser') {
+      renderLiveEraserPoints(ctx, drawingPoints);
+    }
   };
 
   const getSerializedState = () => {
@@ -301,15 +492,7 @@ export const usePrivacyFabricEditor = (options: {
     updateHistoryFlags();
   };
 
-  const scheduleBlurPreview = () => {
-    if (blurPreviewFrame) return;
-    blurPreviewFrame = requestAnimationFrame(() => {
-      blurPreviewFrame = 0;
-      void renderBlurPreview();
-    });
-  };
-
-  const renderBlurPreview = async () => {
+  const rebuildCommittedBlurPreview = async () => {
     if (!fabricCanvas || !sourceImage) {
       clearBlurPreview();
       return;
@@ -331,37 +514,281 @@ export const usePrivacyFabricEditor = (options: {
     applyBlurPreview(preview);
   };
 
+  const schedulePreviewRender = () => {
+    if (previewFrame) return;
+    previewFrame = requestAnimationFrame(() => {
+      previewFrame = 0;
+      renderPreviewLayer();
+    });
+  };
+
+  const scheduleBlurPreview = () => {
+    if (previewBuildFrame) return;
+    previewBuildFrame = requestAnimationFrame(() => {
+      previewBuildFrame = 0;
+      void rebuildCommittedBlurPreview();
+    });
+  };
+
+  const createPathFromPoints = (points: Point[], kind: 'blur' | 'brush') => {
+    const pathData = createSvgStrokePath(points);
+    const path = setPrivacyObjectKind(
+      new Path(pathData, {
+        fill: '',
+        strokeLineCap: 'round',
+        strokeLineJoin: 'round',
+        strokeWidth: kind === 'blur' ? blurSize.value : brushSize.value,
+        stroke: kind === 'blur' ? 'rgba(255,255,255,0.01)' : brushColor.value,
+        opacity: kind === 'blur' ? 0.01 : 1,
+        selectable: false,
+        evented: false,
+        objectCaching: false,
+      }),
+      kind,
+    );
+    return path;
+  };
+
+  const startLiveDrawing = (mode: 'blur' | 'eraser', point: Point) => {
+    drawingPoints = [point];
+    activeDrawMode = mode;
+    schedulePreviewRender();
+  };
+
+  const pushLiveDrawingPoint = (point: Point) => {
+    if (!activeDrawMode) return;
+    const lastPoint = drawingPoints[drawingPoints.length - 1];
+    if (
+      lastPoint &&
+      Math.hypot(lastPoint.x - point.x, lastPoint.y - point.y) < 1
+    )
+      return;
+    drawingPoints.push(point);
+    schedulePreviewRender();
+  };
+
+  const stopLiveDrawing = () => {
+    drawingPoints = [];
+    activeDrawMode = undefined;
+    schedulePreviewRender();
+  };
+
+  const queueSettingsCommit = () => {
+    if (settingsCommitTimer) clearTimeout(settingsCommitTimer);
+    settingsCommitTimer = setTimeout(() => {
+      settingsCommitTimer = undefined;
+      commitHistory();
+    }, 160);
+  };
+
+  const stopToolbarDrag = () => {
+    toolbarDragState = undefined;
+    window.removeEventListener('pointermove', onToolbarDrag);
+    window.removeEventListener('pointerup', stopToolbarDrag);
+  };
+
+  const onToolbarDrag = (event: PointerEvent) => {
+    if (!toolbarDragState) return;
+    toolbarOffset.value = {
+      x: toolbarDragState.originX + event.clientX - toolbarDragState.startX,
+      y: toolbarDragState.originY + event.clientY - toolbarDragState.startY,
+    };
+  };
+
+  const startToolbarDrag = (event: PointerEvent) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    toolbarDragState = {
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: toolbarOffset.value.x,
+      originY: toolbarOffset.value.y,
+    };
+    window.addEventListener('pointermove', onToolbarDrag);
+    window.addEventListener('pointerup', stopToolbarDrag);
+  };
+
+  const syncControlsFromSelection = () => {
+    const activeObject = fabricCanvas?.getActiveObject();
+    if (!activeObject) return;
+    const kind = getPrivacyObjectKind(activeObject);
+    if (kind === 'brush') {
+      if (typeof activeObject.strokeWidth === 'number') {
+        brushSize.value = Math.round(activeObject.strokeWidth);
+      }
+      if (typeof activeObject.stroke === 'string') {
+        brushColor.value = activeObject.stroke;
+      }
+      return;
+    }
+    if (kind === 'blur') {
+      if (typeof activeObject.strokeWidth === 'number') {
+        blurSize.value = Math.round(activeObject.strokeWidth);
+      }
+      return;
+    }
+    if (kind === 'rect') {
+      if (typeof activeObject.strokeWidth === 'number') {
+        rectWidth.value = Math.round(activeObject.strokeWidth);
+      }
+      if (typeof activeObject.stroke === 'string') {
+        rectColor.value = activeObject.stroke;
+      }
+      return;
+    }
+    if (kind === 'arrow') {
+      if (typeof activeObject.strokeWidth === 'number') {
+        rectWidth.value = Math.round(activeObject.strokeWidth);
+      }
+      if (typeof activeObject.stroke === 'string') {
+        rectColor.value = activeObject.stroke;
+      }
+      return;
+    }
+    if (kind === 'text') {
+      if (typeof activeObject.fontSize === 'number') {
+        textSize.value = Math.round(activeObject.fontSize);
+      }
+      if (typeof activeObject.fill === 'string') {
+        textColor.value = activeObject.fill;
+      }
+    }
+  };
+
+  const applyControlsToSelection = () => {
+    if (!fabricCanvas) return;
+    const targets = fabricCanvas.getActiveObjects();
+    if (!targets.length) return;
+    let changed = false;
+    targets.forEach((object) => {
+      const kind = getPrivacyObjectKind(object);
+      if (kind === 'brush') {
+        object.set({
+          stroke: brushColor.value,
+          strokeWidth: brushSize.value,
+        });
+        changed = true;
+        return;
+      }
+      if (kind === 'blur') {
+        object.set({ strokeWidth: blurSize.value });
+        changed = true;
+        return;
+      }
+      if (kind === 'rect') {
+        object.set({
+          stroke: rectColor.value,
+          strokeWidth: rectWidth.value,
+        });
+        changed = true;
+        return;
+      }
+      if (kind === 'arrow') {
+        object.set({
+          stroke: rectColor.value,
+          strokeWidth: rectWidth.value,
+        });
+        changed = true;
+        return;
+      }
+      if (kind === 'text') {
+        object.set({
+          fill: textColor.value,
+          fontSize: textSize.value,
+        });
+        changed = true;
+      }
+    });
+    if (!changed) return;
+    fabricCanvas.requestRenderAll();
+    scheduleBlurPreview();
+    queueSettingsCommit();
+  };
+
+  const createArrowDraft = (start: Point, end: Point) => {
+    const angle = Math.atan2(end.y - start.y, end.x - start.x);
+    const headLength = 14 + rectWidth.value * 2;
+    const headSpread = Math.PI / 8;
+    const leftHead = {
+      x: end.x - headLength * Math.cos(angle - headSpread),
+      y: end.y - headLength * Math.sin(angle - headSpread),
+    };
+    const rightHead = {
+      x: end.x - headLength * Math.cos(angle + headSpread),
+      y: end.y - headLength * Math.sin(angle + headSpread),
+    };
+    return setPrivacyObjectKind(
+      new Path(
+        [
+          `M ${start.x} ${start.y}`,
+          `L ${end.x} ${end.y}`,
+          `M ${leftHead.x} ${leftHead.y}`,
+          `L ${end.x} ${end.y}`,
+          `L ${rightHead.x} ${rightHead.y}`,
+        ].join(' '),
+        {
+          fill: '',
+          stroke: rectColor.value,
+          strokeWidth: rectWidth.value,
+          strokeLineCap: 'round',
+          strokeLineJoin: 'round',
+          selectable: false,
+          evented: false,
+          objectCaching: false,
+        },
+      ),
+      'arrow',
+    );
+  };
+
+  const replaceArrowDraft = (start: Point, end: Point) => {
+    if (!fabricCanvas) return;
+    if (arrowDraft) {
+      fabricCanvas.remove(arrowDraft);
+    }
+    arrowDraft = createArrowDraft(start, end);
+    fabricCanvas.add(arrowDraft);
+  };
+
+  const removeIntersectingObjects = (path: FabricObject) => {
+    if (!fabricCanvas) return false;
+    const targets = fabricCanvas.getObjects().filter((object) => {
+      return (
+        object !== path &&
+        (object.intersectsWithObject(path) ||
+          object.isContainedWithinObject(path) ||
+          path.isContainedWithinObject(object) ||
+          object.containsPoint(path.getCenterPoint()) ||
+          path.containsPoint(object.getCenterPoint()))
+      );
+    });
+    if (!targets.length) return false;
+    targets.forEach((target) => fabricCanvas.remove(target));
+    return true;
+  };
+
   const syncBrush = () => {
     if (!fabricCanvas) return;
     if (toolMode.value === 'brush') {
       fabricCanvas.freeDrawingBrush = new PencilBrush(fabricCanvas);
       fabricCanvas.freeDrawingBrush.width = brushSize.value;
       fabricCanvas.freeDrawingBrush.color = brushColor.value;
-      return;
-    }
-    if (toolMode.value === 'blur') {
-      fabricCanvas.freeDrawingBrush = new PencilBrush(fabricCanvas);
-      fabricCanvas.freeDrawingBrush.width = blurSize.value;
-      fabricCanvas.freeDrawingBrush.color = '#ffffff';
     }
   };
 
   const syncTool = () => {
     if (!fabricCanvas) return;
-    const isFreeDrawing =
-      toolMode.value === 'brush' || toolMode.value === 'blur';
+    const isFreeDrawing = toolMode.value === 'brush';
     fabricCanvas.isDrawingMode = isFreeDrawing;
     fabricCanvas.selection = toolMode.value === 'select';
-    fabricCanvas.skipTargetFind =
-      toolMode.value !== 'select' && toolMode.value !== 'eraser';
+    fabricCanvas.skipTargetFind = toolMode.value !== 'select';
     fabricCanvas.defaultCursor = cursorStyle.value;
     fabricCanvas.hoverCursor = cursorStyle.value;
     fabricCanvas.moveCursor = 'move';
     syncFabricViewport();
     fabricCanvas.getObjects().forEach((object) => {
       object.selectable = toolMode.value === 'select';
-      object.evented =
-        toolMode.value === 'select' || toolMode.value === 'eraser';
+      object.evented = toolMode.value === 'select';
     });
     if (!isFreeDrawing) {
       fabricCanvas.discardActiveObject();
@@ -402,22 +829,14 @@ export const usePrivacyFabricEditor = (options: {
 
     fabricCanvas.on('path:created', ({ path }) => {
       if (!path) return;
-      if (toolMode.value === 'blur') {
-        setPrivacyObjectKind(path, 'blur');
-        path.set({
-          stroke: 'rgba(255,255,255,0.01)',
-          fill: '',
-          opacity: 0.01,
-        });
-      } else {
-        setPrivacyObjectKind(path, 'brush');
-        path.set({
-          stroke: brushColor.value,
-          opacity: 1,
-        });
-      }
+      setPrivacyObjectKind(path, 'brush');
+      path.set({
+        stroke: brushColor.value,
+        opacity: 1,
+        strokeWidth: brushSize.value,
+      });
       path.selectable = toolMode.value === 'select';
-      path.evented = toolMode.value === 'select' || toolMode.value === 'eraser';
+      path.evented = toolMode.value === 'select';
       commitHistory();
       scheduleBlurPreview();
       fabricCanvas?.requestRenderAll();
@@ -425,8 +844,16 @@ export const usePrivacyFabricEditor = (options: {
 
     fabricCanvas.on('mouse:down', (info: FabricPointerEvent) => {
       if (!fabricCanvas) return;
+      const point = fabricCanvas.getScenePoint(info.e);
+      if (toolMode.value === 'blur') {
+        startLiveDrawing('blur', point);
+        return;
+      }
+      if (toolMode.value === 'eraser') {
+        startLiveDrawing('eraser', point);
+        return;
+      }
       if (toolMode.value === 'rect') {
-        const point = fabricCanvas.getScenePoint(info.e);
         rectStart = point;
         rectDraft = setPrivacyObjectKind(
           new Rect({
@@ -446,9 +873,14 @@ export const usePrivacyFabricEditor = (options: {
         fabricCanvas.add(rectDraft);
         return;
       }
+      if (toolMode.value === 'arrow') {
+        arrowStart = point;
+        replaceArrowDraft(point, point);
+        fabricCanvas.requestRenderAll();
+        return;
+      }
 
       if (toolMode.value === 'text') {
-        const point = fabricCanvas.getScenePoint(info.e);
         const text = setPrivacyObjectKind(
           new IText('', {
             left: point.x,
@@ -470,24 +902,37 @@ export const usePrivacyFabricEditor = (options: {
         fabricCanvas.requestRenderAll();
         return;
       }
-
-      if (toolMode.value === 'eraser') {
-        const targets = info.target
-          ? [info.target]
-          : fabricCanvas.getActiveObjects();
-        if (!targets.length) return;
-        targets.forEach((target) => fabricCanvas?.remove(target));
-        fabricCanvas.discardActiveObject();
-        commitHistory();
-        scheduleBlurPreview();
-        fabricCanvas.requestRenderAll();
-      }
     });
 
     fabricCanvas.on('mouse:move', (info: FabricPointerEvent) => {
-      if (!fabricCanvas || !rectDraft || !rectStart) return;
-      if (toolMode.value !== 'rect') return;
       const point = fabricCanvas.getScenePoint(info.e);
+      if (activeDrawMode === 'blur') {
+        pushLiveDrawingPoint(point);
+        return;
+      }
+      if (activeDrawMode === 'eraser') {
+        pushLiveDrawingPoint(point);
+        const erasePath = new Path(createSvgStrokePath(drawingPoints), {
+          fill: '',
+          stroke: 'rgba(255,255,255,0.01)',
+          strokeLineCap: 'round',
+          strokeLineJoin: 'round',
+          strokeWidth: brushSize.value,
+        });
+        const erased = removeIntersectingObjects(erasePath);
+        if (erased) {
+          fabricCanvas.requestRenderAll();
+        }
+        return;
+      }
+      if (!fabricCanvas || !rectDraft || !rectStart) {
+        if (toolMode.value === 'arrow' && arrowDraft && arrowStart) {
+          replaceArrowDraft(arrowStart, point);
+          fabricCanvas.requestRenderAll();
+        }
+        return;
+      }
+      if (toolMode.value !== 'rect') return;
       rectDraft.set({
         left: Math.min(rectStart.x, point.x),
         top: Math.min(rectStart.y, point.y),
@@ -498,6 +943,48 @@ export const usePrivacyFabricEditor = (options: {
     });
 
     fabricCanvas.on('mouse:up', () => {
+      if (!fabricCanvas) return;
+      if (activeDrawMode === 'blur') {
+        const nextPoints = [...drawingPoints];
+        stopLiveDrawing();
+        if (nextPoints.length > 1) {
+          const path = createPathFromPoints(nextPoints, 'blur');
+          path.set({
+            selectable: toolMode.value === 'select',
+            evented: toolMode.value === 'select',
+          });
+          fabricCanvas.add(path);
+          commitHistory();
+          scheduleBlurPreview();
+          fabricCanvas.requestRenderAll();
+        }
+        return;
+      }
+      if (activeDrawMode === 'eraser') {
+        stopLiveDrawing();
+        commitHistory();
+        scheduleBlurPreview();
+        fabricCanvas.requestRenderAll();
+        return;
+      }
+      if (toolMode.value === 'arrow' && arrowDraft) {
+        const nextArrow = arrowDraft;
+        const bounds = nextArrow.getBoundingRect();
+        arrowDraft = undefined;
+        arrowStart = undefined;
+        if (Math.hypot(bounds.width, bounds.height) <= 6) {
+          fabricCanvas.remove(nextArrow);
+          fabricCanvas.requestRenderAll();
+          return;
+        }
+        nextArrow.set({
+          selectable: toolMode.value === 'select',
+          evented: toolMode.value === 'select',
+        });
+        commitHistory();
+        fabricCanvas.requestRenderAll();
+        return;
+      }
       if (!fabricCanvas || !rectDraft) return;
       const valid = (rectDraft.width ?? 0) > 2 && (rectDraft.height ?? 0) > 2;
       const nextRect = rectDraft;
@@ -510,7 +997,7 @@ export const usePrivacyFabricEditor = (options: {
       }
       nextRect.set({
         selectable: toolMode.value === 'select',
-        evented: toolMode.value === 'select' || toolMode.value === 'eraser',
+        evented: toolMode.value === 'select',
       });
       commitHistory();
     });
@@ -520,6 +1007,8 @@ export const usePrivacyFabricEditor = (options: {
       commitHistory();
       scheduleBlurPreview();
     });
+    fabricCanvas.on('selection:created', syncControlsFromSelection);
+    fabricCanvas.on('selection:updated', syncControlsFromSelection);
   };
 
   const resetCanvasState = () => {
@@ -527,6 +1016,12 @@ export const usePrivacyFabricEditor = (options: {
     historyIndex = -1;
     updateHistoryFlags();
     blurredPreviewCanvas = undefined;
+    blurredSourceCanvas = undefined;
+    blurredSourceRadius = 0;
+    drawingPoints = [];
+    activeDrawMode = undefined;
+    arrowDraft = undefined;
+    arrowStart = undefined;
     clearBlurPreview();
     if (fabricCanvas) {
       fabricCanvas.clear();
@@ -564,6 +1059,7 @@ export const usePrivacyFabricEditor = (options: {
     const src = options.src.value;
     if (!options.show.value || !src) return;
     ensurePrivacyCustomProperties();
+    toolbarOffset.value = { x: 0, y: 0 };
     await nextTick();
     await loadSourceImage(src);
     syncStageRect();
@@ -583,9 +1079,18 @@ export const usePrivacyFabricEditor = (options: {
   const dispose = () => {
     isReady.value = false;
     unbindStageTracking();
-    if (blurPreviewFrame) {
-      cancelAnimationFrame(blurPreviewFrame);
-      blurPreviewFrame = 0;
+    stopToolbarDrag();
+    if (settingsCommitTimer) {
+      clearTimeout(settingsCommitTimer);
+      settingsCommitTimer = undefined;
+    }
+    if (previewFrame) {
+      cancelAnimationFrame(previewFrame);
+      previewFrame = 0;
+    }
+    if (previewBuildFrame) {
+      cancelAnimationFrame(previewBuildFrame);
+      previewBuildFrame = 0;
     }
     fabricCanvas?.dispose();
     fabricCanvas = undefined;
@@ -685,6 +1190,9 @@ export const usePrivacyFabricEditor = (options: {
       case 'r':
         setTool('rect');
         break;
+      case 'a':
+        setTool('arrow');
+        break;
       case 't':
         setTool('text');
         break;
@@ -692,15 +1200,20 @@ export const usePrivacyFabricEditor = (options: {
   };
 
   watch(
-    [toolMode, brushSize, blurSize, rectWidth, textSize],
+    [
+      toolMode,
+      brushSize,
+      blurSize,
+      rectWidth,
+      textSize,
+      brushColor,
+      rectColor,
+      textColor,
+    ],
     () => {
       if (!fabricCanvas) return;
       syncTool();
-      fabricCanvas.getObjects().forEach((object) => {
-        if (getPrivacyObjectKind(object) === 'rect') {
-          object.set({ strokeWidth: rectWidth.value });
-        }
-      });
+      applyControlsToSelection();
       scheduleBlurPreview();
     },
     { flush: 'post' },
@@ -748,6 +1261,10 @@ export const usePrivacyFabricEditor = (options: {
     activeSliderLabel,
     activeSliderValue,
     activeSliderRange,
+    showColorControl,
+    activeColorValue,
+    toolbarOrientation,
+    startToolbarDrag,
     setTool,
     undo,
     redo,

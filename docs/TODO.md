@@ -12,6 +12,9 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
   - [ ] Continue moving Plus-only `snapshot.ts` behavior into neutral seams or `src/composables/plus/*`
   - [ ] Reduce duplicated logic between base and plus `WindowCard` / `SearchCard`
   - [x] Replace the manual privacy editor engine with a Fabric-based Plus composable/helper split
+  - [x] Upgrade the Fabric privacy editor from demo UI to a compact toolbar with usable controls
+  - [x] Add arrow tool, draggable toolbar placement and portrait/landscape adaptive toolbar layout
+  - [x] Add a single-step post-save screenshot rollback path with bounded backup storage
 - [ ] Type tightening
   - [x] Replace high-risk `any` in `src/views/plus/snapshot/SearchCard.vue`
   - [x] Replace remaining high-risk `any` in `src/views/plus/snapshot/RuleCard.vue`
@@ -55,6 +58,10 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
   - [x] Move blur/export helpers into `src/utils/plus/privacyBlur.ts`
   - [x] Move Fabric canvas state into `src/composables/plus/usePrivacyFabricEditor.ts`
   - [x] Shrink `src/components/plus/snapshot/PrivacyBlurEditor.vue` back to a thin view shell
+  - [x] Add compact toolbar controls for color, size, text styling and action buttons
+  - [x] Replace the floating regenerate warning panel with toast-style feedback
+  - [x] Add arrow annotations and live blur / eraser feedback improvements
+  - [x] Add one-step restore of the pre-edit screenshot after finishing
 
 ## Next recommended order
 

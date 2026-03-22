@@ -10,8 +10,6 @@ const {
   blurEditorShow,
   applyBlurredScreenshot,
   resetBlurredScreenshot,
-  showRegenerateTip,
-  dismissRegenerateTip,
 } = useSnapshotStore();
 const { clickImg, imgHover, imgMove, imgLoadTime, positionStyle, imgRef } =
   useSharedSnapshotHoverImg();
@@ -104,17 +102,5 @@ const { clickImg, imgHover, imgMove, imgLoadTime, positionStyle, imgRef } =
       @apply="applyBlurredScreenshot"
       @reset="resetBlurredScreenshot"
     />
-
-    <NAlert
-      v-if="showRegenerateTip"
-      type="warning"
-      size="small"
-      closable
-      class="absolute left-4px right-4px top-4px z-12"
-      style="--n-border-radius: 10px"
-      @close="dismissRegenerateTip"
-    >
-      图片已编辑：如你之前已经生成过链接，请重新生成链接后再分享。
-    </NAlert>
   </div>
 </template>
