@@ -11,6 +11,7 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
 - [ ] Snapshot seam cleanup
   - [ ] Continue moving Plus-only `snapshot.ts` behavior into neutral seams or `src/composables/plus/*`
   - [ ] Reduce duplicated logic between base and plus `WindowCard` / `SearchCard`
+  - [x] Replace the manual privacy editor engine with a Fabric-based Plus composable/helper split
 - [ ] Type tightening
   - [x] Replace high-risk `any` in `src/views/plus/snapshot/SearchCard.vue`
   - [x] Replace remaining high-risk `any` in `src/views/plus/snapshot/RuleCard.vue`
@@ -49,10 +50,16 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
   - [x] Remove `as any` tree prop casts from `src/views/snapshot/WindowCard.vue`
   - [x] Remove `as any` tree prop casts from `src/views/plus/snapshot/WindowCard.vue`
   - [x] Align both files on `TreeProps` / `TreeOption`-based signatures
+- [x] Refactor the privacy screenshot editor
+  - [x] Keep `ScreenshotCard.vue` and store integration unchanged
+  - [x] Move blur/export helpers into `src/utils/plus/privacyBlur.ts`
+  - [x] Move Fabric canvas state into `src/composables/plus/usePrivacyFabricEditor.ts`
+  - [x] Shrink `src/components/plus/snapshot/PrivacyBlurEditor.vue` back to a thin view shell
 
 ## Next recommended order
 
 1. Continue reducing duplicated logic between base and plus `SearchCard` / `WindowCard`
 2. Add the first wrapper contract tests before further seam work
 3. Continue seam-first cleanup for `snapshot.ts`
-4. Split the next large Plus-only block out of `RuleCard.vue` or `useDeviceControlTools.ts`
+4. Validate the new privacy editor in browser and tune tool behavior if needed
+5. Split the next large Plus-only block out of `RuleCard.vue` or `useDeviceControlTools.ts`

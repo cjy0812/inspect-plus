@@ -106,9 +106,12 @@ export const useSnapshotStore = createSharedComposable(() => {
       URL.revokeObjectURL(maskedScreenshotUrl.value);
     }
   };
-  const resetBlurredScreenshot = () => {
+  const clearMaskedScreenshotPreview = () => {
     revokeMaskedScreenshotUrl();
     maskedScreenshotUrl.value = undefined;
+  };
+  const resetBlurredScreenshot = () => {
+    clearMaskedScreenshotPreview();
     showRegenerateTip.value = false;
   };
   const invalidateShareLinks = () => {
@@ -129,7 +132,7 @@ export const useSnapshotStore = createSharedComposable(() => {
         await screenshotStorage.setItem(snapshotId.value, editedBuffer);
         screenshot.value = editedBuffer;
         // 持久化成功后切回底层截图，避免临时 URL 生命周期问题
-        resetBlurredScreenshot();
+        clearMaskedScreenshotPreview();
       } catch {
         // 转存失败时，保留当前遮罩预览，至少保证用户可见结果
       }
@@ -146,7 +149,7 @@ export const useSnapshotStore = createSharedComposable(() => {
   watch(
     () => screenshotUrl.value,
     () => {
-      resetBlurredScreenshot();
+      clearMaskedScreenshotPreview();
     },
   );
   onScopeDispose(() => {
