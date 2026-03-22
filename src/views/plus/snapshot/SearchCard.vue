@@ -11,7 +11,7 @@ import { buildEmptyFn, copy } from '@/utils/others';
 import { parseSelector, wasmLoadTask } from '@/utils/selector';
 import { gkdWidth, vw } from '@/utils/size';
 import { getImagUrl } from '@/utils/url';
-import { FastQuery, GkdException } from '@gkd-kit/selector';
+import { FastQuery, GkdException, type QueryResult } from '@gkd-kit/selector';
 import dayjs from 'dayjs';
 import * as base64url from 'universal-base64url';
 import type { ShallowRef } from 'vue';
@@ -79,7 +79,7 @@ const searchSelector = (text: string, skipDuplicateCheck: boolean = false) => {
 
   const results = selector.querySelfOrSelectorAllContext(rootNode.value);
   // 修正 1: 将 QueryResult 转换为真正的数组以适配 TS 和后续的 map 操作
-  const resultsArray = Array.from(results);
+  const resultsArray = Array.from<QueryResult<RawNode>>(results);
 
   if (resultsArray.length == 0) {
     message.success(`没有选择到节点`);
@@ -89,7 +89,7 @@ const searchSelector = (text: string, skipDuplicateCheck: boolean = false) => {
   const result: SelectorSearchResult = {
     selector,
     nodes: resultsArray.map((r) => r.target),
-    results: resultsArray as any,
+    results: resultsArray,
     key: Date.now(),
     gkd: true,
   };
@@ -164,9 +164,9 @@ onMounted(async () => {
   await wasmLoadTask;
   let count = 0;
 
-  const toArray = (param: any): string[] => {
+  const toArray = (param: unknown): string[] => {
     if (Array.isArray(param)) {
-      return param.filter((item) => typeof item === 'string');
+      return param.filter((item): item is string => typeof item === 'string');
     }
     if (typeof param === 'string') {
       return [param];
@@ -210,9 +210,11 @@ const generateRules = errorTry(async (result: SelectorSearchResult) => {
   const s = result.selector;
   // 修正 2: 显式类型转换以修复 .map 报错
   // 使用 Array.from 配合 unknown 转换，这是最符合 TS 规范的绕过方式
-  const t = Array.from(result.results as unknown as Iterable<any>).map(
-    (v: any) => v.context.toArray().at(-1)!,
-  )[0];
+  const t = result.results[0]?.context.toArray().at(-1);
+  if (!t) {
+    message.error('无法提取选择器路径信息');
+    return;
+  }
 
   const fastQuery = [
     (t.quickFind ?? t.idQf) &&
@@ -436,7 +438,7 @@ const shareResult = (result: SearchResult) => {
                       @click="
                         snapshotStore.showTrack(
                           result.selector,
-                          (result.results as any)[i],
+                          result.results[i],
                         )
                       "
                     >

@@ -1,49 +1,15 @@
 import { useDeviceApi } from '@/utils/api';
 import { message } from '@/utils/discrete';
-import { errorWrap } from '@/utils/error';
 import {
-  normalizeLooseJsonLikeText,
-  tryParseJSON5Tolerant,
-} from '@/utils/plus/json';
+  mergeSubscriptionPayload,
+  normalizeSubscriptionImportText,
+  parseSubscriptionImportText,
+  type SnapshotAppHeader,
+  type SubscriptionCandidate,
+} from '@/utils/plus/subscriptionImport';
 import { getAppInfo } from '@/utils/node';
 import { snapshotStorage } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
-
-type SubscriptionPayload = {
-  categories?: any[];
-  globalGroups?: any[];
-  apps?: any[];
-};
-
-type CandidateKind = 'app' | 'globalGroup' | 'category';
-
-interface SubscriptionCandidate {
-  key: string;
-  label: string;
-  kind: CandidateKind;
-  payload: SubscriptionPayload;
-}
-
-const isObj = (v: unknown): v is Record<string, any> =>
-  typeof v === 'object' && v != null;
-
-const isRuleGroup = (
-  v: unknown,
-): v is { key: number; name?: string; rules?: any[] } =>
-  isObj(v) && typeof v.key === 'number';
-
-const isRuleApp = (
-  v: unknown,
-): v is { id: string; name?: string; groups?: any[] } =>
-  isObj(v) && typeof v.id === 'string';
-
-const isSubscriptionLike = (
-  v: unknown,
-): v is { categories?: any[]; globalGroups?: any[]; apps?: any[] } =>
-  isObj(v) &&
-  (Array.isArray(v.categories) ||
-    Array.isArray(v.globalGroups) ||
-    Array.isArray(v.apps));
 
 export const useDeviceControlTools = () => {
   const { api, origin } = useDeviceApi();
@@ -100,10 +66,7 @@ export const useDeviceControlTools = () => {
     },
   );
 
-  const getSnapshotAppHeader = async (): Promise<{
-    id: string;
-    name: string;
-  }> => {
+  const getSnapshotAppHeader = async (): Promise<SnapshotAppHeader> => {
     if (route.path.startsWith('/device')) {
       throw new Error(
         '当前在 /device 页面，无法自动补全 app 头，请在快照页面操作',
@@ -129,231 +92,12 @@ export const useDeviceControlTools = () => {
     return { id: app.id, name: app.name || app.id };
   };
 
-  const buildCandidatesFromValue = async (
-    data: unknown,
-  ): Promise<SubscriptionCandidate[]> => {
-    const candidates: SubscriptionCandidate[] = [];
-    const append = (candidate: SubscriptionCandidate) =>
-      candidates.push(candidate);
-    const normalizeLabel = (text: unknown, fallback: string) =>
-      String(text || '').trim() || fallback;
-    const appendAppCandidates = (
-      app: { id: string; name?: string; groups?: any[] },
-      prefix: string,
-    ) => {
-      const appName = normalizeLabel(app.name, app.id);
-      const groups = (Array.isArray(app.groups) ? app.groups : []).filter(
-        isRuleGroup,
-      );
-      if (groups.length) {
-        groups.forEach((group, idx) => {
-          append({
-            key: `${prefix}:app:${app.id}:group:${group.key}:${idx}`,
-            kind: 'app',
-            label: `AppGroup: ${appName} / ${normalizeLabel(group.name, `key=${group.key}`)}`,
-            payload: {
-              apps: [
-                {
-                  ...app,
-                  groups: [group],
-                },
-              ],
-            },
-          });
-        });
-        return;
-      }
-      append({
-        key: `${prefix}:app:${app.id}`,
-        kind: 'app',
-        label: `App: ${appName} (${app.id})`,
-        payload: { apps: [app] },
-      });
-    };
-
-    const appendFromSubscription = (
-      sub: { categories?: any[]; globalGroups?: any[]; apps?: any[] },
-      prefix: string,
-    ) => {
-      (sub.apps || []).forEach((app: any, idx: number) => {
-        if (!isRuleApp(app)) return;
-        appendAppCandidates(app, `${prefix}:${idx}`);
-      });
-      (sub.globalGroups || []).forEach((group: any, idx: number) => {
-        if (!isRuleGroup(group)) return;
-        append({
-          key: `${prefix}:group:${idx}:${group.key}`,
-          kind: 'globalGroup',
-          label: `GlobalGroup: ${normalizeLabel(group.name, `key=${group.key}`)}`,
-          payload: { globalGroups: [group] },
-        });
-      });
-      (sub.categories || []).forEach((category: any, idx: number) => {
-        const cName = isObj(category)
-          ? normalizeLabel(category.name, category.key || `#${idx + 1}`)
-          : `#${idx + 1}`;
-        append({
-          key: `${prefix}:category:${idx}`,
-          kind: 'category',
-          label: `Category: ${cName}`,
-          payload: { categories: [category] },
-        });
-      });
-    };
-
-    if (isSubscriptionLike(data)) {
-      appendFromSubscription(data, 'root');
-      return candidates;
-    }
-
-    if (isRuleApp(data)) {
-      appendAppCandidates(data, 'root');
-      return candidates;
-    }
-
-    if (isRuleGroup(data)) {
-      const appHeader = await getSnapshotAppHeader();
-      append({
-        key: `root:auto-app-group:${data.key}`,
-        kind: 'app',
-        label: `App(auto): ${appHeader.name} / Group(${normalizeLabel(data.name, `key=${data.key}`)})`,
-        payload: {
-          apps: [
-            {
-              id: appHeader.id,
-              name: appHeader.name,
-              groups: [data],
-            },
-          ],
-        },
-      });
-      return candidates;
-    }
-
-    if (Array.isArray(data) && data.length) {
-      if (data.every((item) => isRuleApp(item))) {
-        data.forEach((app, idx) => {
-          appendAppCandidates(app, `root:${idx}`);
-        });
-        return candidates;
-      }
-      if (data.every((item) => isRuleGroup(item))) {
-        const appHeader = await getSnapshotAppHeader();
-        data.forEach((group) => {
-          append({
-            key: `root:auto-app-group:${group.key}`,
-            kind: 'app',
-            label: `App(auto): ${appHeader.name} / Group(${normalizeLabel(group.name, `key=${group.key}`)})`,
-            payload: {
-              apps: [
-                {
-                  id: appHeader.id,
-                  name: appHeader.name,
-                  groups: [group],
-                },
-              ],
-            },
-          });
-        });
-        return candidates;
-      }
-      data.forEach((item, idx) => {
-        if (isSubscriptionLike(item)) {
-          appendFromSubscription(item, `list-${idx}`);
-          return;
-        }
-        if (isRuleApp(item)) {
-          appendAppCandidates(item, `list-${idx}`);
-          return;
-        }
-        if (isRuleGroup(item)) {
-          append({
-            key: `list-${idx}:group:${item.key}`,
-            kind: 'globalGroup',
-            label: `GlobalGroup: ${normalizeLabel(item.name, `key=${item.key}`)}`,
-            payload: { globalGroups: [item] },
-          });
-        }
-      });
-      return candidates;
-    }
-
-    if (isObj(data) && Array.isArray(data.groups) && !data.id) {
-      const appHeader = await getSnapshotAppHeader();
-      data.groups.forEach((group: any) => {
-        if (!isRuleGroup(group)) return;
-        append({
-          key: `root:auto-app-group:${group.key}`,
-          kind: 'app',
-          label: `App(auto): ${appHeader.name} / Group(${normalizeLabel(group.name, `key=${group.key}`)})`,
-          payload: {
-            apps: [
-              {
-                id: appHeader.id,
-                name: appHeader.name,
-                groups: [group],
-              },
-            ],
-          },
-        });
-      });
-      return candidates;
-    }
-
-    return candidates;
-  };
-
-  const mergePayloadFromCandidates = (candidates: SubscriptionCandidate[]) => {
-    const result: SubscriptionPayload = {};
-    const appMap = new Map<string, any>();
-    const globalGroups: any[] = [];
-    const categories: any[] = [];
-
-    candidates.forEach((item) => {
-      (item.payload.globalGroups || []).forEach((group) =>
-        globalGroups.push(group),
-      );
-      (item.payload.categories || []).forEach((category) =>
-        categories.push(category),
-      );
-      (item.payload.apps || []).forEach((app) => {
-        if (!isRuleApp(app)) return;
-        const prev = appMap.get(app.id);
-        if (!prev) {
-          appMap.set(app.id, {
-            ...app,
-            groups: Array.isArray(app.groups) ? [...app.groups] : [],
-          });
-          return;
-        }
-        const groups = Array.isArray(app.groups) ? app.groups : [];
-        prev.groups.push(...groups);
-      });
-    });
-
-    const apps = [...appMap.values()];
-    if (apps.length) result.apps = apps;
-    if (globalGroups.length) result.globalGroups = globalGroups;
-    if (categories.length) result.categories = categories;
-    return result;
-  };
-
   const parseCandidatesCore = async () => {
-    const normalizedText = normalizeLooseJsonLikeText(subsText.value.trim());
-    const parsed = tryParseJSON5Tolerant(normalizedText);
-    if (parsed.error) {
-      const msg = parsed.error.message || '订阅文本解析失败';
-      message.error(msg);
-      return false;
-    }
-    const data = errorWrap(() => parsed.value);
-    if (data == null) return false;
     try {
-      const candidates = await buildCandidatesFromValue(data);
-      if (!candidates.length) {
-        message.error('无法识别的订阅文本');
-        return false;
-      }
+      const { normalizedText, candidates } = await parseSubscriptionImportText(
+        subsText.value,
+        getSnapshotAppHeader,
+      );
       parsedCandidates.value = candidates;
       selectedCandidateKeys.value = [];
       parsedFingerprint.value = normalizedText;
@@ -363,8 +107,8 @@ export const useDeviceControlTools = () => {
         );
       }
       return true;
-    } catch (e: any) {
-      message.error(e?.message || '规则解析失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '规则解析失败');
       return false;
     }
   };
@@ -376,7 +120,7 @@ export const useDeviceControlTools = () => {
   const updateSubs = useTask(async () => {
     ensureDeviceConnected();
 
-    const normalizedText = normalizeLooseJsonLikeText(subsText.value.trim());
+    const normalizedText = normalizeSubscriptionImportText(subsText.value);
     if (!normalizedText) {
       message.error('请输入订阅文本');
       return;
@@ -399,7 +143,7 @@ export const useDeviceControlTools = () => {
       return;
     }
 
-    const payload = mergePayloadFromCandidates(selected);
+    const payload = mergeSubscriptionPayload(selected);
     if (
       !payload.apps?.length &&
       !payload.globalGroups?.length &&

@@ -12,9 +12,9 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
   - [ ] Continue moving Plus-only `snapshot.ts` behavior into neutral seams or `src/composables/plus/*`
   - [ ] Reduce duplicated logic between base and plus `WindowCard` / `SearchCard`
 - [ ] Type tightening
-  - [ ] Replace high-risk `any` in `src/views/plus/snapshot/SearchCard.vue`
-  - [ ] Replace high-risk `any` in `src/views/plus/snapshot/RuleCard.vue`
-  - [ ] Replace high-risk `any` in `src/composables/plus/useDeviceControlTools.ts`
+  - [x] Replace high-risk `any` in `src/views/plus/snapshot/SearchCard.vue`
+  - [x] Replace remaining high-risk `any` in `src/views/plus/snapshot/RuleCard.vue`
+  - [x] Replace remaining high-risk `any` in `src/composables/plus/useDeviceControlTools.ts`
   - [ ] Replace tree prop casts in `src/views/snapshot/WindowCard.vue` and `src/views/plus/snapshot/WindowCard.vue`
 - [ ] Tests
   - [ ] Add wrapper contract tests for `HomePage` / `DevicePage`
@@ -35,10 +35,20 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
   - [x] Stop creating unreleased object URLs from `computed(() => URL.createObjectURL(...))`
 - [x] Small browser hardening
   - [x] Add `noopener,noreferrer` when opening snapshot pages from `/device`
+- [x] Split device subscription import logic
+  - [x] Extract normalization, candidate building and payload merge into `src/utils/plus/subscriptionImport.ts`
+  - [x] Keep `useDeviceControlTools.ts` focused on UI state and API orchestration
+- [x] Split RuleCard rule-test engine
+  - [x] Extract rule parsing/validation/execution into `src/utils/plus/ruleTest.ts`
+  - [x] Reduce `RuleCard.vue` to view state + presentation wiring
+- [x] Tighten Plus snapshot typing
+  - [x] Remove `any`-based result plumbing from `src/views/plus/snapshot/SearchCard.vue`
+  - [x] Remove `any` from `src/views/plus/snapshot/RuleCard.vue`
+  - [x] Remove `any` from `src/composables/plus/useDeviceControlTools.ts`
 
 ## Next recommended order
 
-1. Split parsing and candidate-building out of `src/composables/plus/useDeviceControlTools.ts`
-2. Extract `RuleCard` parser/validator into dedicated Plus utils or composables
-3. Remove `any`-based result plumbing from `src/views/plus/snapshot/SearchCard.vue`
-4. Add the first wrapper contract tests before further seam work
+1. Replace tree prop casts in `WindowCard` base/plus pair
+2. Continue reducing duplicated logic between base and plus `SearchCard` / `WindowCard`
+3. Add the first wrapper contract tests before further seam work
+4. Continue seam-first cleanup for `snapshot.ts`
