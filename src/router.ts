@@ -68,15 +68,14 @@ const router = createRouter({
     {
       path: '/device',
       component: recordModule(() => import('@/views/plus/DevicePage.vue')),
-      beforeEnter(to, _, next) {
+      beforeEnter(to) {
         const u = toValidURL(String(to.query.url));
         if (u) {
           localStorage.setItem('device_link', u.origin);
           const query = { ...to.query };
           delete query.url;
-          return next({ ...to, query });
+          return { ...to, query };
         }
-        next();
       },
       meta: { title: '连接设备' },
     },

@@ -173,6 +173,50 @@ Reason:
 - stop adding new feature logic directly inside large Plus card forks
 - favor `components/plus/snapshot/*` plus `composables/plus/*`
 
+## Phase 6 Audit Sweep
+
+### Router
+
+- `src/router.ts`
+  - route targets intentionally point to `src/views/plus/*` for the end-user experience
+  - this remains acceptable because `HomePage` and `DevicePage` were already reduced to thin wrappers
+  - one concrete cleanup was required:
+    - `/device` used legacy `beforeEnter(to, _, next)` syntax
+    - this was converted to return-based Vue Router 4 syntax to avoid deprecated guard flow
+
+### Store
+
+- `src/store/dialog.ts`
+  - healthy shape after the callback-map refactor
+  - promise callbacks are no longer stored in reactive state
+- `src/store/global.ts`
+  - small and predictable
+  - no additional sweep needed
+- `src/store/storage.ts`
+  - most important finding:
+    - `settingsStore` was created with `shallowReactive`
+    - this made nested objects such as `groupRemarks` fragile for persistence and UI reactivity
+    - Plus code mutates `settingsStore.groupRemarks[key]`, so shallow tracking was an actual risk
+  - fix applied:
+    - switched `useReactiveStorage` to `reactive`
+    - made persistence watch explicitly deep
+
+### Vue / Composables
+
+- `src/views/plus/home/HomePage.vue`
+  - wrapper shape is now correct
+  - business state remains in `useHomePlus`
+- `src/views/plus/DevicePage.vue`
+  - wrapper shape is now correct
+  - business state remains in `useDevicePlus`
+- remaining high-risk fork debt still lives mostly in snapshot:
+  - `src/views/plus/snapshot/SearchCard.vue`
+  - `src/views/plus/snapshot/RuleCard.vue`
+  - `src/views/plus/snapshot/WindowCard.vue`
+- current recommendation remains unchanged:
+  - continue reducing snapshot fork debt by moving Plus behavior into child components and composables
+  - avoid another large wrapper fork
+
 ## Acceptance criteria for the next refactor pass
 
 - `src/views/plus/DevicePage.vue` is reduced to wrapper glue

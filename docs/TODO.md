@@ -170,21 +170,21 @@
 
 ## Phase 6: Router Audit and Best-Practice Sweep
 
-- [ ] **Task 6.1**: Use `vue-router-best-practices` skill to audit `src/router/*`.
+- [x] **Task 6.1**: Use `vue-router-best-practices` skill to audit `src/router/*`.
   - Check for:
     - duplicated route definitions
     - Plus-specific route forks
     - route guards mixed with view logic
     - unnecessary router coupling
 
-- [ ] **Task 6.2**: Use `vue-pinia-best-practices` skill to audit `src/store/*`.
+- [x] **Task 6.2**: Use `vue-pinia-best-practices` skill to audit `src/store/*`.
   - Check for:
     - side effects in getters
     - oversized stores
     - state that belongs in composables
     - circular dependencies
 
-- [ ] **Task 6.3**: Use `vue-best-practices` skill to audit:
+- [x] **Task 6.3**: Use `vue-best-practices` skill to audit:
   - `src/views/*`
   - `src/components/*`
   - `src/composables/*`
@@ -195,9 +195,9 @@
   - computed misuse
   - lifecycle misuse
 
-- [ ] **Task 6.4**: Do not expand scope into unrelated files unless they are directly implicated by the refactor.
+- [x] **Task 6.4**: Do not expand scope into unrelated files unless they are directly implicated by the refactor.
 
-- [ ] **Verification**:
+- [x] **Verification**:
   - Router remains stable and minimal
   - Stores are clean and side-effect-free where appropriate
   - Vue code follows predictable patterns

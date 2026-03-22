@@ -26,10 +26,14 @@ const useReactiveStorage = <T extends object>(
   const initData = str
     ? tryRun(() => getter(JSON.parse(str)), fallback)
     : fallback();
-  const data = shallowReactive(initData);
-  watch(data, () => {
-    localStorage.setItem(key, JSON.stringify(toRaw(data)));
-  });
+  const data = reactive(initData);
+  watch(
+    data,
+    () => {
+      localStorage.setItem(key, JSON.stringify(toRaw(data)));
+    },
+    { deep: true },
+  );
   return data as T;
 };
 
