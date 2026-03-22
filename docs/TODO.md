@@ -145,21 +145,21 @@
 
 ## Phase 5: TypeScript Augmentation
 
-- [ ] **Task 5.1**: Review all type extensions needed by Plus features.
+- [x] **Task 5.1**: Review all type extensions needed by Plus features.
 
-- [ ] **Task 5.2**: Do **not** modify official `.d.ts` files.
+- [x] **Task 5.2**: Do **not** modify official `.d.ts` files.
 
-- [ ] **Task 5.3**: Create `src/types/plus/index.d.ts` if needed and use:
+- [x] **Task 5.3**: Create `src/types/plus/index.d.ts` if needed and use:
   - declaration merging
   - module augmentation
 
-- [ ] **Task 5.4**: Keep Plus type extensions isolated under `src/types/plus/`.
+- [x] **Task 5.4**: Keep Plus type extensions isolated under `src/types/plus/`.
 
-- [ ] **Neutral rule**:
+- [x] **Neutral rule**:
   - Use generic type names where possible.
   - Avoid project-specific naming leakage into base type files.
 
-- [ ] **Verification**:
+- [x] **Verification**:
   - Type augmentation compiles cleanly
   - No upstream type files are touched
   - Plus types are isolated and easy to remove later
