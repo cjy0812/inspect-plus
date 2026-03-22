@@ -1,11 +1,13 @@
 ---
 name: inspect-plus-architecture
-description: Use for inspect-plus refactors that must keep `offical` easy to merge while isolating Plus behavior. Apply when touching `src/views`, `src/views/plus`, `src/components/plus`, `src/composables/plus`, `src/utils/plus`, routing overrides, or any Base/Plus decoupling work.
+description: Use for inspect-plus architecture decisions that must keep `offical` easy to merge while isolating Plus behavior. Apply when touching `src/views`, `src/views/plus`, `src/components/plus`, `src/composables/plus`, `src/utils/plus`, routing overrides, or any Base/Plus decoupling work. Pair with inspect-plus-workflow for command, TODO, and browser-testing execution details.
 ---
 
 # Inspect Plus Architecture
 
 This skill governs how to evolve `inspect-plus` without making future merges from `offical` painful.
+
+For command execution, TODO handling, and browser verification, pair this skill with `inspect-plus-workflow`.
 
 ## Goal
 
@@ -39,11 +41,12 @@ Avoid copy-paste forks of official views and components.
 Do not move official logic into `plus` just because it is large.
 Do move Plus-only logic out of base views when it reduces merge conflicts.
 
-## Mandatory workflow before editing
+## Mandatory architecture check before editing
 
 1. Compare against official first.
    - Use `git diff --name-status offical..main`
-   - Use targeted diffs for the file being changed.
+   - Prefer targeted diffs for the file being changed.
+   - Use `git diff offical..main -- src/ > src.diff` when you need a wider repo view.
 2. Classify each change:
    - `official-compatible`: likely acceptable in base
    - `plus-only`: must live in plus layer
@@ -76,6 +79,7 @@ These are discouraged:
 - Re-implementing the same computed/watch logic in both base and plus
 - Adding Plus-only branches deep inside official templates
 - Mixing Plus styles into official component internals without a wrapper seam
+- Adding convenience code that speeds up the current task but increases future merge conflicts
 
 ## Wrapper design pattern
 
@@ -112,6 +116,11 @@ If a change would duplicate more than roughly 20 percent of an official file, st
 
 If a Plus view grows into a near-copy of a base view, treat that as architecture debt and split it before adding new features.
 
+Long-term maintainability rule:
+
+- Prefer a slightly slower but cleaner seam-first refactor over a quick copy-paste fork.
+- Do not add "temporary" spaghetti branches that are likely to survive into later rounds.
+
 Type augmentation rule:
 
 - Do not modify official `.d.ts` files for Plus-only extensions
@@ -124,45 +133,15 @@ Type augmentation rule:
 2. Plus styling should live in Plus components or wrapper-scoped `:deep(...)` overrides.
 3. Prefer CSS variables from `src/style/var.scss`.
 4. Avoid hard-coded layout values when a reusable variable is possible.
+5. Do not optimize one floating window or panel while leaving sibling UI inconsistent.
+6. Check both light and dark readability when changing color, focus, or emphasis styles.
+7. Favor responsive-friendly tokens over fixed one-off values so mobile adaptation stays possible.
 
 ## Import rules
 
 1. In Plus files, prefer `@/` aliases for official imports.
 2. Do not use fragile deep relative imports to reach official files from Plus folders.
 3. Keep file names and import case exact.
-
-## Browser testing workflow
-
-When validating `inspect-plus` in a real browser, use the same setup every time.
-
-1. Prefer connect-before-launch.
-   - Before using `chrome-devtools-mcp`, check whether `http://127.0.0.1:9222/json/version` is reachable.
-   - If it is reachable, reuse the existing Chrome instance.
-   - If it is not reachable, start Chrome with:
-     - `D:\Chrome\Chrome.exe --remote-debugging-port=9222 --user-data-dir="D:\Chrome\UserData" --profile-directory="Default"`
-2. Keep MCP in browserUrl mode.
-   - `chrome-devtools-mcp` should connect to `http://127.0.0.1:9222`
-   - Do not switch back to launching Chrome via MCP unless the user explicitly asks for that mode.
-3. Start the app before testing pages.
-   - Run `pnpm dev`
-   - Wait until Vite reports a local URL or the page is reachable in the browser.
-4. Use a fixed smoke-test route order.
-   - `/`
-   - `/device`
-   - `/selector`
-   - `/svg`
-5. For each tested page, always do both:
-   - capture a page snapshot
-   - inspect console messages
-6. Report only meaningful failures as page issues.
-   - Functional/runtime problems such as Vue warnings, missing props, blank pages, failed navigation, and uncaught errors are real findings.
-   - Ignore Vite hot-update noise unless it blocks testing.
-   - Accessibility issues such as missing `id` or `name` should be reported separately from runtime failures.
-7. If browser testing fails, debug in this order:
-   - Is `http://127.0.0.1:9222/json/version` reachable?
-   - Is Codex configured with `--browserUrl=http://127.0.0.1:9222`?
-   - Was Chrome started with the project-standard remote debugging command?
-   - Does the MCP session need to be restarted after config changes?
 
 ## Review checklist
 
