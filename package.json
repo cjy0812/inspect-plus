@@ -99,6 +99,7 @@
     ]
   },
   "devDependencies": {
-    "vue-tsc": "^3.2.5"
+    "vue-tsc": "^3.2.5",
+    "wrangler": "^4.93.0"
   }
 }

@@ -1,0 +1,6 @@
+name = "inspect-plus"          # ← 必须和你在 Cloudflare 创建 Worker 时填的项目名称**完全一致**（小写+连字符）
+compatibility_date = "2026-05-20"
+
+[assets]
+directory = "./dist"               
+# not_found_handling = "404-page"  
