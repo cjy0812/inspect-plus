@@ -8,7 +8,7 @@ const svgElMap = computedAsync(
 const props = withDefaults(
   defineProps<{
     name: string;
-    strokeWidth?: string; // 新增的 strokeWidth 属性
+    strokeWidth?: string;
   }>(),
   {},
 );
@@ -19,7 +19,7 @@ watchEffect(() => {
   const s = svgEl.value;
   const a = actualEl.value;
   if (!s || !a) return;
-  a.replaceChildren(...Array.from(s.cloneNode(true).childNodes));
+  a.replaceChildren(...s.cloneNode(true).childNodes);
 });
 </script>
 <template>
@@ -28,7 +28,8 @@ watchEffect(() => {
     ref="actualEl"
     class="SvgIcon"
     :name="name"
-    :viewBox="svgEl.getAttributeNS(null, 'viewBox') || undefined"
+    :viewBox="svgEl.getAttribute('viewBox') ?? undefined"
+    :fill="svgEl.getAttribute('fill') ?? undefined"
     :style="{ '--svg-stroke-width': strokeWidth }"
   ></svg>
 </template>
@@ -38,7 +39,9 @@ watchEffect(() => {
   overflow: hidden;
   height: var(--svg-h, var(--n-icon-size, var(--app-icon-size, 1em)));
   width: var(--svg-w, var(--n-icon-size, var(--app-icon-size, 1em)));
-  fill: currentColor;
   stroke-width: var(--svg-stroke-width);
+}
+.SvgIcon:not([fill]) {
+  fill: currentColor;
 }
 </style>

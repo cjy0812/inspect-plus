@@ -8,23 +8,23 @@ on:
       - 'README.md'
 
 permissions:
+  id-token: write
   contents: write
   pages: write # GitHub Pages 部署权限
-  id-token: write # 身份验证权限
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: latest
 
       - uses: pnpm/action-setup@v4
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
 
       - run: pnpm exec tsx ./scripts/updateVersion.ts
       - run: pnpm run build:cf
