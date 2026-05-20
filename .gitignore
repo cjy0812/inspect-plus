@@ -52,3 +52,4 @@ auto-import-components.d.ts
 .github/copilot-instructions.md
 mem.diff
 /.wrangler
+/.symdex
