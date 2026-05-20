@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue';
 import ActionCard from '@/components/ActionCard.vue';
-import DeviceControlTools from '@/components/DeviceControlTools.vue';
+import DeviceControlTools from '@/components/plus/device/DeviceControlTools.vue';
 import SvgIcon from '@/components/SvgIcon.vue';
 import { useHomePlus } from '@/composables/plus/useHomePlus';
 

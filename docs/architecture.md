@@ -45,7 +45,7 @@ Rules:
 - prefer neutral slot / prop names
 - do not push Plus-only logic deep into base templates
 
-### Plus Wrapper Layer
+### Plus Adapter Layer
 
 Primary responsibility:
 
@@ -63,9 +63,11 @@ Key files:
 
 Rules:
 
+- this is the project Adapter layer for Plus routes
 - wrappers should stay thin
 - wrappers should not become second copies of base pages
 - wrappers may hold small glue code only
+- concrete Plus UI should live under `src/components/plus/<domain>/*`
 
 ### Plus Component Layer
 
@@ -77,8 +79,11 @@ Primary responsibility:
 
 Key files:
 
+- `src/components/plus/device/DeviceControlTools.vue`
 - `src/components/plus/home/HomeSnapshotGroups.vue`
 - `src/components/plus/device/DeviceSnapshotGroups.vue`
+- `src/components/plus/dialog/DialogContainer.vue`
+- `src/components/plus/settings/SettingsModal.vue`
 - `src/components/plus/snapshot/FastQueryIndicator.vue`
 - `src/components/plus/snapshot/SelectorSyntaxPreview.vue`
 - `src/components/plus/snapshot/PrivacyBlurEditor.vue`
@@ -271,7 +276,7 @@ These files should keep trending toward:
 2. If it is Plus-only, start in `src/composables/plus/*` or `src/components/plus/*`.
 3. Reuse an existing base seam if one already exists.
 4. If no seam exists, add the smallest neutral seam to the base file first.
-5. Wire the feature into a thin wrapper under `src/views/plus/*`.
+5. Wire the feature into the route-level Adapter under `src/views/plus/*`.
 
 ### How to decide base vs Plus placement
 

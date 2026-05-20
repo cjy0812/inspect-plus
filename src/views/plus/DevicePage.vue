@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import SettingsModal from '@/components/SettingsModal.vue';
-import DeviceControlTools from '@/components/DeviceControlTools.vue';
+import SettingsModal from '@/components/plus/settings/SettingsModal.vue';
+import DeviceControlTools from '@/components/plus/device/DeviceControlTools.vue';
 import DeviceSnapshotGroups from '@/components/plus/device/DeviceSnapshotGroups.vue';
 import SvgIcon from '@/components/SvgIcon.vue';
 import BaseDevicePage from '@/views/DevicePage.vue';
