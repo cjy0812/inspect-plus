@@ -28,7 +28,7 @@ export default defineConfig(() => {
         modernTargets: `chrome>=${chromeVersion}`,
       }),
       mirror(),
-      _404Page(),
+      _404Page({ enabled: process.env.CLOUDFLARE_PAGES !== '1' }),
     ],
     resolve: {
       alias: {
