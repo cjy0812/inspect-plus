@@ -2,7 +2,7 @@
 import { dateZhCN, zhCN, type GlobalThemeOverrides } from 'naive-ui';
 import { RouterView } from 'vue-router';
 import ErrorDlg from './components/ErrorDlg.vue';
-import DialogContainer from './components/DialogContainer.vue';
+import DialogContainer from '@/components/plus/dialog/DialogContainer.vue';
 import { ScrollbarWrapper } from './utils/others';
 import { debounce } from 'lodash-es';
 import { useTheme } from './composables/plus/useTheme';

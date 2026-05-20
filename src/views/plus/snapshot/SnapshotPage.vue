@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import BaseSnapshotPage from '@/views/snapshot/SnapshotPage.vue';
-import DeviceControlTools from '@/components/DeviceControlTools.vue';
+import DeviceControlTools from '@/components/plus/device/DeviceControlTools.vue';
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
-import SettingsModal from '@/components/SettingsModal.vue';
+import SettingsModal from '@/components/plus/settings/SettingsModal.vue';
 import TrackCard from '@/components/TrackCard.vue';
 import { usesnapshot } from '@/composables/plus/usesnapshot';
 import AttrCard from './AttrCard.vue';

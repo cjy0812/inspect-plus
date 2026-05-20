@@ -22,6 +22,10 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
 
 ## Done in this round
 
+- [x] Clarify Plus route Adapter layer
+  - [x] Treat `src/views/plus/*` as the route-level Adapter layer
+  - [x] Move root-level Plus-only components into `src/components/plus/<domain>/*`
+  - [x] Keep official/base file paths stable for future `main` merges
 - [x] Fix `/device` wrapper seam regression
   - [x] Restore `refreshSnapshots` as a real base-slot contract in `src/views/DevicePage.vue`
   - [x] Remove runtime `refreshSnapshots` undefined warnings observed in browser testing

@@ -95,7 +95,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { message } from '@/utils/discrete';
-import SvgIcon from './SvgIcon.vue';
+import SvgIcon from '@/components/SvgIcon.vue';
 import { getImportId } from '@/utils/url';
 import { settingsStore } from '@/store/storage';
 import { useDialogStore } from '@/store/dialog';
