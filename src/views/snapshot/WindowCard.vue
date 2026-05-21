@@ -2,17 +2,10 @@
 // ... 保持 import 不变 ...
 import ActionCard from '@/components/ActionCard.vue';
 import GapList from '@/components/GapList';
+import { useSnapshotWindowCard } from '@/composables/useSnapshotWindowCard';
 import { message } from '@/utils/discrete';
-import {
-  getAppInfo,
-  getDevice,
-  getGkdAppInfo,
-  getNodeLabel,
-  getNodeStyle,
-} from '@/utils/node';
 import { copy, delay } from '@/utils/others';
-import type { TreeInst, TreeOption, TreeProps } from 'naive-ui';
-import type { HTMLAttributes, ShallowRef, VNode } from 'vue';
+import type { ShallowRef, VNode } from 'vue';
 import { useSnapshotStore } from './snapshot';
 
 const slots = defineSlots<{
@@ -28,107 +21,32 @@ const { updateFocusNode, focusNode, focusTime } = snapshotStore;
 const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
 const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
 
-let lastClickId = Number.NaN;
-const expandedKeys = shallowRef<number[]>([]);
-const selectedKeys = shallowRef<number[]>([]);
-const treeRef = shallowRef<TreeInst>();
 const treeContainer = useTemplateRef('treeContainerRef');
-const toRawNode = (option: TreeOption): RawNode => option as RawNode;
-const rootTreeData = computed<TreeOption[]>(() =>
-  rootNode.value ? [rootNode.value as TreeOption] : [],
+const {
+  expandedKeys,
+  selectedKeys,
+  treeRef,
+  rootTreeData,
+  treeFilter,
+  treeNodeProps,
+  createRenderLabel,
+  app,
+  deviceName,
+  activityId,
+  gkdVersionName,
+  appVersionCodeText,
+} = useSnapshotWindowCard({
+  snapshot,
+  rootNode,
+  focusNode,
+  focusTime,
+  updateFocusNode,
+  treeContainer,
+});
+
+const renderLabel = createRenderLabel(({ option, label }) =>
+  slots.renderLabel?.({ option, label }),
 );
-watch([() => focusNode.value, () => focusTime.value], async () => {
-  if (!focusNode.value) return;
-  const key = focusNode.value.id;
-  nextTick().then(async () => {
-    await delay(300);
-    if (key === focusNode.value?.id) {
-      if (lastClickId === key) {
-        lastClickId = Number.NaN;
-        return;
-      }
-      selectedKeys.value = [key];
-      if (!treeContainer.value) return;
-      const nodeRef = treeContainer.value.querySelector(
-        `[data-node-id="${key}"]`,
-      );
-      if (nodeRef) {
-        nodeRef.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-      } else {
-        await delay(300);
-        treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
-      }
-    }
-  });
-  let parent = focusNode.value.parent;
-  if (!parent) return;
-  const s = new Set(expandedKeys.value);
-  while (parent) {
-    s.add(parent.id);
-    parent = parent.parent;
-  }
-  if (
-    s.size == expandedKeys.value.length &&
-    expandedKeys.value.every((v) => s.has(v))
-  )
-    return;
-  expandedKeys.value = [...s];
-});
-
-const treeFilter: NonNullable<TreeProps['filter']> = (_pattern, node) =>
-  toRawNode(node).id === focusNode.value?.id;
-
-const treeNodeProps: NonNullable<TreeProps['nodeProps']> = ({
-  option,
-}): HTMLAttributes & Record<string, unknown> => {
-  const rawNode = toRawNode(option);
-  const style = getNodeStyle(rawNode, focusNode.value);
-  return {
-    onClick: () => {
-      lastClickId = rawNode.id;
-      updateFocusNode(rawNode);
-    },
-    style: { '--n-node-text-color': style.color, ...style },
-    class: 'whitespace-nowrap',
-    'data-node-id': String(rawNode.id),
-  };
-};
-
-const renderLabel: NonNullable<TreeProps['renderLabel']> = ({ option }) => {
-  const rawNode = toRawNode(option);
-  const label = getNodeLabel(rawNode);
-  if (slots.renderLabel) return slots.renderLabel({ option: rawNode, label });
-  return label;
-};
-
-// --- 计算属性优化：提取 app 为内部变量，减少重复计算 ---
-const app = computed(() =>
-  snapshot.value ? getAppInfo(snapshot.value) : null,
-);
-
-const deviceName = computed(() => {
-  if (!snapshot.value) return '';
-  const device = getDevice(snapshot.value);
-  return `${device.manufacturer} Android ${device.release || ''}`;
-});
-
-const activityId = computed(() => {
-  if (!snapshot.value) return '';
-  const { activityId: v, appId } = snapshot.value;
-  if (!v || !appId) return '';
-  return v.startsWith(appId) && v[appId.length] === '.'
-    ? v.substring(appId.length)
-    : v;
-});
-
-const gkdVersionName = computed(() => {
-  if (!snapshot.value) return undefined;
-  const v = getGkdAppInfo(snapshot.value).versionName;
-  return v ? `GKD@${v}` : undefined;
-});
 
 const onDelete = async () => {
   message.success(`删除成功,即将回到首页`);
@@ -195,8 +113,8 @@ const onDelete = async () => {
 
         <NTooltip>
           <template #trigger>
-            <div @click="copy(app?.versionCode?.toString() || '')">
-              {{ app?.versionCode || '-' }}
+            <div @click="copy(appVersionCodeText)">
+              {{ appVersionCodeText || '-' }}
             </div>
           </template>
           版本代码

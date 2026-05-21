@@ -1,6 +1,6 @@
 # Refactor Todo
 
-Last updated: 2026-03-22
+Last updated: 2026-05-21
 
 ## Current focus
 
@@ -22,6 +22,10 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
 
 ## Done in this round
 
+- [x] Extract shared `WindowCard` seam
+  - [x] Add neutral `src/composables/useSnapshotWindowCard.ts`
+  - [x] Reuse shared tree state, focus scrolling, node props, and snapshot metadata in base and Plus `WindowCard`
+  - [x] Keep Plus-only quick-find label rendering inside `src/views/plus/snapshot/WindowCard.vue`
 - [x] Add first Adapter contract tests
   - [x] Add Vitest / Vue Test Utils test infrastructure
   - [x] Cover `HomePage` and `DevicePage` route-level slot wiring
