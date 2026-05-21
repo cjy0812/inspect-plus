@@ -10,7 +10,8 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
 
 - [ ] Snapshot seam cleanup
   - [ ] Continue moving Plus-only `snapshot.ts` behavior into neutral seams or `src/composables/plus/*`
-  - [ ] Reduce duplicated logic between base and plus `WindowCard` / `SearchCard`
+  - [x] Extract shared state/logic seams for base and Plus `WindowCard` / `SearchCard`
+  - [ ] Reduce remaining template-level duplication only where it does not increase upstream merge risk
 - [ ] Type tightening
   - [x] Replace high-risk `any` in `src/views/plus/snapshot/SearchCard.vue`
   - [x] Replace remaining high-risk `any` in `src/views/plus/snapshot/RuleCard.vue`
@@ -22,6 +23,10 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
 
 ## Done in this round
 
+- [x] Extract shared `SearchCard` seam
+  - [x] Add neutral `src/composables/useSnapshotSearchCard.ts`
+  - [x] Reuse selector/string search, query replay, rule generation, and share-link logic in base and Plus `SearchCard`
+  - [x] Keep Plus-only syntax preview and fast-query result decoration inside the Plus layer
 - [x] Extract shared `WindowCard` seam
   - [x] Add neutral `src/composables/useSnapshotWindowCard.ts`
   - [x] Reuse shared tree state, focus scrolling, node props, and snapshot metadata in base and Plus `WindowCard`
@@ -63,7 +68,7 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
 
 ## Next recommended order
 
-1. Continue reducing duplicated logic between base and plus `SearchCard` / `WindowCard`
-2. Add the first wrapper contract tests before further seam work
-3. Continue seam-first cleanup for `snapshot.ts`
+1. Continue seam-first cleanup for `snapshot.ts`
+2. Add parser tests for `RuleCard` / `useDeviceControlTools`
+3. Review remaining template-level duplication in snapshot cards only where the seam is stable
 4. Split the next large Plus-only block out of `RuleCard.vue` or `useDeviceControlTools.ts`

@@ -4,18 +4,11 @@ import SelectorText from '@/components/SelectorText.vue';
 import FastQueryIndicator from '@/components/plus/snapshot/FastQueryIndicator.vue';
 import SelectorSyntaxPreview from '@/components/plus/snapshot/SelectorSyntaxPreview.vue';
 import { useSearchCardPlus } from '@/composables/plus/useSearchCardPlus';
-import { message } from '@/utils/discrete';
-import { errorTry, errorWrap } from '@/utils/error';
-import { getAppInfo, getNodeLabel, getNodeStyle } from '@/utils/node';
-import { buildEmptyFn, copy } from '@/utils/others';
-import { parseSelector, wasmLoadTask } from '@/utils/selector';
+import { useSnapshotSearchCard } from '@/composables/useSnapshotSearchCard';
+import { getNodeLabel, getNodeStyle } from '@/utils/node';
+import { buildEmptyFn } from '@/utils/others';
 import { gkdWidth, vw } from '@/utils/size';
-import { getImagUrl } from '@/utils/url';
-import { FastQuery, GkdException, type QueryResult } from '@gkd-kit/selector';
-import dayjs from 'dayjs';
-import * as base64url from 'universal-base64url';
 import type { ShallowRef } from 'vue';
-import JSON5 from 'json5';
 import { useSnapshotStore } from './snapshot';
 import { buildFastQueryMeta } from '@/composables/plus/useFastQueryIndicator';
 
@@ -29,17 +22,12 @@ withDefaults(
   },
 );
 
-const route = useRoute();
-const { snapshotImportId, snapshotImageId } = useStorageStore();
-
 const snapshotStore = useSnapshotStore();
 const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
 const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
 const { focusNode, updateFocusNode } = snapshotStore;
 
 const searchText = shallowRef(``);
-const selectorResults = shallowReactive<SearchResult[]>([]);
-const expandedKeys = shallowRef<number[]>([]);
 const enableSearchBySelector = shallowRef(true);
 const {
   selectorSyntaxText,
@@ -51,232 +39,27 @@ const {
   searchText,
   enableSearchBySelector,
 });
-
-const searchSelector = (text: string, skipDuplicateCheck: boolean = false) => {
-  if (!rootNode.value) {
-    message.error('当前无可用节点树, 请尝试刷新页面');
-    return;
-  }
-  const selector = errorWrap(
-    () => parseSelector(text),
-    (e) => {
-      if (typeof e == 'string') return e;
-      if (e instanceof GkdException) return `非法选择器:` + e.outMessage;
-      return `非法选择器:` + (e instanceof Error ? e.message : e);
-    },
-  );
-  if (
-    !skipDuplicateCheck &&
-    selectorResults.find(
-      (s) =>
-        typeof s.selector == 'object' &&
-        s.selector.toString() == selector.toString(),
-    )
-  ) {
-    message.warning(`不可重复选择`);
-    return;
-  }
-
-  const results = selector.querySelfOrSelectorAllContext(rootNode.value);
-  // 修正 1: 将 QueryResult 转换为真正的数组以适配 TS 和后续的 map 操作
-  const resultsArray = Array.from<QueryResult<RawNode>>(results);
-
-  if (resultsArray.length == 0) {
-    message.success(`没有选择到节点`);
-    return;
-  }
-  message.success(`选择到 ${resultsArray.length} 个节点`);
-  const result: SelectorSearchResult = {
-    selector,
-    nodes: resultsArray.map((r) => r.target),
-    results: resultsArray,
-    key: Date.now(),
-    gkd: true,
-  };
-  result.fastQueryMeta = buildFastQueryMeta(result);
-  selectorResults.unshift(result);
-  return resultsArray.length;
-};
-
-const searchString = (text: string) => {
-  if (!rootNode.value) {
-    message.error('当前无可用节点树');
-    return;
-  }
-  if (
-    selectorResults.find(
-      (s) => typeof s.selector == 'string' && s.selector.toString() == text,
-    )
-  ) {
-    message.warning(`不可重复搜索`);
-    return;
-  }
-  const results: RawNode[] = [];
-  const stack: RawNode[] = [rootNode.value];
-  while (stack.length > 0) {
-    const n = stack.pop()!;
-    if (getNodeLabel(n).includes(text)) {
-      results.push(n);
-    }
-    stack.push(...[...n.children].reverse());
-  }
-  if (results.length == 0) {
-    message.success(`没有搜索到节点`);
-    return;
-  }
-  message.success(`搜索到 ${results.length} 个节点`);
-  selectorResults.unshift({
-    gkd: false,
-    selector: text,
-    nodes: results,
-    key: Date.now(),
-    fastQueryMeta: null,
-  });
-  return results.length;
-};
-
-const refreshExpandedKeys = () => {
-  const newResult = selectorResults[0];
-  const newNode = newResult.nodes[0];
-  if (!Array.isArray(newNode)) {
-    updateFocusNode(newNode);
-  } else if (typeof newResult.selector == 'object') {
-    updateFocusNode(newNode);
-  }
-  const allKeys = new Set(selectorResults.map((s) => s.key));
-  const newKeys = expandedKeys.value.filter((k) => allKeys.has(k));
-  newKeys.push(newResult.key);
-  expandedKeys.value = newKeys;
-};
-
-const searchBySelector = errorTry(() => {
-  const text = searchText.value.trim();
-  if (!text) return;
-  if (enableSearchBySelector.value) {
-    if (!searchSelector(text)) return;
-  } else {
-    if (!searchString(text)) return;
-  }
-  refreshExpandedKeys();
+const {
+  selectorResults,
+  expandedKeys,
+  searchBySelector,
+  generateRules,
+  hasZipId,
+  shareResult,
+} = useSnapshotSearchCard({
+  snapshot,
+  rootNode,
+  updateFocusNode,
+  searchText,
+  enableSearchBySelector,
+  resolveImportUrl,
+  decorateSelectorResult: (result) => {
+    result.fastQueryMeta = buildFastQueryMeta(result);
+  },
+  decorateStringResult: (result) => {
+    result.fastQueryMeta = null;
+  },
 });
-
-onMounted(async () => {
-  await wasmLoadTask;
-  let count = 0;
-
-  const toArray = (param: unknown): string[] => {
-    if (Array.isArray(param)) {
-      return param.filter((item): item is string => typeof item === 'string');
-    }
-    if (typeof param === 'string') {
-      return [param];
-    }
-    return [];
-  };
-
-  const gkdParams = toArray(route.query.gkd);
-  const uniqueGkdParams = [...new Set(gkdParams)];
-  for (const item of uniqueGkdParams) {
-    try {
-      const decoded = base64url.decode(item);
-      count += searchSelector(decoded, true) || 0;
-    } catch (e) {
-      // 忽略非法 Base64
-      console.warn('Invalid gkd parameter:', item, e);
-    }
-  }
-
-  const strParams = toArray(route.query.str);
-  const uniqueStrParams = [...new Set(strParams)];
-  for (const item of uniqueStrParams) {
-    count += searchString(item) || 0;
-  }
-
-  if (count > 0) {
-    refreshExpandedKeys();
-  }
-});
-
-const generateRules = errorTry(async (result: SelectorSearchResult) => {
-  if (!snapshot.value) {
-    message.error('当前无可用快照数据');
-    return;
-  }
-  const imageId = snapshotImageId[snapshot.value.id];
-  const importId = snapshotImportId[snapshot.value.id];
-  const snapshotUrls = importId ? resolveImportUrl(importId) : undefined;
-  const exampleUrls = imageId ? getImagUrl(imageId) : undefined;
-
-  const s = result.selector;
-  // 修正 2: 显式类型转换以修复 .map 报错
-  // 使用 Array.from 配合 unknown 转换，这是最符合 TS 规范的绕过方式
-  const t = result.results[0]?.context.toArray().at(-1);
-  if (!t) {
-    message.error('无法提取选择器路径信息');
-    return;
-  }
-
-  const fastQuery = [
-    (t.quickFind ?? t.idQf) &&
-      t.attr.id &&
-      s.fastQueryList.some(
-        (v) => v instanceof FastQuery.Id && v.acceptText(t.attr.id!),
-      ),
-    (t.quickFind ?? t.idQf) &&
-      t.attr.vid &&
-      s.fastQueryList.some(
-        (v) => v instanceof FastQuery.Vid && v.acceptText(t.attr.vid!),
-      ),
-    (t.quickFind ?? t.textQf) &&
-      t.attr.text &&
-      s.fastQueryList.some(
-        (v) => v instanceof FastQuery.Text && v.acceptText(t.attr.text!),
-      ),
-  ].some(Boolean);
-  const rule = {
-    id: snapshot.value.appId,
-    name: getAppInfo(snapshot.value).name,
-    groups: [
-      {
-        key: 1,
-        name: `[ChangeMe]规则名称-${dayjs().format('YYYY-MM-DD HH:mm:ss')}`,
-        desc: `[ChangeMe]本规则由GKD网页端审查工具生成`,
-        rules: [
-          {
-            fastQuery: fastQuery || undefined,
-            activityIds: snapshot.value.activityId,
-            matches: s.toString(),
-            exampleUrls,
-            snapshotUrls,
-          },
-        ],
-      },
-    ],
-  };
-
-  copy(JSON5.stringify(rule, undefined, 2));
-});
-
-const hasZipId = computed(() => {
-  if (!snapshot.value) return false;
-  return snapshotImportId[snapshot.value.id];
-});
-
-const shareResult = (result: SearchResult) => {
-  if (!hasZipId.value || !snapshot.value) return;
-  const importUrl = new URL(
-    resolveImportUrl(snapshotImportId[snapshot.value.id]),
-  );
-  if (typeof result.selector == 'object') {
-    importUrl.searchParams.set(
-      'gkd',
-      base64url.encode(result.selector.toString()),
-    );
-  } else {
-    importUrl.searchParams.set('str', result.selector.toString());
-  }
-  copy(importUrl.toString());
-};
 </script>
 
 <template>
