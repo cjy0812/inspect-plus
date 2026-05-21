@@ -15,7 +15,7 @@ export const useTask = <T extends (...args: any[]) => Promise<void>>(
   handler?: (error: any) => void,
 ) => {
   let loading = false;
-  const loadingRef = customRef((track, trigger) => {
+  const loadingRef = customRef<boolean>((track, trigger) => {
     return {
       get() {
         track();
@@ -28,7 +28,7 @@ export const useTask = <T extends (...args: any[]) => Promise<void>>(
     };
   });
   return {
-    get loading() {
+    get loading(): boolean {
       return loadingRef.value;
     },
     invoke: async (...args: Parameters<T>) => {
