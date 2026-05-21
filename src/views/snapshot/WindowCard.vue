@@ -44,8 +44,8 @@ const {
   treeContainer,
 });
 
-const renderLabel = createRenderLabel(({ option, label }) =>
-  slots.renderLabel?.({ option, label }),
+const renderLabel = createRenderLabel(
+  ({ option, label }) => slots.renderLabel?.({ option, label }) ?? label,
 );
 
 const onDelete = async () => {
