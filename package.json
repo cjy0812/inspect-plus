@@ -10,6 +10,8 @@
     "build:mirror": "cross-env MIRROR=ON vite build",
     "preview": "vite preview",
     "build-only": "vite build",
+    "test": "vitest",
+    "test:run": "vitest run",
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint --cache --fix .",
     "format": "prettier --cache --write --ignore-unknown .",
@@ -103,6 +105,9 @@
     ]
   },
   "devDependencies": {
+    "@vue/test-utils": "^2.4.10",
+    "happy-dom": "^20.9.0",
+    "vitest": "^4.1.7",
     "vue-tsc": "^3.2.5",
     "wrangler": "^4.93.0"
   }

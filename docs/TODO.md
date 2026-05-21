@@ -17,11 +17,14 @@ Keep `offical` mergeable while reducing Plus-only runtime risk.
   - [x] Replace remaining high-risk `any` in `src/composables/plus/useDeviceControlTools.ts`
   - [x] Replace tree prop casts in `src/views/snapshot/WindowCard.vue` and `src/views/plus/snapshot/WindowCard.vue`
 - [ ] Tests
-  - [ ] Add wrapper contract tests for `HomePage` / `DevicePage`
+  - [x] Add wrapper contract tests for `HomePage` / `DevicePage`
   - [ ] Add parser tests for `RuleCard` / `useDeviceControlTools`
 
 ## Done in this round
 
+- [x] Add first Adapter contract tests
+  - [x] Add Vitest / Vue Test Utils test infrastructure
+  - [x] Cover `HomePage` and `DevicePage` route-level slot wiring
 - [x] Clarify Plus route Adapter layer
   - [x] Treat `src/views/plus/*` as the route-level Adapter layer
   - [x] Move root-level Plus-only components into `src/components/plus/<domain>/*`

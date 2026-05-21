@@ -1,6 +1,12 @@
 {
   "extends": "@tsconfig/node20/tsconfig.json",
-  "include": ["vite.config.*", "eslint.config.ts", "plugins", "scripts"],
+  "include": [
+    "vite.config.*",
+    "vitest.config.*",
+    "eslint.config.ts",
+    "plugins",
+    "scripts"
+  ],
   "compilerOptions": {
     "composite": true,
     "noEmit": true,
