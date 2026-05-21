@@ -1,17 +1,10 @@
 <script setup lang="tsx">
 import ActionCard from '@/components/ActionCard.vue';
 import GapList from '@/components/GapList';
+import { useSnapshotWindowCard } from '@/composables/useSnapshotWindowCard';
 import { message } from '@/utils/discrete';
-import {
-  getAppInfo,
-  getDevice,
-  getGkdAppInfo,
-  getNodeLabel,
-  getNodeStyle,
-} from '@/utils/node';
 import { copy, delay } from '@/utils/others';
-import type { TreeInst, TreeOption, TreeProps } from 'naive-ui';
-import type { HTMLAttributes, ShallowRef } from 'vue';
+import type { ShallowRef } from 'vue';
 import { h } from 'vue';
 import SvgIcon from '@/components/SvgIcon.vue';
 import { useWindowQuickFind } from '@/composables/plus/useWindowQuickFind';
@@ -25,73 +18,29 @@ const snapshot = snapshotStore.snapshot as ShallowRef<Snapshot>;
 const rootNode = snapshotStore.rootNode as ShallowRef<RawNode>;
 const { getNodeQuickFindMeta } = useWindowQuickFind(rootNode);
 
-let lastClickId = Number.NaN;
-const expandedKeys = shallowRef<number[]>([]);
-const selectedKeys = shallowRef<number[]>([]);
-const treeRef = shallowRef<TreeInst>();
-const toRawNode = (option: TreeOption): RawNode => option as RawNode;
-const rootTreeData = computed<TreeOption[]>(() =>
-  rootNode.value ? [rootNode.value as TreeOption] : [],
-);
-
-watch([() => focusNode.value, () => focusTime.value], async () => {
-  if (!focusNode.value) return;
-  const key = focusNode.value.id;
-  nextTick().then(async () => {
-    await delay(300);
-    if (key === focusNode.value?.id) {
-      if (lastClickId === key) {
-        // 当点击节点树中的节点时, 不滚动
-        lastClickId = Number.NaN;
-        return;
-      }
-      selectedKeys.value = [key];
-      treeRef.value?.scrollTo({ key, behavior: 'smooth', debounce: true });
-    }
-  });
-  let parent = focusNode.value.parent;
-  if (!parent) {
-    return;
-  }
-  const s = new Set(expandedKeys.value);
-  while (parent) {
-    s.add(parent.id);
-    parent = parent.parent;
-  }
-  if (
-    s.size == expandedKeys.value.length &&
-    expandedKeys.value.every((v) => s.has(v))
-  ) {
-    return;
-  }
-  expandedKeys.value = [...s];
+const {
+  expandedKeys,
+  selectedKeys,
+  treeRef,
+  rootTreeData,
+  treeFilter,
+  treeNodeProps,
+  createRenderLabel,
+  app,
+  deviceName,
+  activityId,
+  gkdVersionName,
+  appVersionCodeText,
+  isSystem,
+} = useSnapshotWindowCard({
+  snapshot,
+  rootNode,
+  focusNode,
+  focusTime,
+  updateFocusNode,
 });
 
-const treeFilter: NonNullable<TreeProps['filter']> = (_pattern, node) => {
-  return toRawNode(node).id === focusNode.value?.id;
-};
-const treeNodeProps: NonNullable<TreeProps['nodeProps']> = ({
-  option,
-}): HTMLAttributes & Record<string, unknown> => {
-  const rawNode = toRawNode(option);
-  const style = getNodeStyle(rawNode, focusNode.value);
-  return {
-    onClick: () => {
-      lastClickId = rawNode.id;
-      updateFocusNode(rawNode);
-    },
-    style: {
-      '--n-node-text-color': style.color,
-      ...style,
-    },
-    class: 'whitespace-nowrap',
-    'data-node-id': String(rawNode.id),
-  };
-};
-
-const renderLabel: NonNullable<TreeProps['renderLabel']> = ({ option }) => {
-  const rawNode = toRawNode(option);
-  const label = getNodeLabel(rawNode);
+const renderLabel = createRenderLabel(({ option: rawNode, label }) => {
   const meta = getNodeQuickFindMeta(rawNode);
   if (!meta?.has) {
     return label;
@@ -128,34 +77,6 @@ const renderLabel: NonNullable<TreeProps['renderLabel']> = ({ option }) => {
       }),
     ],
   );
-};
-
-const deviceName = computed(() => {
-  // 1. 如果没有快照，返回空字符串或占位符
-  if (!snapshot.value) return '';
-  const device = getDevice(snapshot.value);
-  return `${device.manufacturer} Android ${device.release || ''}`;
-});
-
-const isSystem = computed(() => {
-  // 2. 增加可选链 ?. 防御，防止 snapshot 为空时调用 getAppInfo 崩溃
-  if (!snapshot.value) return false;
-  return getAppInfo(snapshot.value)?.isSystem ?? false;
-});
-
-const activityId = computed(() => {
-  // 3. 这里的 snapshot.value.activityId 在初始状态下会直接报错
-  const snap = snapshot.value;
-  if (!snap) return '';
-
-  const v = snap.activityId;
-  const appId = snap.appId;
-  if (!v || !appId) return '';
-
-  if (v.startsWith(appId) && v[appId.length] === '.') {
-    return v.substring(appId.length);
-  }
-  return v;
 });
 
 const onDelete = async () => {
@@ -165,16 +86,6 @@ const onDelete = async () => {
     path: `/`,
   });
 };
-const gkdVersionName = computed(() => {
-  if (!snapshot.value) return undefined;
-  const v = getGkdAppInfo(snapshot.value).versionName;
-  return v ? `GKD@${v}` : undefined;
-});
-const appVersionCodeText = computed(() => {
-  if (!snapshot.value) return '';
-  const versionCode = getAppInfo(snapshot.value)?.versionCode;
-  return versionCode == null ? '' : String(versionCode);
-});
 </script>
 
 <template>
@@ -207,7 +118,7 @@ const appVersionCodeText = computed(() => {
         </NTooltip>
 
         <div flex items-center gap-2px max-w-120px>
-          <NTooltip v-if="isSystem && snapshot">
+          <NTooltip v-if="isSystem && app">
             <template #trigger>
               <SvgIcon
                 name="system"
@@ -215,14 +126,13 @@ const appVersionCodeText = computed(() => {
                 class="text-yellow-600"
               />
             </template>
-            {{ `${getAppInfo(snapshot).name} 是一个系统应用` }}
+            {{ `${app.name} 是一个系统应用` }}
           </NTooltip>
           <NTooltip>
             <template #trigger>
-              <div v-if="snapshot" @click="copy(getAppInfo(snapshot).name)">
-                {{ getAppInfo(snapshot).name }}
+              <div @click="copy(app?.name || '')">
+                {{ app?.name || '-' }}
               </div>
-              <div v-else>-</div>
             </template>
             应用名称
           </NTooltip>
@@ -230,13 +140,9 @@ const appVersionCodeText = computed(() => {
 
         <NTooltip>
           <template #trigger>
-            <div
-              v-if="snapshot"
-              @click="copy(getAppInfo(snapshot).versionName)"
-            >
-              {{ getAppInfo(snapshot).versionName }}
+            <div @click="copy(app?.versionName || '')">
+              {{ app?.versionName || '-' }}
             </div>
-            <div v-else>-</div>
           </template>
           版本名称
         </NTooltip>
