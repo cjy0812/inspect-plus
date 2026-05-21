@@ -35,9 +35,12 @@ export function useSnapshotWindowCard(options: {
   const expandedKeys = shallowRef<number[]>([]);
   const selectedKeys = shallowRef<number[]>([]);
   const treeRef = shallowRef<TreeInst>();
-  const toRawNode = (option: TreeOption): RawNode => option as RawNode;
+  const toRawNode = (option: TreeOption): RawNode =>
+    option as unknown as RawNode;
   const rootTreeData = computed<TreeOption[]>(() =>
-    options.rootNode.value ? [options.rootNode.value as TreeOption] : [],
+    options.rootNode.value
+      ? [options.rootNode.value as unknown as TreeOption]
+      : [],
   );
 
   watch(
