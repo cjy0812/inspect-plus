@@ -220,7 +220,7 @@ const validateAndNormalizeRuleCandidate = (
 
     if ('actionMaximum' in obj) {
       const v = obj.actionMaximum;
-      if (!(Number.isInteger(v) && v >= 0)) {
+      if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) {
         return {
           success: false,
           error: '非法字段: actionMaximum 必须为非负整数',

@@ -10,7 +10,6 @@ on:
 permissions:
   id-token: write
   contents: write
-  pages: write # GitHub Pages 部署权限
 
 jobs:
   deploy:
@@ -22,38 +21,27 @@ jobs:
         with:
           node-version: latest
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm exec tsx ./scripts/updateVersion.ts
-      - run: pnpm run build:cf
+      - run: pnpm run build:mirror
+      - run: pnpm publish --no-git-checks
 
-      # --- 容错处理开始 ---
-
-      - name: Publish package
-        continue-on-error: true # 如果 NPM 发布失败（Token报错），跳过并继续
-        run: |
-          pnpm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
-          pnpm publish --no-git-checks
-
-      # 1. Cloudflare Pages 部署
-      - name: Deploy to Cloudflare Pages
-        continue-on-error: true # 如果 CF 部署失败（项目名报错），跳过并继续
-        uses: cloudflare/wrangler-action@v3
+      - uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=inspect-plus
+          command: pages deploy dist --project-name=gkd-inspect
 
-      # 2. GitHub Pages 部署
-      - name: Upload GitHub Pages artifact
-        continue-on-error: true
-        uses: actions/upload-pages-artifact@v3
+      - uses: nwtgck/actions-netlify@v3
         with:
-          path: ./dist
-
-      - name: Deploy to GitHub Pages
-        continue-on-error: true # 如果 GH Pages 部署失败，不影响整个流程结束
-        id: deployment
-        uses: actions/deploy-pages@v4
+          publish-dir: ./dist
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: 'Deploy from GitHub Actions'
+          enable-pull-request-comment: false
+          enable-commit-comment: false
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
