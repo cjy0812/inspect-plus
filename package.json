@@ -7,8 +7,6 @@
     "build": "vite build",
     "build:gh": "cross-env BASE_URL=/inspect-plus/ vite build",
     "build:cf": "cross-env BASE_URL=/ vite build",
-    "prebuild:mirror": "node ./scripts/updateVersion.ts",
-    "build:mirror": "cross-env MIRROR=ON vite build",
     "preview": "vite preview",
     "build-only": "vite build",
     "test": "vitest",
@@ -16,20 +14,12 @@
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint --cache --fix .",
     "format": "prettier --cache --write --ignore-unknown .",
-    "postinstall": "simple-git-hooks",
-    "postpublish": "curl -X PUT https://registry-direct.npmmirror.com/@gkd-kit/inspect/sync"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
+    "postinstall": "simple-git-hooks"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/gkd-kit/inspect"
   },
-  "files": [
-    "./dist"
-  ],
   "dependencies": {
     "@antv/g6": "5.1.1",
     "@eslint/js": "10.0.1",
