@@ -430,7 +430,7 @@ const setCheckedRowKeys = (keys: number[]) => {
             <template #trigger>
               <a
                 flex
-                href="https://github.com/gkd-kit/inspect"
+                href="https://github.com/cjy0812/inspect-plus"
                 target="_blank"
                 rel="noopener noreferrer"
               >
