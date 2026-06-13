@@ -34,7 +34,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm run build:gh
-      - run: pnpm publish --no-git-checks
 
       - uses: actions/configure-pages@v5
 
