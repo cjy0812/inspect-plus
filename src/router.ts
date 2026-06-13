@@ -9,7 +9,7 @@ const recordModule = <T, S extends () => T>(v: S): S => {
 };
 
 const snapshotPage = recordModule(
-  () => import('@/views/snapshot/SnapshotPage.vue'),
+  () => import('@/views/plus/snapshot/SnapshotPage.vue'),
 );
 
 const getGithubAssetId = (v: unknown) => {
