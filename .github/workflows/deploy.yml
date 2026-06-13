@@ -27,13 +27,14 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: latest
+          node-version-file: package.json
 
       - uses: pnpm/action-setup@v6
 
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm run build:gh
+      - run: pnpm publish --no-git-checks
 
       - uses: actions/configure-pages@v5
 

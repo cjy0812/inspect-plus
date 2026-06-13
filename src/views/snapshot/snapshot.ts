@@ -5,11 +5,13 @@ import {
 } from '@/utils/export';
 import { useArrayBufferObjectUrl } from '@/composables/useArrayBufferObjectUrl';
 import { gmOk } from '@/utils/gm';
+import { importFromNetwork } from '@/utils/import';
 import { findNodesByXy, getAppInfo, listToTree } from '@/utils/node';
 import { toFixedNumber, toInteger } from '@/utils/others';
 import type { ResolvedSelector } from '@/utils/selector';
 import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 import { useTask } from '@/utils/task';
+import { getImportFileUrl } from '@/utils/url';
 import type { QueryResult } from '@gkd-kit/selector';
 
 if (import.meta.hot) {
@@ -24,19 +26,38 @@ const getRemoteImportId = async (id: number): Promise<number> => {
     .catch(() => 0);
 };
 
+type SnapshotRouteSource =
+  | { type: 'snapshot'; snapshotId: number }
+  | { type: 'import'; importId: number }
+  | undefined;
+
+const getGithubAssetId = (v: unknown): number | undefined => {
+  return toInteger(String(v).match(/^\d+/)?.[0]);
+};
+
 export const useSnapshotStore = createSharedComposable(() => {
   const route = useRoute();
   const router = useRouter();
 
+  const routeSource = computed<SnapshotRouteSource>(() => {
+    const snapshotId = toInteger(route.params.snapshotId);
+    if (snapshotId) {
+      return { type: 'snapshot', snapshotId };
+    }
+    const importId = getGithubAssetId(route.params.github_asset_id);
+    if (importId) {
+      return { type: 'import', importId };
+    }
+    return undefined;
+  });
   const snapshotId = shallowRef<number>();
-  watchImmediate(
-    () => route.params.snapshotId,
-    (v) => {
-      snapshotId.value = toInteger(v);
-    },
-  );
   const importId = computed(() => {
-    if (snapshotId.value) return snapshotImportId[snapshotId.value];
+    if (snapshotId.value) {
+      return snapshotImportId[snapshotId.value];
+    }
+    if (routeSource.value?.type == 'import') {
+      return routeSource.value.importId;
+    }
     return undefined;
   });
   const imageId = computed(() => {
@@ -53,36 +74,104 @@ export const useSnapshotStore = createSharedComposable(() => {
   const screenshot = shallowRef<ArrayBuffer>();
   const { url: screenshotUrl } = useArrayBufferObjectUrl(screenshot);
   const redirected = shallowRef(false);
-  const update = useTask(async (id: number | undefined) => {
-    redirected.value = false;
-    if (!id) {
-      snapshot.value = undefined;
-      screenshot.value = undefined;
-      return;
-    }
-    await Promise.all([
-      snapshotStorage.getItem(id).then((r) => {
-        snapshot.value = r || undefined;
-      }),
-      screenshotStorage.getItem(id).then((r) => {
-        screenshot.value = r || undefined;
-      }),
+  const resetSnapshot = () => {
+    snapshotId.value = undefined;
+    snapshot.value = undefined;
+    screenshot.value = undefined;
+  };
+  const loadLocalSnapshot = async (id: number) => {
+    snapshotId.value = id;
+    const [localSnapshot, localScreenshot] = await Promise.all([
+      snapshotStorage.getItem(id),
+      screenshotStorage.getItem(id),
     ]);
-    if (!snapshot.value) {
-      const remoteImportId =
-        snapshotImportId[id] || (await getRemoteImportId(id));
-      if (remoteImportId && Number.isSafeInteger(remoteImportId)) {
-        redirected.value = true;
-        router.replace({
-          path: '/i/' + remoteImportId,
-          query: route.query,
-        });
-        return;
+    snapshot.value = localSnapshot || undefined;
+    screenshot.value = localSnapshot ? localScreenshot || undefined : undefined;
+    return Boolean(localSnapshot);
+  };
+  const findSnapshotIdByImportId = (id: number) => {
+    const entry = Object.entries(snapshotImportId).find(([, v]) => v == id);
+    return toInteger(entry?.[0]);
+  };
+  const loadImportSnapshot = async (id: number) => {
+    const localSnapshotId =
+      importSnapshotId[id] || findSnapshotIdByImportId(id);
+    if (localSnapshotId) {
+      const hasSnapshot = await loadLocalSnapshot(localSnapshotId);
+      if (hasSnapshot) {
+        importSnapshotId[id] = localSnapshotId;
+        snapshotImportId[localSnapshotId] = id;
+        return true;
+      }
+      delete importSnapshotId[id];
+      if (snapshotImportId[localSnapshotId] == id) {
+        delete snapshotImportId[localSnapshotId];
       }
     }
+
+    const [remoteSnapshot] =
+      (await importFromNetwork(getImportFileUrl(id))) || [];
+    if (remoteSnapshot?.id) {
+      importSnapshotId[id] = remoteSnapshot.id;
+      snapshotImportId[remoteSnapshot.id] = id;
+      await loadLocalSnapshot(remoteSnapshot.id);
+      return true;
+    }
+    resetSnapshot();
+    return false;
+  };
+  const update = useTask(async (source: SnapshotRouteSource) => {
+    redirected.value = false;
+    if (!source) {
+      resetSnapshot();
+      return;
+    }
+
+    if (source.type == 'snapshot') {
+      const hasSnapshot = await loadLocalSnapshot(source.snapshotId);
+      const localImportId = snapshotImportId[source.snapshotId];
+      if (localImportId) {
+        importSnapshotId[localImportId] = source.snapshotId;
+        redirected.value = !hasSnapshot;
+        router.replace({
+          path: '/i/' + localImportId,
+          query: route.query,
+        });
+        if (!hasSnapshot) {
+          await loadImportSnapshot(localImportId);
+          redirected.value = false;
+        }
+        return;
+      }
+
+      if (!hasSnapshot) {
+        const remoteImportId = await getRemoteImportId(source.snapshotId);
+        if (remoteImportId && Number.isSafeInteger(remoteImportId)) {
+          redirected.value = true;
+          router.replace({
+            path: '/i/' + remoteImportId,
+            query: route.query,
+          });
+          await loadImportSnapshot(remoteImportId);
+          redirected.value = false;
+          return;
+        }
+      }
+      return;
+    }
+
+    await loadImportSnapshot(source.importId);
   });
   const loading = computed(() => update.loading);
-  watchImmediate(() => snapshotId.value, update.invoke);
+  watchImmediate(() => routeSource.value, update.invoke);
+  watchEffect(() => {
+    if (routeSource.value?.type == 'snapshot' && importId.value) {
+      router.replace({
+        path: '/i/' + importId.value,
+        query: route.query,
+      });
+    }
+  });
   watchEffect(() => {
     if (
       importId.value &&

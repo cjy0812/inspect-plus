@@ -1,5 +1,4 @@
 import { toValidURL } from '@/utils/check';
-import { getImportFileUrl } from '@/utils/url';
 import type { RouteRecordRedirectOption } from 'vue-router';
 import { createRouter, createWebHistory } from 'vue-router';
 
@@ -9,17 +8,22 @@ const recordModule = <T, S extends () => T>(v: S): S => {
   return v;
 };
 
+const snapshotPage = recordModule(
+  () => import('@/views/snapshot/SnapshotPage.vue'),
+);
+
+const getGithubAssetId = (v: unknown) => {
+  return String(v).match(/^\d+/)?.[0]; // 丢弃非法字符
+};
+
 const redirectImport: RouteRecordRedirectOption = (to) => {
-  const github_asset_id = String(to.params.github_asset_id).match(/^\d+/)?.[0]; // 丢弃非法字符
+  const github_asset_id = getGithubAssetId(to.params.github_asset_id);
   if (!github_asset_id) {
     return { path: '/404' };
   }
   return {
-    path: '/i',
-    query: {
-      ...to.query,
-      url: getImportFileUrl(github_asset_id),
-    },
+    path: '/i/' + github_asset_id,
+    query: to.query,
   };
 };
 
@@ -34,9 +38,7 @@ const router = createRouter({
     {
       path: '/snapshot/:snapshotId',
       name: 'snapshot',
-      component: recordModule(
-        () => import('@/views/plus/snapshot/SnapshotPage.vue'),
-      ),
+      component: snapshotPage,
       meta: { title: '快照' },
     },
     {
@@ -46,7 +48,21 @@ const router = createRouter({
     },
     {
       path: '/i/:github_asset_id',
-      redirect: redirectImport,
+      component: snapshotPage,
+      beforeEnter(to, _, next) {
+        const github_asset_id = getGithubAssetId(to.params.github_asset_id);
+        if (!github_asset_id) {
+          return next({ path: '/404' });
+        }
+        if (github_asset_id != String(to.params.github_asset_id)) {
+          return next({
+            path: '/i/' + github_asset_id,
+            query: to.query,
+          });
+        }
+        next();
+      },
+      meta: { title: '快照' },
     },
     {
       path: '/:github_asset_id(\\d+)',

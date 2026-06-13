@@ -41,6 +41,10 @@ const exportJpg = useTask(async () => exportSnapshotAsImage(props.snapshot));
 const exportZip = useTask(async () => exportSnapshotAsZip(props.snapshot));
 
 const previewUrl = computed(() => {
+  const importId = snapshotImportId[props.snapshot.id];
+  if (importId) {
+    return router.resolve({ path: `/i/${importId}` }).href;
+  }
   return router.resolve({
     name: 'snapshot',
     params: { snapshotId: props.snapshot.id },
