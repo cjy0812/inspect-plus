@@ -198,11 +198,13 @@ export function useHomePlus(options: UseHomePlusOptions) {
 
   const goToSnapshot = (snapshotId: number) => {
     snapshotViewedTime[snapshotId] = Date.now();
-    router.push({
-      name: 'snapshot',
-      params: { snapshotId },
-      query: filterQuery(route.query, ['str', 'gkd']),
-    });
+    window.open(
+      router.resolve({
+        name: 'snapshot',
+        params: { snapshotId },
+        query: filterQuery(route.query, ['str', 'gkd']),
+      }).href,
+    );
   };
 
   const getItemShortTimeText = (item: Snapshot) =>
