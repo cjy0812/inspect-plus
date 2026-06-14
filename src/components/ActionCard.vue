@@ -107,7 +107,7 @@ const copy = async (content: string) => {
   <div flex gap-16px>
     <NTooltip v-if="showPreview">
       <template #trigger>
-        <a flex target="_blank" :href="previewUrl">
+        <a flex target="_blank" rel="noopener noreferrer" :href="previewUrl">
           <NButton text>
             <template #icon>
               <SvgIcon name="code" />
