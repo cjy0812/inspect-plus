@@ -12,10 +12,6 @@ const props = defineProps<{
     loading: Record<number, boolean | undefined>;
     invoke: (row: Snapshot) => unknown;
   };
-  deleteSnapshot: {
-    loading: Record<number, boolean | undefined>;
-    invoke: (row: Snapshot) => unknown;
-  };
 }>();
 
 const emit = defineEmits<{
@@ -34,6 +30,7 @@ const {
   checkedSet,
   snapshotViewedTime,
   batchDelete,
+  deleteSnapshot,
   previewUrlMap,
   previewLoadingMap,
   previewErrorMap,
@@ -299,8 +296,8 @@ const {
                         <NButton
                           text
                           type="error"
-                          :loading="props.deleteSnapshot.loading[item.id]"
-                          @click="props.deleteSnapshot.invoke(item)"
+                          :loading="deleteSnapshot.loading[item.id]"
+                          @click="deleteSnapshot.invoke(item)"
                         >
                           <template #icon><SvgIcon name="delete" /></template>
                         </NButton>

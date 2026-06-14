@@ -181,6 +181,33 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
     (row) => row.id,
   );
 
+  const deleteSnapshot = useBatchTask(
+    async (row: Snapshot) => {
+      const confirmed = await new Promise<boolean>((res) => {
+        dialog.warning({
+          title: '删除快照',
+          content: `是否确认删除快照 ID: ${row.id}？此操作不可恢复。`,
+          positiveText: '确认删除',
+          negativeText: '取消',
+          onPositiveClick: () => res(true),
+          onNegativeClick: () => res(false),
+          onClose: () => res(false),
+        });
+      });
+      if (!confirmed) return;
+      await api.deleteSnapshot({ id: row.id });
+      await Promise.all([
+        snapshotStorage.removeItem(row.id),
+        screenshotStorage.removeItem(row.id),
+      ]);
+      options.checkedRowKeys.value = options.checkedRowKeys.value.filter(
+        (id) => id !== row.id,
+      );
+      message.success('删除成功');
+    },
+    (r) => r.id,
+  );
+
   const batchDelete = useTask(async () => {
     await new Promise((resolve, reject) => {
       dialog.warning({
@@ -244,6 +271,7 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
     checkedSet,
     snapshotViewedTime,
     batchDelete,
+    deleteSnapshot,
     previewUrlMap,
     previewLoadingMap,
     previewErrorMap,
