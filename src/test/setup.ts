@@ -23,26 +23,14 @@ vi.mock('@/components/SvgIcon.vue', () => ({
 vi.mock('naive-ui', () => ({
   NTooltip: defineComponent({
     name: 'NTooltipStub',
-    setup(
-      _: unknown,
-      { slots }: { slots: Record<string, () => ReturnType<typeof h>> },
-    ) {
+    setup(_: unknown, { slots }: any) {
       return () => h('div', [slots.trigger?.(), slots.default?.()]);
     },
   }),
   NButton: defineComponent({
     name: 'NButtonStub',
     emits: ['click'],
-    setup(
-      _: unknown,
-      {
-        emit,
-        slots,
-      }: {
-        emit: (e: string) => void;
-        slots: Record<string, () => ReturnType<typeof h>>;
-      },
-    ) {
+    setup(_: unknown, { emit, slots }: any) {
       return () =>
         h(
           'button',
@@ -59,95 +47,75 @@ vi.mock('naive-ui', () => ({
     props: {
       show: { type: Boolean, default: false },
     },
-    setup(
-      _: unknown,
-      { slots }: { slots: Record<string, () => ReturnType<typeof h>> },
-    ) {
+    setup(_: unknown, { slots }: any) {
       return () => h('div', { 'data-testid': 'modal' }, slots.default?.());
     },
   }),
   NSpin: defineComponent({
     name: 'NSpinStub',
-    setup(
-      _: unknown,
-      { slots }: { slots: Record<string, () => ReturnType<typeof h>> },
-    ) {
+    setup(_: unknown, { slots }: any) {
       return () => h('div', { 'data-testid': 'spin' }, slots.default?.());
     },
   }),
   NSpace: defineComponent({
     name: 'NSpaceStub',
-    setup(
-      _: unknown,
-      { slots }: { slots: Record<string, () => ReturnType<typeof h>> },
-    ) {
+    setup(_: unknown, { slots }: any) {
       return () => h('div', { 'data-testid': 'space' }, slots.default?.());
     },
   }),
+  // 完美符合 Naive UI 契约的表单桩
   NCheckbox: defineComponent({
     name: 'NCheckboxStub',
     props: {
-      modelValue: { type: Boolean, default: false },
+      checked: { type: Boolean, default: false },
     },
-    emits: ['update:modelValue'],
-    setup(
-      props: { modelValue: boolean },
-      { emit }: { emit: (e: string, v: boolean) => void },
-    ) {
+    emits: ['update:checked'],
+    setup(props, { emit }) {
       return () =>
         h('input', {
           type: 'checkbox',
-          checked: props.modelValue,
+          checked: props.checked,
           onChange: (e: Event) =>
-            emit('update:modelValue', (e.target as HTMLInputElement).checked),
+            emit('update:checked', (e.target as HTMLInputElement).checked),
         });
     },
   }),
   NInput: defineComponent({
     name: 'NInputStub',
     props: {
-      modelValue: { type: String, default: '' },
+      value: { type: String, default: '' },
     },
-    emits: ['update:modelValue'],
-    setup(
-      props: { modelValue: string },
-      { emit }: { emit: (e: string, v: string) => void },
-    ) {
+    emits: ['update:value'],
+    setup(props, { emit }) {
       return () =>
         h('input', {
           type: 'text',
-          value: props.modelValue,
-          onChange: (e: Event) =>
-            emit('update:modelValue', (e.target as HTMLInputElement).value),
+          value: props.value,
+          onInput: (e: Event) =>
+            emit('update:value', (e.target as HTMLInputElement).value),
         });
     },
   }),
   NSelect: defineComponent({
     name: 'NSelectStub',
     props: {
-      modelValue: { type: [String, Number], default: '' },
+      value: { type: [String, Number], default: '' },
       options: {
         type: Array,
-        default: () => [] as Array<{ label: string; value: string }>,
+        default: () => [] as any[],
       },
     },
-    emits: ['update:modelValue'],
-    setup(
-      props: {
-        modelValue: string | number;
-        options: Array<{ label: string; value: string }>;
-      },
-      { emit }: { emit: (e: string, v: string) => void },
-    ) {
+    emits: ['update:value'],
+    setup(props, { emit }) {
       return () =>
         h(
           'select',
           {
-            value: props.modelValue,
+            value: props.value as any,
             onChange: (e: Event) =>
-              emit('update:modelValue', (e.target as HTMLSelectElement).value),
+              emit('update:value', (e.target as HTMLSelectElement).value),
           },
-          props.options.map((option: { label: string; value: string }) =>
+          (props.options as any[]).map((option: any) =>
             h('option', { value: option.value }, option.label),
           ),
         );
@@ -155,20 +123,14 @@ vi.mock('naive-ui', () => ({
   }),
   NMessageProvider: defineComponent({
     name: 'NMessageProviderStub',
-    setup(
-      _: unknown,
-      { slots }: { slots: Record<string, () => ReturnType<typeof h>> },
-    ) {
+    setup(_: unknown, { slots }: any) {
       return () =>
         h('div', { 'data-testid': 'message-provider' }, slots.default?.());
     },
   }),
   NDialogProvider: defineComponent({
     name: 'NDialogProviderStub',
-    setup(
-      _: unknown,
-      { slots }: { slots: Record<string, () => ReturnType<typeof h>> },
-    ) {
+    setup(_: unknown, { slots }: any) {
       return () =>
         h('div', { 'data-testid': 'dialog-provider' }, slots.default?.());
     },
@@ -179,7 +141,7 @@ vi.mock('@vueuse/core', () => ({
   useStorage: vi.fn(() => ({
     value: '',
   })),
-  useEventListener: vi.fn(),
+  useEventListener: vi.fn(() => vi.fn()),
   useDebounceFn: vi.fn((fn: (...args: unknown[]) => void) => fn),
 }));
 

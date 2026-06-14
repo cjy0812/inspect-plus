@@ -17,28 +17,21 @@ export const createStubComponent = (
     emits?: string[];
     render?: (props: Record<string, unknown>) => ReturnType<typeof h>;
   },
-): DefineComponent => {
+): DefineComponent<any, any, any> => {
   return defineComponent({
     name: `${name}Stub`,
     props: options.props,
     emits: options.emits,
-    setup(
-      props: Record<string, unknown>,
-      {
-        slots,
-        emit,
-      }: {
-        slots: Record<string, () => ReturnType<typeof h>>;
-        emit: (e: string, ...args: unknown[]) => void;
-      },
-    ) {
+    setup(props: Record<string, unknown>, { slots, emit }: any) {
       const renderProps = {
         ...props,
         emit,
       };
+
       if (options.render) {
-        return options.render(renderProps);
+        return () => options.render!(renderProps);
       }
+
       return () =>
         h(
           'div',
@@ -51,7 +44,7 @@ export const createStubComponent = (
           slots.default?.(),
         );
     },
-  });
+  }) as any;
 };
 
 export const createMockFn = <T extends (...args: unknown[]) => unknown>(
@@ -79,26 +72,14 @@ export const mountWithStubs = <T extends ComponentPublicInstance>(
   const defaultStubs = {
     NTooltip: defineComponent({
       name: 'NTooltipStub',
-      setup(
-        _: unknown,
-        { slots }: { slots: Record<string, () => ReturnType<typeof h>> },
-      ) {
+      setup(_: unknown, { slots }: any) {
         return () => h('div', [slots.trigger?.(), slots.default?.()]);
       },
     }),
     NButton: defineComponent({
       name: 'NButtonStub',
       emits: ['click'],
-      setup(
-        _: unknown,
-        {
-          emit,
-          slots,
-        }: {
-          emit: (e: string) => void;
-          slots: Record<string, () => ReturnType<typeof h>>;
-        },
-      ) {
+      setup(_: unknown, { emit, slots }: any) {
         return () =>
           h(
             'button',
@@ -112,21 +93,24 @@ export const mountWithStubs = <T extends ComponentPublicInstance>(
     }),
     SvgIcon: defineComponent({
       name: 'SvgIconStub',
-      props: ['name'],
-      setup(props: { name: string }) {
+      props: {
+        name: { type: String, required: false },
+      },
+      setup(props: { name?: string }) {
         return () => h('span', { 'data-testid': `svg-${props.name}` });
       },
     }),
   };
 
   return mount(component, {
+    ...options,
     global: {
+      ...options?.global,
       stubs: {
         ...defaultStubs,
         ...options?.global?.stubs,
       },
     },
-    ...options,
   });
 };
 
