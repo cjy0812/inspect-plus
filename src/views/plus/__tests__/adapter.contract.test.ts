@@ -1,7 +1,7 @@
 /* eslint-disable vue/one-component-per-file */
-import { mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
+import { createStubComponent, mountWithStubs } from '@/test/utils';
 
 const spies = vi.hoisted(() => ({
   setCheckedRowKeys: vi.fn(),
@@ -11,7 +11,12 @@ const spies = vi.hoisted(() => ({
 vi.mock('@/views/home/HomePage.vue', () => ({
   default: defineComponent({
     name: 'BaseHomePageStub',
-    setup(_, { slots }) {
+    setup(
+      _: unknown,
+      {
+        slots,
+      }: { slots: Record<string, (props: unknown) => ReturnType<typeof h>> },
+    ) {
       return () =>
         h(
           'section',
@@ -31,7 +36,12 @@ vi.mock('@/views/home/HomePage.vue', () => ({
 vi.mock('@/views/DevicePage.vue', () => ({
   default: defineComponent({
     name: 'BaseDevicePageStub',
-    setup(_, { slots }) {
+    setup(
+      _: unknown,
+      {
+        slots,
+      }: { slots: Record<string, (props: unknown) => ReturnType<typeof h>> },
+    ) {
       const captureSnapshot = { loading: false, invoke: vi.fn() };
       const downloadAllSnapshot = { loading: false, invoke: vi.fn() };
       const previewSnapshot = { loading: {}, invoke: vi.fn() };
@@ -71,7 +81,15 @@ vi.mock('@/components/plus/home/HomeSnapshotGroups.vue', () => ({
       updateSnapshots: { type: Function, required: true },
     },
     emits: ['update:checkedRowKeys'],
-    setup(props, { emit }) {
+    setup(
+      props: {
+        checkedRowKeys: number[];
+        snapshots: Array<{ id: number }>;
+        loading: boolean;
+        updateSnapshots: () => void;
+      },
+      { emit }: { emit: (e: string, v: number[]) => void },
+    ) {
       return () =>
         h(
           'button',
@@ -86,12 +104,7 @@ vi.mock('@/components/plus/home/HomeSnapshotGroups.vue', () => ({
 }));
 
 vi.mock('@/components/plus/device/DeviceControlTools.vue', () => ({
-  default: defineComponent({
-    name: 'DeviceControlToolsStub',
-    setup() {
-      return () => h('div', { 'data-testid': 'device-control-tools' });
-    },
-  }),
+  default: createStubComponent('DeviceControlTools', {}),
 }));
 
 vi.mock('@/components/plus/device/DeviceSnapshotGroups.vue', () => ({
@@ -105,7 +118,16 @@ vi.mock('@/components/plus/device/DeviceSnapshotGroups.vue', () => ({
       deleteSnapshot: { type: Object, required: true },
     },
     emits: ['update:checkedRowKeys'],
-    setup(props, { emit }) {
+    setup(
+      props: {
+        checkedRowKeys: number[];
+        snapshots: Array<{ id: number }>;
+        refreshSnapshots: () => void;
+        previewSnapshot: unknown;
+        deleteSnapshot: unknown;
+      },
+      { emit }: { emit: (e: string, v: number[]) => void },
+    ) {
       return () =>
         h(
           'button',
@@ -125,58 +147,18 @@ vi.mock('@/components/plus/settings/SettingsModal.vue', () => ({
     props: {
       show: { type: Boolean, required: true },
     },
-    setup(props) {
+    setup(props: { show: boolean }) {
       return () =>
         h('div', { 'data-testid': 'settings-modal' }, `settings:${props.show}`);
     },
   }),
 }));
 
-vi.mock('@/components/SvgIcon.vue', () => ({
-  default: defineComponent({
-    name: 'SvgIconStub',
-    props: {
-      name: { type: String, required: true },
-    },
-    setup(props) {
-      return () => h('span', { 'data-testid': `svg-${props.name}` });
-    },
-  }),
-}));
-
-const globalStubs = {
-  NTooltip: defineComponent({
-    name: 'NTooltipStub',
-    setup(_, { slots }) {
-      return () => h('div', [slots.trigger?.(), slots.default?.()]);
-    },
-  }),
-  NButton: defineComponent({
-    name: 'NButtonStub',
-    emits: ['click'],
-    setup(_, { emit, slots }) {
-      return () =>
-        h(
-          'button',
-          {
-            type: 'button',
-            onClick: () => emit('click'),
-          },
-          slots.default?.(),
-        );
-    },
-  }),
-};
-
 describe('Plus route adapters', () => {
   it('wires HomePage content slot into the base home page', async () => {
     const { default: HomePage } =
       await import('@/views/plus/home/HomePage.vue');
-    const wrapper = mount(HomePage, {
-      global: {
-        stubs: globalStubs,
-      },
-    });
+    const wrapper = mountWithStubs(HomePage);
 
     expect(wrapper.find('[data-testid="base-home-page"]').exists()).toBe(true);
     expect(wrapper.get('[data-testid="home-snapshot-groups"]').text()).toBe(
@@ -189,11 +171,7 @@ describe('Plus route adapters', () => {
 
   it('wires DevicePage action and content slots into the base device page', async () => {
     const { default: DevicePage } = await import('@/views/plus/DevicePage.vue');
-    const wrapper = mount(DevicePage, {
-      global: {
-        stubs: globalStubs,
-      },
-    });
+    const wrapper = mountWithStubs(DevicePage);
 
     expect(wrapper.find('[data-testid="base-device-page"]').exists()).toBe(
       true,
