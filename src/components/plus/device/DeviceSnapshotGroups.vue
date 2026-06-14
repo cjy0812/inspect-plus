@@ -8,6 +8,14 @@ const props = defineProps<{
   snapshots: Snapshot[];
   checkedRowKeys: number[];
   refreshSnapshots: () => Promise<void>;
+  previewSnapshot: {
+    loading: Record<number, boolean | undefined>;
+    invoke: (row: Snapshot) => unknown;
+  };
+  deleteSnapshot: {
+    loading: Record<number, boolean | undefined>;
+    invoke: (row: Snapshot) => unknown;
+  };
 }>();
 
 const emit = defineEmits<{
@@ -29,12 +37,10 @@ const {
   previewUrlMap,
   previewLoadingMap,
   previewErrorMap,
-  previewSnapshot,
   downloadSnapshotZip,
   downloadSnapshotImage,
   shareSnapshotZipUrl,
   shareSnapshotImageUrl,
-  deleteSnapshot,
   ensurePreview,
   getGroupSnapshotIds,
   getActivitySnapshotIds,
@@ -230,15 +236,21 @@ const {
                       </div>
                     </div>
                   </NPopover>
-                  <NButton
-                    text
-                    size="small"
-                    class="ml-auto shrink-0"
-                    :loading="previewSnapshot.loading[item.id]"
-                    @click="previewSnapshot.invoke(item)"
-                  >
-                    <template #icon><SvgIcon name="code" /></template>
-                  </NButton>
+                  <NTooltip>
+                    <template #trigger>
+                      <span class="ml-auto inline-flex shrink-0">
+                        <NButton
+                          text
+                          size="small"
+                          :loading="props.previewSnapshot.loading[item.id]"
+                          @click="props.previewSnapshot.invoke(item)"
+                        >
+                          <template #icon><SvgIcon name="code" /></template>
+                        </NButton>
+                      </span>
+                    </template>
+                    查看
+                  </NTooltip>
                   <NPopover>
                     <template #trigger>
                       <NButton text>
@@ -287,8 +299,8 @@ const {
                         <NButton
                           text
                           type="error"
-                          :loading="deleteSnapshot.loading[item.id]"
-                          @click="deleteSnapshot.invoke(item)"
+                          :loading="props.deleteSnapshot.loading[item.id]"
+                          @click="props.deleteSnapshot.invoke(item)"
                         >
                           <template #icon><SvgIcon name="delete" /></template>
                         </NButton>

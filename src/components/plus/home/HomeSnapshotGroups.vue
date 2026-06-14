@@ -2,7 +2,6 @@
 import { computed, toRef } from 'vue';
 import ActionCard from '@/components/ActionCard.vue';
 import DeviceControlTools from '@/components/plus/device/DeviceControlTools.vue';
-import SvgIcon from '@/components/SvgIcon.vue';
 import { useHomePlus } from '@/composables/plus/useHomePlus';
 
 const props = defineProps<{
@@ -50,7 +49,6 @@ const {
   getActivityRemarkKey,
   openGroupRemarkModal,
   saveGroupRemark,
-  goToSnapshot,
   getItemShortTimeText,
   getItemCreateTimeText,
   getItemImportTimeText,
@@ -317,17 +315,9 @@ const {
                         </div>
                       </div>
                     </NPopover>
-                    <NButton
-                      text
-                      size="small"
-                      class="ml-auto shrink-0"
-                      @click="goToSnapshot(item.id)"
-                    >
-                      <template #icon><SvgIcon name="code" /></template>
-                    </NButton>
                     <ActionCard
+                      class="ml-auto shrink-0"
                       :snapshot="item"
-                      :showPreview="false"
                       :onDelete="updateSnapshots"
                     />
                   </div>

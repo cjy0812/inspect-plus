@@ -3,7 +3,6 @@ import { computed, shallowReactive, shallowRef, toValue, watch } from 'vue';
 import type { MaybeRefOrGetter, Ref } from 'vue';
 import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 import { getAppInfo, getDevice } from '@/utils/node';
-import { filterQuery } from '@/utils/others';
 import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
 import { screenshotStorage } from '@/utils/snapshot';
 
@@ -13,8 +12,6 @@ interface UseHomePlusOptions {
 }
 
 export function useHomePlus(options: UseHomePlusOptions) {
-  const route = useRoute();
-  const router = useRouter();
   const { settingsStore, snapshotImportTime, snapshotViewedTime } =
     useStorageStore();
 
@@ -196,17 +193,6 @@ export function useHomePlus(options: UseHomePlusOptions) {
       cacheLimit: previewCacheLimit,
     });
 
-  const goToSnapshot = (snapshotId: number) => {
-    snapshotViewedTime[snapshotId] = Date.now();
-    window.open(
-      router.resolve({
-        name: 'snapshot',
-        params: { snapshotId },
-        query: filterQuery(route.query, ['str', 'gkd']),
-      }).href,
-    );
-  };
-
   const getItemShortTimeText = (item: Snapshot) =>
     dayjs(item.id).format('MM-DD HH:mm:ss');
   const getItemCreateTimeText = (item: Snapshot) =>
@@ -245,7 +231,6 @@ export function useHomePlus(options: UseHomePlusOptions) {
     getActivityRemarkKey,
     openGroupRemarkModal,
     saveGroupRemark,
-    goToSnapshot,
     getItemShortTimeText,
     getItemCreateTimeText,
     getItemImportTimeText,

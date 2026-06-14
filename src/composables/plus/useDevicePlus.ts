@@ -32,7 +32,6 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
   type SnapshotGroup = ReturnType<typeof buildGroupedSnapshots>[number];
   type SnapshotActivity = SnapshotGroup['activities'][number];
 
-  const router = useRouter();
   const { settingsStore, snapshotImportTime, snapshotViewedTime } =
     useStorageStore();
   const deviceLink = useStorage('device_link', '');
@@ -137,20 +136,6 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
       cacheLimit: previewCacheLimit,
     });
 
-  const previewSnapshot = useBatchTask(
-    async (row: Snapshot) => {
-      await ensureLocalSnapshotData(row);
-      snapshotViewedTime[row.id] = Date.now();
-      window.open(
-        router.resolve({
-          name: 'snapshot',
-          params: { snapshotId: row.id },
-        }).href,
-      );
-    },
-    (row) => row.id,
-  );
-
   const downloadSnapshotZip = useBatchTask(
     async (row: Snapshot) => {
       await ensureLocalSnapshotData(row);
@@ -192,34 +177,6 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
         title: '分享链接',
         content: getImagUrl(imageId),
       });
-    },
-    (row) => row.id,
-  );
-
-  const deleteSnapshot = useBatchTask(
-    async (row: Snapshot) => {
-      await new Promise((resolve, reject) => {
-        dialog.warning({
-          title: '删除',
-          content: '是否删除此快照？',
-          negativeText: '取消',
-          positiveText: '确认',
-          onClose: reject,
-          onEsc: reject,
-          onMaskClick: reject,
-          onNegativeClick: reject,
-          onPositiveClick: resolve,
-        });
-      });
-
-      await api.deleteSnapshot({ id: row.id });
-      await snapshotStorage.removeItem(row.id);
-      await screenshotStorage.removeItem(row.id);
-      message.success('快照删除成功');
-      await options.refreshSnapshots();
-      options.checkedRowKeys.value = options.checkedRowKeys.value.filter(
-        (id) => id !== row.id,
-      );
     },
     (row) => row.id,
   );
@@ -290,12 +247,10 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
     previewUrlMap,
     previewLoadingMap,
     previewErrorMap,
-    previewSnapshot,
     downloadSnapshotZip,
     downloadSnapshotImage,
     shareSnapshotZipUrl,
     shareSnapshotImageUrl,
-    deleteSnapshot,
     ensurePreview,
     getGroupSnapshotIds,
     getActivitySnapshotIds,

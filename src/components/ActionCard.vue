@@ -105,13 +105,18 @@ const copy = async (content: string) => {
 </script>
 <template>
   <div flex gap-16px>
-    <a v-if="showPreview" flex target="_blank" :href="previewUrl">
-      <NButton text title="查看">
-        <template #icon>
-          <SvgIcon name="code" />
-        </template>
-      </NButton>
-    </a>
+    <NTooltip v-if="showPreview">
+      <template #trigger>
+        <a flex target="_blank" :href="previewUrl">
+          <NButton text>
+            <template #icon>
+              <SvgIcon name="code" />
+            </template>
+          </NButton>
+        </a>
+      </template>
+      查看
+    </NTooltip>
 
     <NPopover v-if="showExport">
       <template #trigger>

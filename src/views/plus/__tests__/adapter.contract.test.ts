@@ -34,6 +34,8 @@ vi.mock('@/views/DevicePage.vue', () => ({
     setup(_, { slots }) {
       const captureSnapshot = { loading: false, invoke: vi.fn() };
       const downloadAllSnapshot = { loading: false, invoke: vi.fn() };
+      const previewSnapshot = { loading: {}, invoke: vi.fn() };
+      const deleteSnapshot = { loading: {}, invoke: vi.fn() };
       return () =>
         h('section', { 'data-testid': 'base-device-page' }, [
           h(
@@ -50,6 +52,8 @@ vi.mock('@/views/DevicePage.vue', () => ({
             slots.content?.({
               snapshots: [{ id: 10 }, { id: 20 }],
               refreshSnapshots: spies.refreshSnapshots,
+              previewSnapshot,
+              deleteSnapshot,
             }),
           ),
         ]);
@@ -97,6 +101,8 @@ vi.mock('@/components/plus/device/DeviceSnapshotGroups.vue', () => ({
       checkedRowKeys: { type: Array, required: true },
       snapshots: { type: Array, required: true },
       refreshSnapshots: { type: Function, required: true },
+      previewSnapshot: { type: Object, required: true },
+      deleteSnapshot: { type: Object, required: true },
     },
     emits: ['update:checkedRowKeys'],
     setup(props, { emit }) {
