@@ -1,6 +1,13 @@
 import { useStorage } from '@vueuse/core';
 import dayjs from 'dayjs';
-import { computed, shallowRef, toValue, watch, watchEffect } from 'vue';
+import {
+  computed,
+  shallowReactive,
+  shallowRef,
+  toValue,
+  watch,
+  watchEffect,
+} from 'vue';
 import type { MaybeRefOrGetter, Ref } from 'vue';
 import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 import { useDeviceApi } from '@/utils/api';
@@ -181,32 +188,28 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
     (row) => row.id,
   );
 
-  const deleteSnapshot = useBatchTask(
-    async (row: Snapshot) => {
-      const confirmed = await new Promise<boolean>((res) => {
-        dialog.warning({
-          title: '删除快照',
-          content: `是否确认删除快照 ID: ${row.id}？此操作不可恢复。`,
-          positiveText: '确认删除',
-          negativeText: '取消',
-          onPositiveClick: () => res(true),
-          onNegativeClick: () => res(false),
-          onClose: () => res(false),
-        });
-      });
-      if (!confirmed) return;
-      await api.deleteSnapshot({ id: row.id });
-      await Promise.all([
-        snapshotStorage.removeItem(row.id),
-        screenshotStorage.removeItem(row.id),
-      ]);
-      options.checkedRowKeys.value = options.checkedRowKeys.value.filter(
-        (id) => id !== row.id,
-      );
-      message.success('删除成功');
+  const deleteSnapshot = {
+    loading: shallowReactive<Record<number, boolean>>({}),
+    invoke: async (row: Snapshot) => {
+      const id = row.id;
+      if (deleteSnapshot.loading[id]) return;
+      deleteSnapshot.loading[id] = true;
+      try {
+        await api.deleteSnapshot({ id: row.id });
+        await Promise.all([
+          snapshotStorage.removeItem(row.id),
+          screenshotStorage.removeItem(row.id),
+        ]);
+        options.checkedRowKeys.value = options.checkedRowKeys.value.filter(
+          (key) => key !== row.id,
+        );
+        await options.refreshSnapshots();
+        message.success('删除成功');
+      } finally {
+        delete deleteSnapshot.loading[id];
+      }
     },
-    (r) => r.id,
-  );
+  };
 
   const batchDelete = useTask(async () => {
     await new Promise((resolve, reject) => {
