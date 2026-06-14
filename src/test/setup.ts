@@ -47,8 +47,11 @@ vi.mock('naive-ui', () => ({
     props: {
       show: { type: Boolean, default: false },
     },
-    setup(_: unknown, { slots }: any) {
-      return () => h('div', { 'data-testid': 'modal' }, slots.default?.());
+    setup(props: any, { slots }: any) {
+      return () => {
+        if (!props.show) return null;
+        return h('div', { 'data-testid': 'modal' }, slots.default?.());
+      };
     },
   }),
   NSpin: defineComponent({
