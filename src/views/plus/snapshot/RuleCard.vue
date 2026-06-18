@@ -10,7 +10,7 @@ import {
 } from '@/utils/plus/ruleTest';
 import { gkdWidth, vw } from '@/utils/size';
 import type { ShallowRef } from 'vue';
-import { useSnapshotStore } from './snapshot';
+import { useSnapshotStore } from '@/views/snapshot/snapshot';
 
 withDefaults(
   defineProps<{

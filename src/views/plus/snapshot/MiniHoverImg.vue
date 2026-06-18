@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { useSharedSnapshotHoverImg, useSnapshotStore } from './snapshot';
+import { useSharedSnapshotHoverImg } from '@/views/snapshot/snapshot';
+import { useSnapshotStore } from '@/views/snapshot/snapshot';
 
 const { screenshotUrl } = useSnapshotStore();
 const {

@@ -266,11 +266,16 @@ export const useSnapshotStore = createSharedComposable(() => {
     };
   };
 
+  const updateScreenshot = (buffer: ArrayBuffer) => {
+    screenshot.value = buffer;
+  };
+
   return {
     snapshotId,
     snapshot,
     rootNode,
     screenshotUrl,
+    updateScreenshot,
     loading,
     redirected,
     importId,

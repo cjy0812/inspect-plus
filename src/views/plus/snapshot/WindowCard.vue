@@ -8,7 +8,7 @@ import type { ShallowRef } from 'vue';
 import { h } from 'vue';
 import SvgIcon from '@/components/SvgIcon.vue';
 import { useWindowQuickFind } from '@/composables/plus/useWindowQuickFind';
-import { useSnapshotStore } from './snapshot';
+import { useSnapshotStore } from '@/views/snapshot/snapshot';
 
 const router = useRouter();
 

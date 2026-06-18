@@ -2,17 +2,19 @@
 import dayjs from 'dayjs';
 import PrivacyBlurEditor from '@/components/plus/snapshot/PrivacyBlurEditor.vue';
 import MiniHoverImg from './MiniHoverImg.vue';
-import { useSharedSnapshotHoverImg, useSnapshotStore } from './snapshot';
+import { useSharedSnapshotHoverImg } from '@/views/snapshot/snapshot';
+import { useSnapshotStore } from '@/views/snapshot/snapshot';
+import { useSnapshotBlur } from '@/composables/plus/useSnapshotBlur';
 
+const { snapshot } = useSnapshotStore();
 const {
-  snapshot,
   displayScreenshotUrl,
   blurEditorShow,
   applyBlurredScreenshot,
   resetBlurredScreenshot,
   showRegenerateTip,
   dismissRegenerateTip,
-} = useSnapshotStore();
+} = useSnapshotBlur();
 const { clickImg, imgHover, imgMove, imgLoadTime, positionStyle, imgRef } =
   useSharedSnapshotHoverImg();
 </script>

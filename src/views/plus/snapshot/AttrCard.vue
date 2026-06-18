@@ -2,7 +2,7 @@
 import DraggableCard from '@/components/DraggableCard.vue';
 import { getNodeSelectorText } from '@/utils/node';
 import { buildEmptyFn, copy } from '@/utils/others';
-import { useSnapshotStore } from './snapshot';
+import { useSnapshotStore } from '@/views/snapshot/snapshot';
 import AttrNameCell from '@/components/plus/snapshot/AttrNameCell.vue';
 import AttrValueCell from '@/components/plus/snapshot/AttrValueCell.vue';
 

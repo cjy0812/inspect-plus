@@ -16,7 +16,7 @@ import dayjs from 'dayjs';
 import * as base64url from 'universal-base64url';
 import type { ShallowRef } from 'vue';
 import JSON5 from 'json5';
-import { useSnapshotStore } from './snapshot';
+import { useSnapshotStore } from '@/views/snapshot/snapshot';
 import { buildFastQueryMeta } from '@/composables/plus/useFastQueryIndicator';
 
 withDefaults(

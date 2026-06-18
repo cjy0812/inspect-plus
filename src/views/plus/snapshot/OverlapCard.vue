@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import DraggableCard from '@/components/DraggableCard.vue';
 import { getNodeLabel, getNodeStyle } from '@/utils/node';
-import { useSnapshotStore } from './snapshot';
+import { useSnapshotStore } from '@/views/snapshot/snapshot';
 
 const { focusNode, overlapNodes, focusPosition, updateFocusNode } =
   useSnapshotStore();

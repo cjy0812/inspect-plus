@@ -1,11 +1,8 @@
-import { watchEffect, onScopeDispose, shallowRef, type Ref } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { loadingBar } from '@/utils/discrete';
-import { useSnapshotStore } from '@/views/plus/snapshot/snapshot';
+import { useSnapshotStore } from '@/views/snapshot/snapshot';
+import { useSnapshotBlur } from '@/composables/plus/useSnapshotBlur';
 
-/**
- * Snapshot Plus 面板显示状态接口
- */
 export interface SnapshotPlusState {
   searchShow: Ref<boolean>;
   ruleShow: Ref<boolean>;
@@ -16,13 +13,13 @@ export interface SnapshotPlusState {
 }
 
 export type UseSnapshotPlusResult = ReturnType<typeof useSnapshotStore> &
+  ReturnType<typeof useSnapshotBlur> &
   SnapshotPlusState;
 
 export const useSnapshotPlus = (): UseSnapshotPlusResult => {
-  // 1. 获取官方 Store 实例
   const snapshotStore = useSnapshotStore();
+  const blurStore = useSnapshotBlur();
 
-  // 2. 联动加载条逻辑
   watchEffect(() => {
     if (snapshotStore.loading.value) loadingBar.start();
     else loadingBar.finish();
@@ -32,7 +29,6 @@ export const useSnapshotPlus = (): UseSnapshotPlusResult => {
     loadingBar.finish();
   });
 
-  // 3. Plus 专属持久化状态
   const searchShow = useStorage(
     'snapshotPlus:searchShow',
     true,
@@ -51,9 +47,8 @@ export const useSnapshotPlus = (): UseSnapshotPlusResult => {
   };
 
   return {
-    // 转发官方 Store 内容（保持扁平化以便视图直接读取）
     ...snapshotStore,
-    // 注入 Plus 逻辑
+    ...blurStore,
     searchShow,
     ruleShow,
     attrShow,
