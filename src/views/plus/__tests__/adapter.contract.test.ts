@@ -11,12 +11,8 @@ const spies = vi.hoisted(() => ({
 vi.mock('@/views/home/HomePage.vue', () => ({
   default: defineComponent({
     name: 'BaseHomePageStub',
-    setup(
-      _: unknown,
-      {
-        slots,
-      }: { slots: Record<string, (props: unknown) => ReturnType<typeof h>> },
-    ) {
+    props: {},
+    setup(_, { slots }) {
       return () =>
         h(
           'section',
@@ -36,12 +32,8 @@ vi.mock('@/views/home/HomePage.vue', () => ({
 vi.mock('@/views/DevicePage.vue', () => ({
   default: defineComponent({
     name: 'BaseDevicePageStub',
-    setup(
-      _: unknown,
-      {
-        slots,
-      }: { slots: Record<string, (props: unknown) => ReturnType<typeof h>> },
-    ) {
+    props: {},
+    setup(_, { slots }) {
       const captureSnapshot = { loading: false, invoke: vi.fn() };
       const downloadAllSnapshot = { loading: false, invoke: vi.fn() };
       const previewSnapshot = { loading: {}, invoke: vi.fn() };
@@ -81,15 +73,7 @@ vi.mock('@/components/plus/home/HomeSnapshotGroups.vue', () => ({
       updateSnapshots: { type: Function, required: true },
     },
     emits: ['update:checkedRowKeys'],
-    setup(
-      props: {
-        checkedRowKeys: number[];
-        snapshots: Array<{ id: number }>;
-        loading: boolean;
-        updateSnapshots: () => void;
-      },
-      { emit }: { emit: (e: string, v: number[]) => void },
-    ) {
+    setup(props, { emit }) {
       return () =>
         h(
           'button',
@@ -97,7 +81,7 @@ vi.mock('@/components/plus/home/HomeSnapshotGroups.vue', () => ({
             'data-testid': 'home-snapshot-groups',
             onClick: () => emit('update:checkedRowKeys', [7, 8]),
           },
-          `home:${props.snapshots.length}:${props.checkedRowKeys.length}:${props.loading}`,
+          `home:${(props as any).snapshots.length}:${(props as any).checkedRowKeys.length}:${(props as any).loading}`,
         );
     },
   }),
@@ -118,16 +102,7 @@ vi.mock('@/components/plus/device/DeviceSnapshotGroups.vue', () => ({
       deleteSnapshot: { type: Object, required: true },
     },
     emits: ['update:checkedRowKeys'],
-    setup(
-      props: {
-        checkedRowKeys: number[];
-        snapshots: Array<{ id: number }>;
-        refreshSnapshots: () => void;
-        previewSnapshot: unknown;
-        deleteSnapshot: unknown;
-      },
-      { emit }: { emit: (e: string, v: number[]) => void },
-    ) {
+    setup(props, { emit }) {
       return () =>
         h(
           'button',
@@ -135,7 +110,7 @@ vi.mock('@/components/plus/device/DeviceSnapshotGroups.vue', () => ({
             'data-testid': 'device-snapshot-groups',
             onClick: () => emit('update:checkedRowKeys', [10, 20]),
           },
-          `device:${props.snapshots.length}:${props.checkedRowKeys.length}`,
+          `device:${(props as any).snapshots.length}:${(props as any).checkedRowKeys.length}`,
         );
     },
   }),
@@ -147,9 +122,13 @@ vi.mock('@/components/plus/settings/SettingsModal.vue', () => ({
     props: {
       show: { type: Boolean, required: true },
     },
-    setup(props: { show: boolean }) {
+    setup(props) {
       return () =>
-        h('div', { 'data-testid': 'settings-modal' }, `settings:${props.show}`);
+        h(
+          'div',
+          { 'data-testid': 'settings-modal' },
+          `settings:${(props as any).show}`,
+        );
     },
   }),
 }));
@@ -190,5 +169,60 @@ describe('Plus route adapters', () => {
       .get('[data-testid="device-snapshot-groups"]')
       .trigger('click');
     expect(wrapper.text()).toContain('已选中 2 个快照');
+  });
+
+  it('passes deleteSnapshot from base DevicePage slot through to DeviceSnapshotGroups', async () => {
+    const { default: DevicePage } = await import('@/views/plus/DevicePage.vue');
+    const wrapper = mountWithStubs(DevicePage);
+
+    const groupsEl = wrapper.getComponent({ name: 'DeviceSnapshotGroupsStub' });
+    const deleteSnapshotProp = groupsEl.props('deleteSnapshot');
+
+    expect(deleteSnapshotProp).toBeDefined();
+    expect(deleteSnapshotProp).toHaveProperty('loading');
+    expect(deleteSnapshotProp).toHaveProperty('invoke');
+    expect(typeof deleteSnapshotProp.invoke).toBe('function');
+  });
+
+  it('passes previewSnapshot from base DevicePage slot through to DeviceSnapshotGroups', async () => {
+    const { default: DevicePage } = await import('@/views/plus/DevicePage.vue');
+    const wrapper = mountWithStubs(DevicePage);
+
+    const groupsEl = wrapper.getComponent({ name: 'DeviceSnapshotGroupsStub' });
+    const previewSnapshotProp = groupsEl.props('previewSnapshot');
+
+    expect(previewSnapshotProp).toBeDefined();
+    expect(previewSnapshotProp).toHaveProperty('loading');
+    expect(previewSnapshotProp).toHaveProperty('invoke');
+    expect(typeof previewSnapshotProp.invoke).toBe('function');
+  });
+
+  it('passes snapshots and refreshSnapshots from base DevicePage slot to DeviceSnapshotGroups', async () => {
+    const { default: DevicePage } = await import('@/views/plus/DevicePage.vue');
+    const wrapper = mountWithStubs(DevicePage);
+
+    const groupsEl = wrapper.getComponent({ name: 'DeviceSnapshotGroupsStub' });
+
+    expect(groupsEl.props('snapshots')).toEqual([{ id: 10 }, { id: 20 }]);
+    expect(groupsEl.props('refreshSnapshots')).toBe(spies.refreshSnapshots);
+  });
+
+  it('toggles settings modal visibility', async () => {
+    const { default: DevicePage } = await import('@/views/plus/DevicePage.vue');
+    const wrapper = mountWithStubs(DevicePage);
+
+    expect(wrapper.get('[data-testid="settings-modal"]').text()).toBe(
+      'settings:false',
+    );
+
+    const settingsBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('设置'));
+    if (settingsBtn) {
+      await settingsBtn.trigger('click');
+      expect(wrapper.get('[data-testid="settings-modal"]').text()).toBe(
+        'settings:true',
+      );
+    }
   });
 });
