@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { computed, toRef, provide } from 'vue';
+import { computed, provide, toRef } from 'vue';
+import {
+  deleteSnapshotKey,
+  devicePlusKey,
+  previewSnapshotKey,
+  type SnapshotAction,
+} from '@/composables/plus/useDevicePlus';
 import { useDevicePlus } from '@/composables/plus/useDevicePlus';
 import SnapshotItemRow from './SnapshotItemRow.vue';
 
@@ -7,14 +13,8 @@ const props = defineProps<{
   snapshots: Snapshot[];
   checkedRowKeys: number[];
   refreshSnapshots: () => Promise<void>;
-  previewSnapshot: {
-    loading: Record<number, boolean | undefined>;
-    invoke: (row: Snapshot) => unknown;
-  };
-  deleteSnapshot: {
-    loading: Record<number, boolean | undefined>;
-    invoke: (row: Snapshot) => unknown;
-  };
+  previewSnapshot: SnapshotAction;
+  deleteSnapshot: SnapshotAction;
 }>();
 
 const emit = defineEmits<{
@@ -26,17 +26,15 @@ const checkedRowKeysModel = computed({
   set: (value: number[]) => emit('update:checkedRowKeys', value),
 });
 
-// 激活原本的 Composable 逻辑
 const devicePlusContext = useDevicePlus({
   snapshots: toRef(props, 'snapshots'),
   checkedRowKeys: checkedRowKeysModel,
   refreshSnapshots: props.refreshSnapshots,
 });
 
-// 使用 provide 将上下文和所需的 prop 注入给子组件，避免深层 Prop 地狱
-provide('devicePlusContext', devicePlusContext);
-provide('previewSnapshot', props.previewSnapshot);
-provide('deleteSnapshot', props.deleteSnapshot);
+provide(devicePlusKey, devicePlusContext);
+provide(previewSnapshotKey, props.previewSnapshot);
+provide(deleteSnapshotKey, props.deleteSnapshot);
 
 // 解构出主组件 Template 渲染需要的状态和方法
 const {

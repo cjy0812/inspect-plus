@@ -8,7 +8,7 @@ import {
   watch,
   watchEffect,
 } from 'vue';
-import type { MaybeRefOrGetter, Ref } from 'vue';
+import type { InjectionKey, MaybeRefOrGetter, Ref } from 'vue';
 import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 import { useDeviceApi } from '@/utils/api';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
@@ -23,6 +23,7 @@ import { getAppInfo, getDevice } from '@/utils/node';
 import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
 import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 import { useBatchTask, useTask } from '@/utils/task';
+import type { BatchTaskResult } from '@/utils/task';
 import { getImagUrl, getImportUrl } from '@/utils/url';
 import {
   getCustomDomainImportUrl,
@@ -295,3 +296,16 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
     getItemImportTimeText,
   };
 }
+
+export type DevicePlusContext = ReturnType<typeof useDevicePlus>;
+
+export const devicePlusKey: InjectionKey<DevicePlusContext> =
+  Symbol('devicePlusContext');
+
+export type SnapshotAction = BatchTaskResult;
+
+export const previewSnapshotKey: InjectionKey<SnapshotAction> =
+  Symbol('previewSnapshot');
+
+export const deleteSnapshotKey: InjectionKey<SnapshotAction> =
+  Symbol('deleteSnapshot');

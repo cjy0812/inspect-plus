@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { inject } from 'vue';
+import {
+  deleteSnapshotKey,
+  devicePlusKey,
+  previewSnapshotKey,
+} from '@/composables/plus/useDevicePlus';
 import SvgIcon from '@/components/SvgIcon.vue';
 import { getAppInfo } from '@/utils/node';
 
@@ -7,15 +12,10 @@ defineProps<{
   item: Snapshot;
 }>();
 
-// 注入父组件提供的上下文数据
-const devicePlusContext = inject<any>('devicePlusContext');
-const previewSnapshotProp = inject<any>('previewSnapshot');
-const deleteSnapshot = inject<{
-  loading: Record<number, boolean | undefined>;
-  invoke: (row: Snapshot) => unknown;
-}>('deleteSnapshot')!;
+const devicePlusContext = inject(devicePlusKey)!;
+const previewSnapshotProp = inject(previewSnapshotKey)!;
+const deleteSnapshot = inject(deleteSnapshotKey)!;
 
-// 解构出单行渲染和交互所需的所有方法与状态
 const {
   checkedSet,
   snapshotViewedTime,
