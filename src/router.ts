@@ -97,12 +97,12 @@ const router = createRouter({
     },
     {
       path: '/selector',
-      component: recordModule(() => import('@/views/plus/SelectorPage.vue')),
+      component: recordModule(() => import('@/views/SelectorPage.vue')),
       meta: { title: '选择器' },
     },
     {
       path: '/svg',
-      component: recordModule(() => import('@/views/plus/SvgPage.vue')),
+      component: recordModule(() => import('@/views/SvgPage.vue')),
       meta: { title: 'SVG' },
     },
     {

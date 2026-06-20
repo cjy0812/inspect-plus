@@ -65,11 +65,20 @@ const checkedRowKeys = shallowRef<number[]>([]);
       </NTooltip>
     </template>
 
-    <template #content="{ snapshots, refreshSnapshots }">
+    <template
+      #content="{
+        snapshots,
+        refreshSnapshots,
+        previewSnapshot,
+        deleteSnapshot,
+      }"
+    >
       <DeviceSnapshotGroups
         v-model:checked-row-keys="checkedRowKeys"
         :snapshots="snapshots"
         :refresh-snapshots="refreshSnapshots"
+        :preview-snapshot="previewSnapshot"
+        :delete-snapshot="deleteSnapshot"
       />
     </template>
   </BaseDevicePage>

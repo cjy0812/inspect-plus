@@ -1,7 +1,14 @@
 import { useStorage } from '@vueuse/core';
 import dayjs from 'dayjs';
-import { computed, shallowRef, toValue, watch, watchEffect } from 'vue';
-import type { MaybeRefOrGetter, Ref } from 'vue';
+import {
+  computed,
+  shallowReactive,
+  shallowRef,
+  toValue,
+  watch,
+  watchEffect,
+} from 'vue';
+import type { InjectionKey, MaybeRefOrGetter, Ref } from 'vue';
 import { usePreviewCache } from '@/composables/plus/usePreviewCache';
 import { useDeviceApi } from '@/utils/api';
 import { showTextDLg, waitShareAgree } from '@/utils/dialog';
@@ -16,6 +23,7 @@ import { getAppInfo, getDevice } from '@/utils/node';
 import { buildGroupedSnapshots } from '@/utils/plus/snapshotGroup';
 import { screenshotStorage, snapshotStorage } from '@/utils/snapshot';
 import { useBatchTask, useTask } from '@/utils/task';
+import type { BatchTaskResult } from '@/utils/task';
 import { getImagUrl, getImportUrl } from '@/utils/url';
 import {
   getCustomDomainImportUrl,
@@ -32,7 +40,6 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
   type SnapshotGroup = ReturnType<typeof buildGroupedSnapshots>[number];
   type SnapshotActivity = SnapshotGroup['activities'][number];
 
-  const router = useRouter();
   const { settingsStore, snapshotImportTime, snapshotViewedTime } =
     useStorageStore();
   const deviceLink = useStorage('device_link', '');
@@ -137,20 +144,6 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
       cacheLimit: previewCacheLimit,
     });
 
-  const previewSnapshot = useBatchTask(
-    async (row: Snapshot) => {
-      await ensureLocalSnapshotData(row);
-      snapshotViewedTime[row.id] = Date.now();
-      window.open(
-        router.resolve({
-          name: 'snapshot',
-          params: { snapshotId: row.id },
-        }).href,
-      );
-    },
-    (row) => row.id,
-  );
-
   const downloadSnapshotZip = useBatchTask(
     async (row: Snapshot) => {
       await ensureLocalSnapshotData(row);
@@ -196,33 +189,28 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
     (row) => row.id,
   );
 
-  const deleteSnapshot = useBatchTask(
-    async (row: Snapshot) => {
-      await new Promise((resolve, reject) => {
-        dialog.warning({
-          title: '删除',
-          content: '是否删除此快照？',
-          negativeText: '取消',
-          positiveText: '确认',
-          onClose: reject,
-          onEsc: reject,
-          onMaskClick: reject,
-          onNegativeClick: reject,
-          onPositiveClick: resolve,
-        });
-      });
-
-      await api.deleteSnapshot({ id: row.id });
-      await snapshotStorage.removeItem(row.id);
-      await screenshotStorage.removeItem(row.id);
-      message.success('快照删除成功');
-      await options.refreshSnapshots();
-      options.checkedRowKeys.value = options.checkedRowKeys.value.filter(
-        (id) => id !== row.id,
-      );
+  const deleteSnapshot = {
+    loading: shallowReactive<Record<number, boolean>>({}),
+    invoke: async (row: Snapshot) => {
+      const id = row.id;
+      if (deleteSnapshot.loading[id]) return;
+      deleteSnapshot.loading[id] = true;
+      try {
+        await api.deleteSnapshot({ id: row.id });
+        await Promise.all([
+          snapshotStorage.removeItem(row.id),
+          screenshotStorage.removeItem(row.id),
+        ]);
+        options.checkedRowKeys.value = options.checkedRowKeys.value.filter(
+          (key) => key !== row.id,
+        );
+        await options.refreshSnapshots();
+        message.success('删除成功');
+      } finally {
+        delete deleteSnapshot.loading[id];
+      }
     },
-    (row) => row.id,
-  );
+  };
 
   const batchDelete = useTask(async () => {
     await new Promise((resolve, reject) => {
@@ -287,15 +275,14 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
     checkedSet,
     snapshotViewedTime,
     batchDelete,
+    deleteSnapshot,
     previewUrlMap,
     previewLoadingMap,
     previewErrorMap,
-    previewSnapshot,
     downloadSnapshotZip,
     downloadSnapshotImage,
     shareSnapshotZipUrl,
     shareSnapshotImageUrl,
-    deleteSnapshot,
     ensurePreview,
     getGroupSnapshotIds,
     getActivitySnapshotIds,
@@ -309,3 +296,16 @@ export function useDevicePlus(options: UseDevicePlusOptions) {
     getItemImportTimeText,
   };
 }
+
+export type DevicePlusContext = ReturnType<typeof useDevicePlus>;
+
+export const devicePlusKey: InjectionKey<DevicePlusContext> =
+  Symbol('devicePlusContext');
+
+export type SnapshotAction = BatchTaskResult;
+
+export const previewSnapshotKey: InjectionKey<SnapshotAction> =
+  Symbol('previewSnapshot');
+
+export const deleteSnapshotKey: InjectionKey<SnapshotAction> =
+  Symbol('deleteSnapshot');

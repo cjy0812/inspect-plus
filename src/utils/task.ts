@@ -9,6 +9,16 @@ type PrimitiveType =
   | null
   | undefined;
 
+export interface TaskResult {
+  loading: boolean;
+  invoke: (...args: any[]) => Promise<void>;
+}
+
+export interface BatchTaskResult {
+  loading: Record<string, boolean>;
+  invoke: (...args: any[]) => Promise<void>;
+}
+
 export const useTask = <T extends (...args: any[]) => Promise<void>>(
   fn: T,
   miniInterval = 0,

@@ -534,6 +534,8 @@ const placeholder = `
       :pagination="pagination"
       :handleSorterChange="handleSorterChange"
       :refreshSnapshots="refreshSnapshots"
+      :previewSnapshot="previewSnapshot"
+      :deleteSnapshot="deleteSnapshot"
     >
       <NDataTable
         striped

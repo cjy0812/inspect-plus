@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue';
-import SvgIcon from '@/components/SvgIcon.vue';
+import { computed, provide, toRef } from 'vue';
+import {
+  deleteSnapshotKey,
+  devicePlusKey,
+  previewSnapshotKey,
+  type SnapshotAction,
+} from '@/composables/plus/useDevicePlus';
 import { useDevicePlus } from '@/composables/plus/useDevicePlus';
-import { getAppInfo } from '@/utils/node';
+import SnapshotItemRow from './SnapshotItemRow.vue';
 
 const props = defineProps<{
   snapshots: Snapshot[];
   checkedRowKeys: number[];
   refreshSnapshots: () => Promise<void>;
+  previewSnapshot: SnapshotAction;
+  deleteSnapshot: SnapshotAction;
 }>();
 
 const emit = defineEmits<{
@@ -19,38 +26,27 @@ const checkedRowKeysModel = computed({
   set: (value: number[]) => emit('update:checkedRowKeys', value),
 });
 
-const {
-  groupedSnapshots,
-  expandedPackageNames,
-  expandedActivityNames,
-  checkedSet,
-  snapshotViewedTime,
-  batchDelete,
-  previewUrlMap,
-  previewLoadingMap,
-  previewErrorMap,
-  previewSnapshot,
-  downloadSnapshotZip,
-  downloadSnapshotImage,
-  shareSnapshotZipUrl,
-  shareSnapshotImageUrl,
-  deleteSnapshot,
-  ensurePreview,
-  getGroupSnapshotIds,
-  getActivitySnapshotIds,
-  getCheckedStats,
-  setCheckedByIds,
-  toggleChecked,
-  getItemAppName,
-  getItemDeviceText,
-  getItemShortTimeText,
-  getItemCreateTimeText,
-  getItemImportTimeText,
-} = useDevicePlus({
+const devicePlusContext = useDevicePlus({
   snapshots: toRef(props, 'snapshots'),
   checkedRowKeys: checkedRowKeysModel,
   refreshSnapshots: props.refreshSnapshots,
 });
+
+provide(devicePlusKey, devicePlusContext);
+provide(previewSnapshotKey, props.previewSnapshot);
+provide(deleteSnapshotKey, props.deleteSnapshot);
+
+// 解构出主组件 Template 渲染需要的状态和方法
+const {
+  groupedSnapshots,
+  expandedPackageNames,
+  expandedActivityNames,
+  batchDelete,
+  getGroupSnapshotIds,
+  getActivitySnapshotIds,
+  getCheckedStats,
+  setCheckedByIds,
+} = devicePlusContext;
 </script>
 
 <template>
@@ -75,6 +71,7 @@ const {
     <div v-if="!groupedSnapshots.length" py-40px text-center opacity-70>
       暂无快照
     </div>
+
     <NCollapse
       v-else
       v-model:expandedNames="expandedPackageNames"
@@ -102,6 +99,7 @@ const {
             <NTag size="small">{{ group.activities.length }} Activities</NTag>
           </div>
         </template>
+
         <NCollapse
           v-model:expandedNames="expandedActivityNames"
           :accordion="false"
@@ -133,171 +131,13 @@ const {
                 >
               </div>
             </template>
+
             <NSpace vertical :size="6">
-              <div
+              <SnapshotItemRow
                 v-for="item in activity.snapshots"
                 :key="item.id"
-                class="rounded-8px border border-solid px-10px py-6px transition-colors"
-                :class="[
-                  snapshotViewedTime[item.id]
-                    ? 'snapshot-row-viewed'
-                    : 'surface-card',
-                ]"
-              >
-                <div flex items-start gap-10px flex-wrap>
-                  <NCheckbox
-                    :checked="checkedSet.has(item.id)"
-                    @update:checked="toggleChecked(item.id, $event)"
-                  />
-                  <NPopover
-                    trigger="hover"
-                    placement="right-start"
-                    :flip="true"
-                    :shift="true"
-                    @update:show="
-                      if ($event) {
-                        ensurePreview(item.id);
-                      }
-                    "
-                  >
-                    <template #trigger>
-                      <div
-                        class="min-w-0 inline-flex max-w-full cursor-default select-text flex-col"
-                        @mouseenter="ensurePreview(item.id)"
-                      >
-                        <div flex items-center gap-6px leading-18px>
-                          <NTag size="small" type="warning">
-                            {{ getItemShortTimeText(item) }}
-                          </NTag>
-                          <NTag size="small">
-                            {{ getItemImportTimeText(item) }}
-                          </NTag>
-                          <NTag
-                            v-if="snapshotViewedTime[item.id]"
-                            size="small"
-                            type="success"
-                          >
-                            已查看
-                          </NTag>
-                          <span class="truncate font-600">
-                            {{ getItemAppName(item) }}
-                          </span>
-                        </div>
-                        <div text-12px mt-2px class="font-600">
-                          界面ID: {{ item.activityId || '(unknown)' }}
-                        </div>
-                        <div mt-4px text-12px class="opacity-75">
-                          <span>
-                            创建时间:
-                            {{ getItemCreateTimeText(item) }}
-                          </span>
-                          <span class="mx-6px opacity-45">|</span>
-                          <span>
-                            导入时间: {{ getItemImportTimeText(item) }}
-                          </span>
-                        </div>
-                        <div mt-2px text-12px class="opacity-70">
-                          <span>设备: {{ getItemDeviceText(item) }}</span>
-                          <span class="mx-6px opacity-45">|</span>
-                          <span>应用ID: {{ item.appId }}</span>
-                          <span class="mx-6px opacity-45">|</span>
-                          <span>
-                            版本代码:
-                            {{ getAppInfo(item).versionCode }}
-                          </span>
-                          <span class="mx-6px opacity-45">|</span>
-                          <span>
-                            版本号:
-                            {{ getAppInfo(item).versionName || 'unknown' }}
-                          </span>
-                        </div>
-                      </div>
-                    </template>
-                    <div class="inline-block w-fit max-w-90vw">
-                      <img
-                        v-if="previewUrlMap[item.id]"
-                        :src="previewUrlMap[item.id]"
-                        class="block h-auto w-auto max-h-320px max-w-80vw rounded-6px"
-                        alt="preview"
-                      />
-                      <div v-else py-20px text-center opacity-70>
-                        {{
-                          previewErrorMap[item.id] ||
-                          (previewLoadingMap[item.id]
-                            ? '预览加载中...'
-                            : '暂无预览')
-                        }}
-                      </div>
-                    </div>
-                  </NPopover>
-                  <NButton
-                    text
-                    size="small"
-                    class="ml-auto shrink-0"
-                    :loading="previewSnapshot.loading[item.id]"
-                    @click="previewSnapshot.invoke(item)"
-                  >
-                    <template #icon><SvgIcon name="code" /></template>
-                  </NButton>
-                  <NPopover>
-                    <template #trigger>
-                      <NButton text>
-                        <template #icon><SvgIcon name="export" /></template>
-                      </NButton>
-                    </template>
-                    <NSpace vertical>
-                      <NButton
-                        :loading="downloadSnapshotZip.loading[item.id]"
-                        @click="downloadSnapshotZip.invoke(item)"
-                      >
-                        下载-快照
-                      </NButton>
-                      <NButton
-                        :loading="downloadSnapshotImage.loading[item.id]"
-                        @click="downloadSnapshotImage.invoke(item)"
-                      >
-                        下载-图片
-                      </NButton>
-                    </NSpace>
-                  </NPopover>
-                  <NPopover>
-                    <template #trigger>
-                      <NButton text>
-                        <template #icon><SvgIcon name="share" /></template>
-                      </NButton>
-                    </template>
-                    <NSpace vertical>
-                      <NButton
-                        :loading="shareSnapshotZipUrl.loading[item.id]"
-                        @click="shareSnapshotZipUrl.invoke(item)"
-                      >
-                        生成链接-快照
-                      </NButton>
-                      <NButton
-                        :loading="shareSnapshotImageUrl.loading[item.id]"
-                        @click="shareSnapshotImageUrl.invoke(item)"
-                      >
-                        生成链接-图片
-                      </NButton>
-                    </NSpace>
-                  </NPopover>
-                  <NTooltip>
-                    <template #trigger>
-                      <span class="inline-flex">
-                        <NButton
-                          text
-                          type="error"
-                          :loading="deleteSnapshot.loading[item.id]"
-                          @click="deleteSnapshot.invoke(item)"
-                        >
-                          <template #icon><SvgIcon name="delete" /></template>
-                        </NButton>
-                      </span>
-                    </template>
-                    删除快照
-                  </NTooltip>
-                </div>
-              </div>
+                :item="item"
+              />
             </NSpace>
           </NCollapseItem>
         </NCollapse>
