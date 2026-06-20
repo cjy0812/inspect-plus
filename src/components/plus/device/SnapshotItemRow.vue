@@ -10,6 +10,10 @@ defineProps<{
 // 注入父组件提供的上下文数据
 const devicePlusContext = inject<any>('devicePlusContext');
 const previewSnapshotProp = inject<any>('previewSnapshot');
+const deleteSnapshot = inject<{
+  loading: Record<number, boolean | undefined>;
+  invoke: (row: Snapshot) => unknown;
+}>('deleteSnapshot')!;
 
 // 解构出单行渲染和交互所需的所有方法与状态
 const {
@@ -24,7 +28,6 @@ const {
   downloadSnapshotImage,
   shareSnapshotZipUrl,
   shareSnapshotImageUrl,
-  deleteSnapshot,
   getItemAppName,
   getItemDeviceText,
   getItemShortTimeText,

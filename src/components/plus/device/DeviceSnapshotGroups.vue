@@ -11,6 +11,10 @@ const props = defineProps<{
     loading: Record<number, boolean | undefined>;
     invoke: (row: Snapshot) => unknown;
   };
+  deleteSnapshot: {
+    loading: Record<number, boolean | undefined>;
+    invoke: (row: Snapshot) => unknown;
+  };
 }>();
 
 const emit = defineEmits<{
@@ -32,6 +36,7 @@ const devicePlusContext = useDevicePlus({
 // 使用 provide 将上下文和所需的 prop 注入给子组件，避免深层 Prop 地狱
 provide('devicePlusContext', devicePlusContext);
 provide('previewSnapshot', props.previewSnapshot);
+provide('deleteSnapshot', props.deleteSnapshot);
 
 // 解构出主组件 Template 渲染需要的状态和方法
 const {

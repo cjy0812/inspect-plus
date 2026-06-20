@@ -115,6 +115,7 @@ vi.mock('@/components/plus/device/DeviceSnapshotGroups.vue', () => ({
       snapshots: { type: Array, required: true },
       refreshSnapshots: { type: Function, required: true },
       previewSnapshot: { type: Object, required: true },
+      deleteSnapshot: { type: Object, required: true },
     },
     emits: ['update:checkedRowKeys'],
     setup(
@@ -123,6 +124,7 @@ vi.mock('@/components/plus/device/DeviceSnapshotGroups.vue', () => ({
         snapshots: Array<{ id: number }>;
         refreshSnapshots: () => void;
         previewSnapshot: unknown;
+        deleteSnapshot: unknown;
       },
       { emit }: { emit: (e: string, v: number[]) => void },
     ) {
