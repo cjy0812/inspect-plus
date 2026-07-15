@@ -3,7 +3,6 @@ import {
   exportSnapshotAsImageId,
   exportSnapshotAsImportId,
 } from '@/utils/export';
-import { useArrayBufferObjectUrl } from '@/composables/useArrayBufferObjectUrl';
 import { gmOk } from '@/utils/gm';
 import { importFromNetwork } from '@/utils/import';
 import { findNodesByXy, getAppInfo, listToTree } from '@/utils/node';
@@ -72,7 +71,12 @@ export const useSnapshotStore = createSharedComposable(() => {
     }
   });
   const screenshot = shallowRef<ArrayBuffer>();
-  const { url: screenshotUrl } = useArrayBufferObjectUrl(screenshot);
+  const screenshotUrl = computed(() => {
+    if (screenshot.value) {
+      return URL.createObjectURL(new Blob([screenshot.value]));
+    }
+    return undefined;
+  });
   const redirected = shallowRef(false);
   const resetSnapshot = () => {
     snapshotId.value = undefined;

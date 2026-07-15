@@ -1,23 +1,16 @@
 <script lang="tsx" setup>
 import ActionCard from '@/components/ActionCard.vue';
+import BatchActionsBar from '@/components/BatchActionsBar.vue';
 import { toValidURL } from '@/utils/check';
-import { showTextDLg, waitShareAgree } from '@/utils/dialog';
-import { dialog } from '@/utils/discrete';
-import {
-  batchCreateImageId,
-  batchCreateZipUrl,
-  batchImageDownloadZip,
-  batchZipDownloadZip,
-} from '@/utils/export';
 import { importFromLocal, importFromNetwork } from '@/utils/import';
 import { getAppInfo } from '@/utils/node';
 import { getDragEventFiles } from '@/utils/others';
-import { shallowSnapshotStorage, snapshotStorage } from '@/utils/snapshot';
+import { shallowSnapshotStorage } from '@/utils/snapshot';
 import { renderDevice, useSnapshotColumns } from '@/utils/table';
 import { useTask } from '@/utils/task';
-import { getImagUrl } from '@/utils/url';
 import type { DataTableColumns, PaginationProps } from 'naive-ui';
 import type { SortState } from 'naive-ui/es/data-table/src/interface';
+import { useBatchActions } from '@/composables/useBatchActions';
 
 const { settingsStore } = useStorageStore();
 
@@ -214,54 +207,15 @@ useEventListener(document.body, 'paste', (e) => {
   }
 });
 
-const checkedRowKeys = shallowRef<number[]>([]);
-const checkedSnapshots = () => {
-  return Promise.all(
-    checkedRowKeys.value.map(
-      (id) => snapshotStorage.getItem(id) as Promise<Snapshot>,
-    ),
-  );
-};
-const batchDelete = useTask(async () => {
-  await new Promise((res, rej) => {
-    dialog.warning({
-      title: `删除`,
-      content: `是否批量删除 ${checkedRowKeys.value.length} 个快照`,
-      negativeText: `取消`,
-      positiveText: `确认`,
-      onClose: rej,
-      onEsc: rej,
-      onMaskClick: rej,
-      onNegativeClick: rej,
-      onPositiveClick: res,
-    });
-  });
-
-  await Promise.all(
-    checkedRowKeys.value.map((k) => snapshotStorage.removeItem(k)),
-  );
-  await updateSnapshots();
-});
-const batchDownloadImage = useTask(async () => {
-  await batchImageDownloadZip(await checkedSnapshots());
-});
-const batchDownloadZip = useTask(async () => {
-  await batchZipDownloadZip(await checkedSnapshots());
-});
-
-const batchShareImageUrl = useTask(async () => {
-  await waitShareAgree();
-  const imageIds = await batchCreateImageId(await checkedSnapshots());
-  showTextDLg({
-    content: imageIds.map((s) => getImagUrl(s)).join(`\n`) + `\n`,
-  });
-});
-const batchShareZipUrl = useTask(async () => {
-  await waitShareAgree();
-  const zipUrls = await batchCreateZipUrl(await checkedSnapshots());
-  showTextDLg({
-    content: zipUrls.map((s) => location.origin + '/i/' + s).join(`\n`) + `\n`,
-  });
+const checkedRowKeys = ref<number[]>([]);
+const {
+  batchDelete,
+  batchDownloadImage,
+  batchDownloadZip,
+  batchShareImageUrl,
+  batchShareZipUrl,
+} = useBatchActions(checkedRowKeys, {
+  onAfterDelete: updateSnapshots,
 });
 
 const settingsDlgShow = shallowRef(false);
@@ -293,50 +247,14 @@ const setCheckedRowKeys = (keys: number[]) => {
             </template>
           </NButton>
         </NInputGroup>
-        <template v-if="checkedRowKeys.length">
-          <NPopover>
-            <template #trigger>
-              <NButton> 批量下载 </NButton>
-            </template>
-            <NSpace vertical>
-              <NButton
-                :loading="batchDownloadZip.loading"
-                @click="batchDownloadZip.invoke"
-              >
-                批量下载-快照
-              </NButton>
-              <NButton
-                :loading="batchDownloadImage.loading"
-                @click="batchDownloadImage.invoke"
-              >
-                批量下载-图片
-              </NButton>
-            </NSpace>
-          </NPopover>
-          <NPopover>
-            <template #trigger>
-              <NButton> 批量分享 </NButton>
-            </template>
-            <NSpace vertical>
-              <NButton
-                :loading="batchShareZipUrl.loading"
-                @click="batchShareZipUrl.invoke"
-              >
-                批量生成链接-快照
-              </NButton>
-              <NButton
-                :loading="batchShareImageUrl.loading"
-                @click="batchShareImageUrl.invoke"
-              >
-                批量生成链接-图片
-              </NButton>
-            </NSpace>
-          </NPopover>
-          <NButton @click="batchDelete.invoke"> 批量删除 </NButton>
-          <div h-full flex flex-items-center>
-            {{ `已选中 ${checkedRowKeys.length} 个快照` }}
-          </div>
-        </template>
+        <BatchActionsBar
+          :checkedCount="checkedRowKeys.length"
+          :batchDelete="batchDelete"
+          :batchDownloadImage="batchDownloadImage"
+          :batchDownloadZip="batchDownloadZip"
+          :batchShareImageUrl="batchShareImageUrl"
+          :batchShareZipUrl="batchShareZipUrl"
+        />
       </NSpace>
       <div flex-1 />
       <slot

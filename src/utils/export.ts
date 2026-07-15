@@ -30,9 +30,8 @@ export const exportSnapshotAsZip = async (snapshot: Snapshot) => {
 export const exportSnapshotAsImage = async (snapshot: Snapshot) => {
   const fileName = `snapshot-${snapshot.id}.png`;
   saveAs(
-    new Blob([(await screenshotStorage.getItem(snapshot.id))!], {
-      type: 'image/png',
-    }),
+    // 移除固定 image/png MIME，浏览器自动识别二进制格式
+    new Blob([(await screenshotStorage.getItem(snapshot.id))!]),
     fileName,
   );
 };
@@ -43,9 +42,7 @@ export const batchImageDownloadZip = async (snapshots: Snapshot[]) => {
     await delay();
     zip.file(
       snapshot.id + `.png`,
-      new Blob([(await screenshotStorage.getItem(snapshot.id))!], {
-        type: 'image/png',
-      }),
+      new Blob([(await screenshotStorage.getItem(snapshot.id))!]),
     );
   }
   const batchZipFile = await zip.generateAsync({
@@ -70,7 +67,8 @@ export const batchZipDownloadZip = async (snapshots: Snapshot[]) => {
 
 const comporessPngToJpg = async (imgBf: ArrayBuffer): Promise<Blob> => {
   return new Promise<Blob>((res, rej) => {
-    new Compressor(new Blob([imgBf], { type: 'image/png' }), {
+    // 移除写死的 image/png
+    new Compressor(new Blob([imgBf]), {
       quality: 0.75,
       convertSize: 200_000,
       success(file) {

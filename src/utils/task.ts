@@ -65,6 +65,8 @@ export const useTask = <T extends (...args: any[]) => Promise<void>>(
   };
 };
 
+export type TaskLike = ReturnType<typeof useTask>;
+
 export const useBatchTask = <T extends (...args: any[]) => Promise<void>>(
   fn: T,
   keyGetter: (...args: Parameters<T>) => PrimitiveType = (...args) =>

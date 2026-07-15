@@ -47,6 +47,27 @@ export const delay = async (n = 0) => {
     setTimeout(res, n);
   });
 };
+export const DELETE_TIMEOUT = 12_000;
+
+export const withTimeout = <T>(
+  fn: () => Promise<T>,
+  ms: number,
+  message = `操作超时`,
+): Promise<T> => {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    fn().then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+};
 
 export const copy = (() => {
   let lastText: string | void = void 0;

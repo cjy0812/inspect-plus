@@ -10,7 +10,9 @@ import type { JSZipType } from './chunk';
 
 const parseZip = async (zip: JSZipType) => {
   const snapshotFile = zip.filter((s) => s.endsWith(`.json`))[0];
-  const screenshotFile = zip.filter((s) => s.endsWith(`.png`))[0];
+  const screenshotFile = zip.filter(
+    (s) => s.endsWith(`.png`) || s.endsWith(`.webp`),
+  )[0];
   if (!snapshotFile || !screenshotFile) {
     return false;
   }
@@ -105,7 +107,9 @@ export const importFromNetwork = async (
         if (isZipBf(bf)) {
           const zip = await loadAsync(bf);
           const [snapshotFile] = zip.filter((p) => p.endsWith(`.json`));
-          const [screenshotFile] = zip.filter((p) => p.endsWith(`.png`));
+          const [screenshotFile] = zip.filter(
+            (p) => p.endsWith(`.png`) || p.endsWith(`.webp`),
+          );
           if (!snapshotFile || !screenshotFile) {
             return;
           }
