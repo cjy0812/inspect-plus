@@ -74,7 +74,7 @@
 ### 需要使用重定向域名脚本把官方域名重定向至本项目的域名，否则无法实现无感切换，脚本源代码在本项目的[userscripts](./userscripts/url-redirect.user.js)目录下。
 
 1. 安装[油猴脚本管理器](https://www.tampermonkey.net/index.php?browser=chrome&locale=zh)扩展。
-2. 点击[这里](https://github.com/cjy0812/inspect-plus/raw/refs/heads/main/userscripts/url-redirect.user.js)打开脚本安装页面，点击安装。
+2. 点击[这里](https://github.com/cjy0812/inspect-plus/raw/refs/heads/plus/userscripts/url-redirect.user.js)打开脚本安装页面，点击安装。
 3. 刷新GKD快照审查工具页面，即可重定向生效。
 
 #### 目前MIKU增强脚本已添加本项目作用域可直接使用
